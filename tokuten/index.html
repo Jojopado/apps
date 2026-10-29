@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16131c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="特典雷達">
+<title>特典雷達</title>
+<style>
+:root{
+  --bg:#16131c;--card:#221d2b;--card2:#2b2536;--line:#3a3347;--text:#f3eff8;--sub:#a69cb6;
+  --accent:#ffb84d;--accent2:#ff6f91;--ok:#4cd6a0;--warn:#ffb84d;--bad:#ff6b6b;--chip:#2f2840;
+}
+:root[data-theme="light"]{
+  --bg:#f6f3f9;--card:#fff;--card2:#f0ebf6;--line:#e1d9ea;--text:#221b2c;--sub:#6f6680;
+  --accent:#d9820b;--accent2:#e0466e;--ok:#16a06c;--warn:#d9820b;--bad:#d93c3c;--chip:#ece5f4;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f3f9;--card:#fff;--card2:#f0ebf6;--line:#e1d9ea;--text:#221b2c;--sub:#6f6680;
+    --accent:#d9820b;--accent2:#e0466e;--ok:#16a06c;--warn:#d9820b;--bad:#d93c3c;--chip:#ece5f4;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.5}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--accent)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:10px}
+.logo{font-size:22px;font-weight:800;letter-spacing:1px}
+.logo span{color:var(--accent)}
+.upd{margin-left:auto;font-size:12px;color:var(--sub);text-align:right}
+.search{margin-top:8px;width:100%;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-size:13px;color:var(--sub)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1205;font-weight:700}
+main{max-width:640px;margin:0 auto;padding:12px 16px}
+.sec{font-size:13px;color:var(--sub);margin:14px 2px 6px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;display:flex;gap:12px}
+.poster{flex:none;width:58px;height:82px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.35)}
+.body{flex:1;min-width:0}
+.film{font-weight:800;font-size:16px;line-height:1.3}
+.meta{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.tag{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--card2);color:var(--sub);border:1px solid var(--line)}
+.tag.kind{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 40%,transparent)}
+.gift{font-size:14px;margin:4px 0}
+.cond{font-size:12px;color:var(--sub)}
+.status{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:4px}
+.s-live{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.s-soon{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.s-end{background:var(--card2);color:var(--sub)}
+.s-unk{background:var(--card2);color:var(--sub)}
+.acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.act{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:5px 9px;font-size:12.5px}
+.act.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.rep{margin-top:6px;font-size:12px;padding:5px 8px;border-radius:8px;background:var(--card2)}
+.src{font-size:11px;color:var(--sub);margin-top:6px;word-break:break-all}
+.note{font-size:11.5px;color:var(--warn);margin-top:3px}
+.empty{text-align:center;color:var(--sub);padding:40px 10px;font-size:14px}
+.day{display:flex;gap:12px;margin-bottom:8px}
+.dbox{flex:none;width:54px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 0}
+.dbox b{display:block;font-size:20px;line-height:1.1}
+.dbox small{font-size:11px;color:var(--sub)}
+.dbox.today{border-color:var(--accent)}
+.dlist{flex:1;min-width:0}
+.ev{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:6px;font-size:13.5px}
+.ev .k{font-size:11px;font-weight:700;margin-right:6px}
+.k-start{color:var(--ok)}.k-end{color:var(--bad)}.k-rel{color:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stamp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;text-align:center;font-size:12px}
+.stamp .poster{width:100%;height:auto;aspect-ratio:3/4;margin-bottom:6px;font-size:30px}
+.stamp.locked .poster{filter:grayscale(1) brightness(.5)}
+.stamp.locked{color:var(--sub)}
+.stat{display:flex;gap:10px;margin-bottom:12px}
+.stat div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.stat b{display:block;font-size:22px;color:var(--accent)}
+.stat small{color:var(--sub);font-size:12px}
+.about{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:14px;margin-bottom:10px}
+.about h3{margin:0 0 6px;font-size:15px}
+.about p,.about li{color:var(--sub)}
+.about ul{padding-left:18px;margin:4px 0}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:8px 0 7px;font-size:11px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:1px}
+nav button i{font-style:normal;font-size:20px;line-height:1.2}
+nav button.on{color:var(--accent);font-weight:700}
+.badge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:var(--accent2);color:#fff;font-size:10px;line-height:16px;margin-left:2px}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10;display:none;align-items:flex-end;justify-content:center}
+.mask.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
+.sheet h3{margin:0 0 4px}
+.sheet .sub{color:var(--sub);font-size:13px;margin-bottom:10px}
+.sheet select,.sheet input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:15px;margin-bottom:10px}
+.lv{display:flex;gap:8px;margin-bottom:12px}
+.lv button{flex:1;padding:12px 0;border-radius:12px;border:2px solid var(--line);background:var(--card2);font-size:15px;font-weight:700}
+.lv button.on[data-lv="have"]{border-color:var(--ok);color:var(--ok)}
+.lv button.on[data-lv="low"]{border-color:var(--warn);color:var(--warn)}
+.lv button.on[data-lv="gone"]{border-color:var(--bad);color:var(--bad)}
+.primary{width:100%;padding:12px;border:0;border-radius:12px;background:var(--accent);color:#1a1205;font-weight:800;font-size:16px}
+.primary:disabled{opacity:.4}
+.ghost{width:100%;padding:10px;border:0;background:none;color:var(--sub);margin-top:4px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.hist{font-size:12px;color:var(--sub);margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="logo">🎟️ 特典<span>雷達</span></div>
+    <div class="upd" id="upd"></div>
+  </div>
+  <div id="filters">
+    <input class="search" id="q" type="search" placeholder="搜尋片名、特典（例：色紙、海報）">
+    <div class="chips" id="chainChips"></div>
+    <div class="chips" id="stateChips"></div>
+  </div>
+</header>
+<main id="view"></main>
+<nav id="nav">
+  <button data-tab="list" class="on"><i>🎬</i>特典</button>
+  <button data-tab="cal"><i>📅</i>日曆</button>
+  <button data-tab="follow"><i>⭐</i>追蹤<span id="fbadge"></span></button>
+  <button data-tab="book"><i>📒</i>收藏冊</button>
+  <button data-tab="about"><i>ℹ️</i>說明</button>
+</nav>
+
+<div class="mask" id="mask">
+  <div class="sheet" id="sheet"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+'use strict';
+var DATA = (window.TOKUTEN_DATA && window.TOKUTEN_DATA.items) ? window.TOKUTEN_DATA : {updated:null, items:[]};
+var ITEMS = DATA.items.filter(function(x){ return x && x.id && x.film; });
+
+// ---------- storage (per-viewer only) ----------
+function load(k, d){ try{ var v = localStorage.getItem('tkr_' + k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem('tkr_' + k, JSON.stringify(v)); }catch(e){} }
+var S = {
+  follow: load('follow', {}),   // film -> true
+  got: load('got', {}),         // item id -> ISO date
+  reports: load('reports', {}), // item id -> [{place, lv, t}]
+  tab: load('tab', 'list'),
+  chain: '全部', state: '進行中', q: ''
+};
+
+// ---------- dates ----------
+function today(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+function parse(s){ if(!s) return null; var p = String(s).split('-'); if(p.length < 3) return null; var d = new Date(+p[0], +p[1]-1, +p[2]); return isNaN(d) ? null : d; }
+var WD = ['日','一','二','三','四','五','六'];
+function md(d){ return (d.getMonth()+1) + '/' + d.getDate(); }
+function mdw(d){ return md(d) + '（' + WD[d.getDay()] + '）'; }
+function diffDays(a, b){ return Math.round((b - a) / 86400000); }
+function key(d){ return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+
+function status(it){
+  var t = today(), s = parse(it.start), e = parse(it.end);
+  if(s && t < s){
+    var n = diffDays(t, s);
+    return {code:'soon', cls:'s-soon', txt: (n === 1 ? '明天開始' : n + ' 天後開始') + '・' + mdw(s)};
+  }
+  if(e && t > e) return {code:'end', cls:'s-end', txt:'已結束・' + md(e)};
+  if(s || e){
+    if(e){
+      var left = diffDays(t, e);
+      return {code:'live', cls:'s-live', txt: left === 0 ? '發放中・今天最後一天' : '發放中・到 ' + mdw(e) + '（剩 ' + left + ' 天）'};
+    }
+    return {code:'live', cls:'s-live', txt:'發放中・送完為止'};
+  }
+  return {code:'unk', cls:'s-unk', txt:'日期未公布'};
+}
+
+// ---------- helpers ----------
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function hash(s){ var h = 0; for(var i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
+function posterStyle(film){
+  var h = hash(film) % 360, h2 = (h + 40) % 360;
+  return 'background:linear-gradient(150deg,hsl(' + h + ' 70% 52%),hsl(' + h2 + ' 65% 30%))';
+}
+function posterChar(film){ var m = String(film).replace(/^[《「『（(【\s]+/, ''); return esc(Array.from(m)[0] || '?'); }
+function chainsOf(it){ return Array.isArray(it.chains) && it.chains.length ? it.chains : ['其他']; }
+var MAIN_CHAINS = ['威秀','秀泰','國賓','新光'];
+function chainBucket(c){ for(var i=0;i<MAIN_CHAINS.length;i++){ if(String(c).indexOf(MAIN_CHAINS[i]) >= 0) return MAIN_CHAINS[i]; } return c === '全台' ? '全台' : '其他'; }
+var toastT;
+function toast(msg){ var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('show'); }, 1800); }
+var LV = {have:{t:'還有', c:'var(--ok)', e:'🟢'}, low:{t:'快沒了', c:'var(--warn)', e:'🟡'}, gone:{t:'沒了', c:'var(--bad)', e:'🔴'}};
+function ago(ts){
+  var m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if(m < 1) return '剛剛'; if(m < 60) return m + ' 分鐘前'; var h = Math.round(m/60); if(h < 24) return h + ' 小時前'; return Math.round(h/24) + ' 天前';
+}
+
+// ---------- filters ----------
+function renderChips(){
+  var present = {};
+  ITEMS.forEach(function(it){ chainsOf(it).forEach(function(c){ present[chainBucket(c)] = 1; }); });
+  var chains = ['全部'].concat(MAIN_CHAINS.filter(function(c){ return present[c]; }));
+  if(present['全台']) chains.push('全台');
+  if(present['其他']) chains.push('其他');
+  document.getElementById('chainChips').innerHTML = chains.map(function(c){
+    return '<button class="chip' + (S.chain === c ? ' on' : '') + '" data-chain="' + esc(c) + '">' + esc(c === '全部' ? '全部影城' : c) + '</button>';
+  }).join('');
+  var states = ['進行中','即將開始','發放中','全部','已結束'];
+  document.getElementById('stateChips').innerHTML = states.map(function(c){
+    return '<button class="chip' + (S.state === c ? ' on' : '') + '" data-state="' + c + '">' + c + '</button>';
+  }).join('');
+}
+function matches(it){
+  if(S.chain !== '全部'){
+    var ok = chainsOf(it).some(function(c){ var b = chainBucket(c); return b === S.chain || b === '全台'; });
+    if(!ok) return false;
+  }
+  var st = status(it).code;
+  if(S.state === '進行中' && st === 'end') return false;
+  if(S.state === '即將開始' && st !== 'soon') return false;
+  if(S.state === '發放中' && st !== 'live') return false;
+  if(S.state === '已結束' && st !== 'end') return false;
+  if(S.q){
+    var hay = [it.film, it.filmEn, it.gift, it.kind, it.condition, chainsOf(it).join(' ')].join(' ').toLowerCase();
+    if(hay.indexOf(S.q.toLowerCase()) < 0) return false;
+  }
+  return true;
+}
+function sortKey(it){
+  var st = status(it).code, s = parse(it.start), e = parse(it.end), t = today();
+  var rank = {live:0, soon:1, unk:2, end:3}[st];
+  var d = st === 'live' ? (e ? diffDays(t, e) : 999) : st === 'soon' ? diffDays(t, s) : st === 'end' ? -diffDays(e, t) : 0;
+  return rank * 100000 + d;
+}
+
+// ---------- card ----------
+function card(it){
+  var st = status(it);
+  var reps = S.reports[it.id] || [];
+  var last = reps[reps.length - 1];
+  var followed = !!S.follow[it.film];
+  var got = S.got[it.id];
+  var h = '<div class="card" data-id="' + esc(it.id) + '">';
+  h += '<div class="poster" style="' + posterStyle(it.film) + '">' + posterChar(it.film) + '</div>';
+  h += '<div class="body">';
+  h += '<div class="film">' + esc(it.film) + '</div>';
+  h += '<div class="meta"><span class="tag kind">' + esc(it.kind || '特典') + (it.week ? '・' + esc(it.week) : '') + '</span>';
+  chainsOf(it).forEach(function(c){ h += '<span class="tag">' + esc(c) + '</span>'; });
+  h += '</div>';
+  h += '<div class="gift">🎁 ' + esc(it.gift || '內容未公布') + '</div>';
+  if(it.condition) h += '<div class="cond">📝 ' + esc(it.condition) + '</div>';
+  if(it.quantity) h += '<div class="cond">📦 ' + esc(it.quantity) + '</div>';
+  h += '<span class="status ' + st.cls + '">' + st.txt + '</span>';
+  if(last){
+    var l = LV[last.lv];
+    h += '<div class="rep" style="color:' + l.c + '">' + l.e + ' 你回報：' + esc(last.place) + ' ' + l.t + '（' + ago(last.t) + '）</div>';
+  }
+  if(it.note) h += '<div class="note">⚠️ ' + esc(it.note) + '</div>';
+  h += '<div class="acts">';
+  h += '<button class="act' + (followed ? ' on' : '') + '" data-act="follow">' + (followed ? '★ 追蹤中' : '☆ 追蹤') + '</button>';
+  h += '<button class="act' + (got ? ' on' : '') + '" data-act="got">' + (got ? '✓ 拿到了' : '我拿到了') + '</button>';
+  if(st.code !== 'end') h += '<button class="act" data-act="report">📍 回報剩餘</button>';
+  if(st.code === 'soon' || (st.code === 'live' && parse(it.end))) h += '<button class="act" data-act="ics">📅 加到行事曆</button>';
+  h += '</div>';
+  if(it.sourceUrl) h += '<div class="src">來源：<a href="' + esc(it.sourceUrl) + '" target="_blank" rel="noopener">' + esc(it.sourceName || '官方公告') + '</a></div>';
+  h += '</div></div>';
+  return h;
+}
+
+// ---------- views ----------
+function viewList(){
+  var list = ITEMS.filter(matches).sort(function(a,b){ return sortKey(a) - sortKey(b); });
+  if(!ITEMS.length) return '<div class="empty">還沒有特典資料 🙇</div>';
+  if(!list.length) return '<div class="empty">沒有符合的特典<br>換個影城或狀態試試</div>';
+  var groups = {live:[], soon:[], unk:[], end:[]};
+  list.forEach(function(it){ groups[status(it).code].push(it); });
+  var names = {live:'🟢 發放中', soon:'⏳ 即將開始', unk:'❔ 日期未公布', end:'已結束'};
+  var h = '';
+  ['live','soon','unk','end'].forEach(function(k){
+    if(!groups[k].length) return;
+    h += '<div class="sec">' + names[k] + '（' + groups[k].length + '）</div>';
+    h += groups[k].map(card).join('');
+  });
+  return h;
+}
+
+function viewCal(){
+  var t = today(), byDay = {};
+  function add(d, ev){ if(!d) return; var k = key(d); (byDay[k] = byDay[k] || []).push(ev); }
+  ITEMS.forEach(function(it){
+    add(parse(it.start), {k:'start', it:it});
+    add(parse(it.end), {k:'end', it:it});
+    if(it.release && it.release !== it.start) add(parse(it.release), {k:'rel', it:it});
+  });
+  var h = '<div class="sec">接下來 45 天（含今天）</div>';
+  var any = false;
+  for(var i = 0; i < 45; i++){
+    var d = new Date(t); d.setDate(t.getDate() + i);
+    var evs = byDay[key(d)];
+    if(!evs) continue;
+    // dedupe release events per film
+    var seen = {};
+    evs = evs.filter(function(e){ if(e.k !== 'rel') return true; if(seen[e.it.film]) return false; seen[e.it.film] = 1; return true; });
+    any = true;
+    h += '<div class="day"><div class="dbox' + (i === 0 ? ' today' : '') + '"><small>' + (d.getMonth()+1) + '月</small><b>' + d.getDate() + '</b><small>' + (i === 0 ? '今天' : '週' + WD[d.getDay()]) + '</small></div><div class="dlist">';
+    evs.forEach(function(e){
+      var lab = e.k === 'start' ? '<span class="k k-start">開始發</span>' : e.k === 'end' ? '<span class="k k-end">最後一天</span>' : '<span class="k k-rel">上映</span>';
+      var star = S.follow[e.it.film] ? '⭐ ' : '';
+      h += '<div class="ev">' + lab + star + '<b>' + esc(e.it.film) + '</b>' + (e.k !== 'rel' ? '<div class="cond">' + esc(chainsOf(e.it).join('・')) + '｜' + esc(e.it.gift || '') + '</div>' : '') + '</div>';
+    });
+    h += '</div></div>';
+  }
+  if(!any) h += '<div class="empty">接下來沒有已公布日期的特典</div>';
+  return h;
+}
+
+function viewFollow(){
+  var films = Object.keys(S.follow).filter(function(f){ return S.follow[f]; });
+  if(!films.length) return '<div class="empty">還沒追蹤任何電影<br>在「特典」頁按 ☆ 追蹤，<br>新特典和截止日都會整理在這裡</div>';
+  var h = '';
+  films.forEach(function(f){
+    var its = ITEMS.filter(function(it){ return it.film === f; }).sort(function(a,b){ return sortKey(a) - sortKey(b); });
+    h += '<div class="sec">⭐ ' + esc(f) + '（' + its.length + ' 項特典）</div>';
+    h += its.length ? its.map(card).join('') : '<div class="empty">目前沒有資料</div>';
+  });
+  return h;
+}
+
+function viewBook(){
+  var gotIds = Object.keys(S.got).filter(function(id){ return S.got[id]; });
+  var h = '<div class="stat"><div><b>' + gotIds.length + '</b><small>已收集</small></div><div><b>' + ITEMS.length + '</b><small>本季特典</small></div><div><b>' + (ITEMS.length ? Math.round(gotIds.length / ITEMS.length * 100) : 0) + '%</b><small>收集率</small></div></div>';
+  h += '<div class="grid">';
+  var list = ITEMS.slice().sort(function(a,b){ return (S.got[b.id] ? 1 : 0) - (S.got[a.id] ? 1 : 0); });
+  list.forEach(function(it){
+    var g = S.got[it.id];
+    h += '<div class="stamp' + (g ? '' : ' locked') + '" data-id="' + esc(it.id) + '"><div class="poster" style="' + posterStyle(it.film) + '">' + (g ? posterChar(it.film) : '?') + '</div>' + esc(it.film) + '<div class="hist">' + (g ? '✓ ' + esc(g.slice(5).replace('-','/')) + ' 拿到' : esc((it.gift || '').slice(0, 14))) + '</div></div>';
+  });
+  h += '</div>';
+  if(!gotIds.length) h += '<div class="empty">看完電影後在特典卡片按「我拿到了」，<br>這裡就會蓋上章</div>';
+  return h;
+}
+
+function viewAbout(){
+  var cnt = ITEMS.length;
+  return '<div class="about"><h3>🎟️ 特典雷達 v0.1</h3><p>把各影城、片商公布的電影特典整理成一個地方：現在在發什麼、哪天開始、哪天截止。</p></div>' +
+    '<div class="about"><h3>資料怎麼來</h3><ul><li>人工整理影城與片商的公開公告，用自己的話改寫，每筆都附原始來源連結</li><li>目前收錄 ' + cnt + ' 筆，資料更新：' + esc(DATA.updated || '—') + '</li><li>不使用官方海報或特典照片（著作權），色塊封面是自動產生的</li><li><b>特典送完為止、各館數量不同，出發前請以影城公告為準</b></li></ul></div>' +
+    '<div class="about"><h3>📍 剩餘回報（測試版）</h3><p>v0.1 的回報只存在你自己的手機，還不會分享給其他人。之後版本會讓所有人的回報即時共享，看到「台中某某館：快沒了」。</p></div>' +
+    '<div class="about"><h3>📅 加到行事曆</h3><p>按下後會下載行事曆檔，iPhone 會問你要不要加入「行事曆」，到時候就會提醒你。</p></div>' +
+    '<div class="about"><h3>重設</h3><p>清除追蹤、收藏與回報紀錄（只影響這台裝置）。</p><button class="act" id="resetBtn">清除我的紀錄</button></div>';
+}
+
+// ---------- render ----------
+function render(){
+  document.getElementById('filters').style.display = S.tab === 'list' ? '' : 'none';
+  var v = document.getElementById('view');
+  v.innerHTML = S.tab === 'cal' ? viewCal() : S.tab === 'follow' ? viewFollow() : S.tab === 'book' ? viewBook() : S.tab === 'about' ? viewAbout() : viewList();
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function(b){ b.classList.toggle('on', b.getAttribute('data-tab') === S.tab); });
+  var n = Object.keys(S.follow).filter(function(f){ return S.follow[f] && ITEMS.some(function(it){ return it.film === f && status(it).code === 'soon'; }); }).length;
+  document.getElementById('fbadge').innerHTML = n ? '<span class="badge">' + n + '</span>' : '';
+}
+function setTab(t){ S.tab = t; save('tab', t); render(); window.scrollTo(0, 0); }
+
+// ---------- report sheet ----------
+var sheetItem = null, sheetLv = null;
+function openReport(it){
+  sheetItem = it; sheetLv = null;
+  var reps = S.reports[it.id] || [];
+  var lastPlace = load('lastPlace', '');
+  var h = '<h3>📍 回報剩餘</h3><div class="sub">' + esc(it.film) + '｜' + esc(it.gift || '') + '</div>';
+  h += '<input id="place" maxlength="20" placeholder="哪一館？例：台中秀泰、信義威秀" value="' + esc(lastPlace) + '">';
+  h += '<div class="lv"><button data-lv="have">🟢 還有</button><button data-lv="low">🟡 快沒了</button><button data-lv="gone">🔴 沒了</button></div>';
+  h += '<button class="primary" id="sendRep" disabled>送出回報</button><button class="ghost" id="closeSheet">取消</button>';
+  if(reps.length){
+    h += '<div class="sec">你的回報紀錄</div>';
+    reps.slice().reverse().slice(0, 8).forEach(function(r){ h += '<div class="hist">' + LV[r.lv].e + ' ' + esc(r.place) + ' ' + LV[r.lv].t + '・' + ago(r.t) + '</div>'; });
+  }
+  document.getElementById('sheet').innerHTML = h;
+  document.getElementById('mask').classList.add('show');
+}
+function closeSheet(){ document.getElementById('mask').classList.remove('show'); sheetItem = null; }
+function updateSend(){ var p = document.getElementById('place'); var b = document.getElementById('sendRep'); if(b && p) b.disabled = !(sheetLv && p.value.trim()); }
+
+// ---------- ics ----------
+function icsDate(d){ return key(d).replace(/-/g, ''); }
+function icsEsc(s){ return String(s || '').replace(/\\/g,'\\\\').replace(/[,;]/g, function(c){ return '\\' + c; }).replace(/\n/g,'\\n'); }
+function downloadIcs(it){
+  var st = status(it), d, title;
+  if(st.code === 'soon'){ d = parse(it.start); title = '🎟️ 特典開始：' + it.film; }
+  else { d = parse(it.end); title = '🎟️ 特典最後一天：' + it.film; }
+  if(!d){ toast('這個特典還沒有日期'); return; }
+  var d2 = new Date(d); d2.setDate(d.getDate() + 1);
+  var desc = (it.gift || '') + '\n' + chainsOf(it).join('、') + (it.condition ? '\n' + it.condition : '') + (it.sourceUrl ? '\n' + it.sourceUrl : '');
+  var ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//tokuten-radar//v0.1//ZH','BEGIN:VEVENT',
+    'UID:' + it.id + '-' + icsDate(d) + '@tokuten-radar',
+    'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/, ''),
+    'DTSTART;VALUE=DATE:' + icsDate(d), 'DTEND;VALUE=DATE:' + icsDate(d2),
+    'SUMMARY:' + icsEsc(title), 'DESCRIPTION:' + icsEsc(desc),
+    'BEGIN:VALARM','TRIGGER:-PT15H','ACTION:DISPLAY','DESCRIPTION:' + icsEsc(title),'END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  try{
+    var blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = it.id + '.ics';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast('已產生行事曆檔');
+  }catch(e){ toast('這個瀏覽器不支援'); }
+}
+
+// ---------- events ----------
+function findItem(id){ for(var i=0;i<ITEMS.length;i++) if(ITEMS[i].id === id) return ITEMS[i]; return null; }
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest ? ev.target.closest('button,.stamp') : null;
+  if(!t) return;
+  if(t.hasAttribute('data-tab')){ setTab(t.getAttribute('data-tab')); return; }
+  if(t.hasAttribute('data-chain')){ S.chain = t.getAttribute('data-chain'); renderChips(); render(); return; }
+  if(t.hasAttribute('data-state')){ S.state = t.getAttribute('data-state'); renderChips(); render(); return; }
+  if(t.hasAttribute('data-lv')){
+    sheetLv = t.getAttribute('data-lv');
+    Array.prototype.forEach.call(document.querySelectorAll('.lv button'), function(b){ b.classList.toggle('on', b === t); });
+    updateSend(); return;
+  }
+  if(t.id === 'closeSheet'){ closeSheet(); return; }
+  if(t.id === 'sendRep'){
+    var p = document.getElementById('place').value.trim();
+    if(!sheetItem || !sheetLv || !p) return;
+    var arr = S.reports[sheetItem.id] = S.reports[sheetItem.id] || [];
+    arr.push({place:p, lv:sheetLv, t:Date.now()});
+    if(arr.length > 30) arr.splice(0, arr.length - 30);
+    save('reports', S.reports); save('lastPlace', p);
+    closeSheet(); render(); toast('已記錄，謝謝回報！'); return;
+  }
+  if(t.id === 'resetBtn'){
+    S.follow = {}; S.got = {}; S.reports = {};
+    save('follow', S.follow); save('got', S.got); save('reports', S.reports);
+    render(); toast('已清除'); return;
+  }
+  var host = t.closest('[data-id]');
+  if(!host) return;
+  var it = findItem(host.getAttribute('data-id'));
+  if(!it) return;
+  if(t.classList.contains('stamp')){ S.chain = '全部'; S.state = '全部'; S.q = it.film; document.getElementById('q').value = it.film; renderChips(); setTab('list'); return; }
+  var act = t.getAttribute('data-act');
+  if(act === 'follow'){
+    S.follow[it.film] = !S.follow[it.film]; if(!S.follow[it.film]) delete S.follow[it.film];
+    save('follow', S.follow); render(); toast(S.follow[it.film] ? '已追蹤《' + it.film.replace(/[《》]/g,'') + '》' : '已取消追蹤');
+  } else if(act === 'got'){
+    if(S.got[it.id]) delete S.got[it.id]; else S.got[it.id] = key(new Date());
+    save('got', S.got); render(); if(S.got[it.id]) toast('📒 收進收藏冊了');
+  } else if(act === 'report'){ openReport(it); }
+  else if(act === 'ics'){ downloadIcs(it); }
+});
+document.getElementById('mask').addEventListener('click', function(ev){ if(ev.target.id === 'mask') closeSheet(); });
+document.addEventListener('input', function(ev){
+  if(ev.target.id === 'q'){ S.q = ev.target.value.trim(); render(); }
+  if(ev.target.id === 'place') updateSend();
+});
+
+// ---------- init ----------
+document.getElementById('upd').innerHTML = '資料更新<br>' + esc(DATA.updated || '—') + '・' + ITEMS.length + ' 筆';
+if(['list','cal','follow','book','about'].indexOf(S.tab) < 0) S.tab = 'list';
+renderChips(); render();
+})();
+</script>
+</body>
+</html>
