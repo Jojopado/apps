@@ -239,6 +239,12 @@ function alertBox(msg){ document.getElementById('hint').textContent = msg; }
 
 renderList();
 if(window.innerWidth>=820) setSheet(true);
+// 一打開就把所有圖標框進畫面（避開上方標題列與下方清單）
+const mobile = window.innerWidth<820;
+map.fitBounds(STATIONS.filter(s=>s.lat).map(s=>[s.lat,s.lng]), {
+  paddingTopLeft:[mobile?24:384, 110],
+  paddingBottomRight:[mobile?24:24, mobile?window.innerHeight*0.46+24:24]
+});
 </script>
 </body>
 </html>
