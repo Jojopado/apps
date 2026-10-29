@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>台灣人生模擬器</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&display=swap">
+<style>
+/* 版面：單一畫面遊戲；上方四項數值、中間一張紙卡（四邊是四個選項，左右直書），下方年齡與提示 */
+:root{
+  --board:#17423f;      /* 教室黑板綠 */
+  --board-2:#1f544f;
+  --paper:#fbfaf5;
+  --ink:#1d2b2a;
+  --ink-soft:#5d6f6c;
+  --chalk:#d9e6e2;
+  --chalk-dim:#8fb0aa;
+  --taxi:#f2c230;       /* 計程車黃 */
+  --danger:#e5583f;
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--board);color:var(--chalk);font-family:var(--f-body);overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+#app{height:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-block:12px;box-sizing:border-box}
+
+/* 數值 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;align-items:center;gap:4px}
+.dot{height:12px;display:flex;align-items:center;justify-content:center}
+.dot i{display:block;border-radius:50%;background:var(--taxi);transition:width .15s,height .15s}
+.dot i.q{background:none;color:var(--taxi);font-style:normal;font-size:12px;font-weight:700;width:auto!important;height:auto!important}
+.stat .ico{font-size:22px;line-height:1}
+.stat .name{font-size:11px;color:var(--chalk-dim);letter-spacing:.1em}
+.bar{width:100%;max-width:64px;height:6px;border-radius:3px;background:var(--board-2);overflow:hidden}
+.bar b{display:block;height:100%;background:var(--chalk);transition:width .35s}
+.bar b.low{background:var(--danger)}
+.bar b.high{background:var(--taxi)}
+
+.meta{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--f-display)}
+.meta .age{font-size:26px;color:var(--paper);font-variant-numeric:tabular-nums}
+.meta .stage{font-size:14px;color:var(--chalk-dim)}
+
+/* 卡片 */
+.table{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center}
+.card{position:relative;width:100%;max-width:360px;height:100%;max-height:470px;background:var(--paper);color:var(--ink);
+  border-radius:20px;box-shadow:0 14px 30px rgba(0,0,0,.35);touch-action:none;user-select:none;-webkit-user-select:none;
+  cursor:grab;display:grid;grid-template-columns:44px 1fr 44px;grid-template-rows:auto 1fr auto;will-change:transform}
+.card.dragging{cursor:grabbing}
+.card.enter{animation:enter .28s ease-out}
+@keyframes enter{from{transform:scale(.92) translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.opt{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;line-height:1.35;color:var(--ink-soft);
+  padding:10px 6px;border-radius:12px;margin:6px;transition:background .12s,color .12s,opacity .12s;cursor:pointer;text-align:center}
+.opt .arr{font-weight:700;color:var(--ink)}
+.opt.u{grid-column:1/4;grid-row:1}
+.opt.d{grid-column:1/4;grid-row:3}
+.opt.l,.opt.r{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.05em;padding:8px 4px;grid-row:2}
+.opt.l{grid-column:1}
+.opt.r{grid-column:3}
+.opt.empty{visibility:hidden}
+.card.peek .opt{opacity:.35}
+.opt.on{background:var(--taxi);color:var(--ink);opacity:1!important;font-weight:700}
+.opt:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.body{grid-column:2;grid-row:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:4px 2px;min-width:0}
+.face{font-size:64px;line-height:1}
+.who{font-family:var(--f-display);font-size:15px;background:var(--board);color:var(--paper);padding:3px 12px;border-radius:999px}
+.say{font-family:var(--f-display);font-size:19px;line-height:1.55;text-wrap:balance}
+
+.hint{text-align:center;font-size:12px;color:var(--chalk-dim)}
+.toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--taxi);color:var(--ink);font-weight:700;
+  padding:8px 14px;border-radius:10px;font-size:14px;z-index:5;max-width:90%;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+
+/* 全頁畫面（開場／結局／圖鑑） */
+.screen{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sheet{background:var(--paper);color:var(--ink);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.sheet h1,.sheet h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance}
+.sheet h1{font-size:30px}
+.sheet h2{font-size:24px}
+.kicker{font-size:12px;letter-spacing:.15em;color:var(--ink-soft)}
+.idcard{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px;border:1.5px dashed var(--ink-soft);border-radius:12px;padding:12px 14px}
+.idcard dt{color:var(--ink-soft)}
+.idcard dd{margin:0;font-weight:700}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+button.big{font-family:var(--f-display);font-size:18px;border:0;border-radius:14px;padding:12px 18px;cursor:pointer;background:var(--taxi);color:var(--ink);flex:1}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink-soft)}
+button:focus-visible{outline:3px solid var(--chalk);outline-offset:2px}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.timeline li{display:grid;grid-template-columns:44px 1fr;gap:8px}
+.timeline .y{font-variant-numeric:tabular-nums;color:var(--ink-soft);text-align:right}
+.dex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dex div{border-radius:10px;padding:10px 6px;text-align:center;font-size:13px;background:#eef1ec;min-height:44px;display:flex;align-items:center;justify-content:center}
+.dex div.lock{color:#9aa7a4}
+.dex div.new{background:var(--taxi);font-weight:700}
+.small{font-size:13px;color:var(--ink-soft)}
+@media (prefers-reduced-motion:reduce){.card.enter{animation:none}.bar b,.dot i{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// 數值順序：[錢, 健康, 快樂, 人際]
+const STATS=[{ico:'💰',name:'錢'},{ico:'❤️',name:'健康'},{ico:'😊',name:'快樂'},{ico:'👥',name:'人際'}];
+
+const STAGES=[
+  {id:'kid',  name:'童年',   from:7,  to:12, n:3},
+  {id:'teen', name:'國高中', from:13, to:17, n:3},
+  {id:'young',name:'大學・當兵', from:18, to:24, n:4},
+  {id:'work', name:'出社會', from:25, to:34, n:4},
+  {id:'home', name:'成家',   from:33, to:45, n:4},
+  {id:'mid',  name:'中年',   from:46, to:64, n:3},
+  {id:'old',  name:'退休',   from:65, to:80, n:3},
+];
+
+// opts: u上 d下 l左 r右。e=[錢,健康,快樂,人際]；set/unset 旗標；chance 為機率結果
+const CARDS=[
+ // 童年
+ {st:'kid',face:'👩',who:'媽媽',say:'暑假要幫你報才藝班，你想學什麼？',
+  l:{t:'鋼琴',e:[-10,0,-5,0]},r:{t:'珠心算',e:[-5,0,-10,0]},u:{t:'游泳',e:[-5,10,5,0]},d:{t:'不要，我要看卡通',e:[0,-5,15,-5]}},
+ {st:'kid',face:'🧒',who:'同學',say:'下課要不要一起去福利社？',
+  l:{t:'請大家吃',e:[-10,0,5,15]},r:{t:'自己買自己的',e:[-5,0,5,0]},u:{t:'留在教室寫作業',e:[0,0,-5,-5]},d:{t:'去操場打躲避球',e:[0,10,10,5]}},
+ {st:'kid',face:'👵',who:'阿嬤',say:'過年的紅包，要給媽媽「幫你保管」嗎？',
+  l:{t:'交給媽媽',e:[0,0,-10,5]},r:{t:'自己存撲滿',e:[10,0,5,0]},u:{t:'全部買玩具',e:[-5,0,15,0]},d:{t:'拿去郵局開戶',e:[15,0,-5,0]}},
+ {st:'kid',face:'👨‍🏫',who:'老師',say:'新學期，誰要當班長？',
+  l:{t:'舉手',e:[0,-5,0,15]},r:{t:'推薦隔壁同學',e:[0,0,5,-5]},u:{t:'假裝在睡覺',e:[0,0,5,-5]},d:{t:'改當風紀股長',e:[0,0,-5,10]}},
+
+ // 國高中
+ {st:'teen',face:'🏫',who:'補習班主任',say:'學長姐都上台大了，要不要先報名？',
+  l:{t:'報全科',e:[-15,-10,-10,5]},r:{t:'只補數學',e:[-5,-5,0,0]},u:{t:'自己讀就好',e:[0,0,5,0]},d:{t:'去打籃球',e:[0,10,10,5]}},
+ {st:'teen',face:'🎮',who:'好朋友',say:'放學去網咖開黑？',
+  l:{t:'走啊',e:[-5,-5,15,10]},r:{t:'回家讀書',e:[0,0,-10,-5]},u:{t:'只玩一小時',e:[-3,0,5,5]},d:{t:'去河堤騎腳踏車',e:[0,10,5,5]}},
+ {st:'teen',face:'💌',who:'隔壁班同學',say:'有人在你抽屜放了一張紙條。',
+  l:{t:'寫信回覆',e:[0,0,15,5]},r:{t:'裝沒看到',e:[0,0,-10,-5]},u:{t:'拿給全班看',e:[0,0,5,-15]},d:{t:'約週末看電影',e:[-10,0,10,10]}},
+ {st:'teen',face:'📊',who:'導師',say:'會考成績出來了，你想念哪裡？',pos:'last',must:true,
+  l:{t:'明星高中',e:[0,-10,-5,5],set:'elite'},r:{t:'社區高中',e:[0,0,5,5]},u:{t:'高職學技術',e:[5,0,5,0],set:'skill'},d:{t:'五專',e:[0,0,10,0]}},
+
+ // 大學・當兵
+ {st:'young',face:'📝',who:'學測放榜',say:'學測考完，分數普通。',pos:'first',must:true,
+  l:{t:'重考一年',e:[-10,-10,-15,-5],set:'college'},r:{t:'私立熱門科系',e:[-15,0,5,5],set:'college'},u:{t:'國立冷門科系',e:[-5,0,0,0],set:'college'},d:{t:'直接去工作',e:[15,-5,-5,0],set:'worker'}},
+ {st:'young',face:'🛏️',who:'室友',say:'室友每天打電動到凌晨三點。',req:'college',
+  l:{t:'直接跟他講',e:[0,5,0,-10]},r:{t:'戴耳塞忍耐',e:[0,-10,-5,5]},u:{t:'乾脆加入他',e:[0,-10,15,10]},d:{t:'搬出去租雅房',e:[-15,5,5,-5]}},
+ {st:'young',face:'🧋',who:'學姊',say:'缺錢嗎？要不要打工？',
+  l:{t:'手搖飲店',e:[10,-5,0,5]},r:{t:'當家教',e:[15,0,-5,0]},u:{t:'超商大夜班',e:[15,-15,-5,0]},d:{t:'不打工，玩社團',e:[-10,0,10,15]}},
+ {st:'young',face:'🪖',who:'兵單',say:'兵單寄來了。',sex:'男',must:true,
+  l:{t:'乖乖去當兵',e:[0,10,-10,10]},r:{t:'想辦法延畢',e:[-10,0,0,-5]},u:{t:'簽志願役',e:[20,5,-10,0]},d:{t:'申請替代役',e:[0,0,5,0]}},
+ {st:'young',face:'🎓',who:'畢業典禮',say:'畢業了，下一步呢？',req:'college',pos:'last',must:true,
+  l:{t:'讀研究所',e:[-10,0,-5,0],set:'master'},r:{t:'進科技業',e:[15,-10,0,0],set:'tech'},u:{t:'出國打工度假',e:[-5,5,15,5]},d:{t:'考公務員',e:[0,0,-5,0],set:'civil'}},
+ {st:'young',face:'🌏',who:'朋友',say:'畢業旅行要去哪？',
+  l:{t:'日本自由行',e:[-15,0,15,5]},r:{t:'墾丁就好',e:[-5,0,10,5]},u:{t:'不去，省錢',e:[5,0,-5,-10]},d:{t:'一個人去環島',e:[-5,10,10,-5]}},
+
+ // 出社會
+ {st:'work',face:'👔',who:'老闆',say:'這個案子下班前要，今晚可以加班吧？',
+  l:{t:'好的老闆',e:[5,-10,-10,0]},r:{t:'準時下班',e:[0,5,5,-10]},u:{t:'丟給實習生',e:[0,0,5,-10]},d:{t:'要求補休',e:[0,0,5,-5]}},
+ {st:'work',face:'💼',who:'獵頭',say:'年終只發 1.5 個月，要不要考慮跳槽？',
+  l:{t:'跳槽加薪',e:[15,0,0,-5]},r:{t:'繼續待著',e:[0,0,-5,5]},u:{t:'去新竹當工程師',e:[20,-15,-5,-5]},d:{t:'辭職去日本打工度假',e:[-15,5,20,0]}},
+ {st:'work',face:'🏠',who:'房東',say:'下個月起，房租要漲 3000。',
+  l:{t:'只好接受',e:[-15,0,-5,0]},r:{t:'搬回家住',e:[10,0,-10,-5]},u:{t:'搬去更遠更便宜的',e:[5,-5,-5,0]},d:{t:'找朋友合租',e:[5,0,0,10]}},
+ {st:'work',face:'🛵',who:'拖吊場',say:'你的機車又被拖吊了。',
+  l:{t:'乖乖去領',e:[-5,0,-10,0]},r:{t:'乾脆買新車',e:[-15,0,10,0]},u:{t:'改搭捷運公車',e:[0,5,0,0]},d:{t:'在臉書社團開罵',e:[0,0,5,5]}},
+ {st:'work',face:'📈',who:'同事',say:'我最近買股票賺很多，要不要一起？',
+  l:{t:'定期定額 ETF',e:[10,0,0,0]},
+  r:{t:'全部梭哈飆股',chance:{p:.45,ok:{t:'飆股漲停！你賺翻了',e:[25,0,10,0]},ng:{t:'飆股變壁紙，存款蒸發',e:[-25,-5,-10,0]}}},
+  u:{t:'跟他買虛擬貨幣',chance:{p:.3,ok:{t:'幣價翻十倍！',e:[30,0,10,0]},ng:{t:'交易所倒了，錢拿不回來',e:[-25,0,-10,-5]}}},
+  d:{t:'不碰，存定存',e:[5,0,-5,0]}},
+ {st:'work',face:'📱',who:'好朋友',say:'都單身這麼久了，要不要試試交友軟體？',must:true,
+  l:{t:'認真滑',e:[-5,0,5,10],set:'partner'},r:{t:'參加聯誼',e:[-10,0,10,10],set:'partner'},u:{t:'單身很好',e:[5,0,5,-10]},d:{t:'讓媽媽安排相親',e:[0,0,-10,5],set:'partner'}},
+
+ // 成家
+ {st:'home',face:'💍',who:'另一半',say:'交往三年了，我們要結婚嗎？',req:'partner',pos:'first',must:true,
+  l:{t:'辦婚禮宴客',e:[-20,0,10,15],set:'married'},r:{t:'登記就好',e:[0,0,5,0],set:'married'},u:{t:'再等等',e:[0,0,-5,-5]},d:{t:'分手',e:[5,0,-15,-10],unset:'partner'}},
+ {st:'home',face:'🧓',who:'親戚',say:'過年圍爐：「啊你什麼時候要結婚？」',
+  l:{t:'快了快了',e:[0,0,-5,5]},r:{t:'反問他薪水多少',e:[0,0,10,-15]},u:{t:'躲去廁所',e:[0,0,0,-5]},d:{t:'幫阿伯倒酒轉移話題',e:[0,-5,0,10]}},
+ {st:'home',face:'🏢',who:'房仲',say:'這間 30 坪，總價 2800 萬，只要背 30 年房貸。',
+  l:{t:'買了！',e:[-25,-5,10,0],set:'house'},r:{t:'繼續租屋',e:[0,0,-5,0]},u:{t:'請爸媽出頭期款',e:[-10,0,5,-5],set:'house'},d:{t:'搬回南部買',e:[-10,0,10,-5],set:'house'}},
+ {st:'home',face:'👶',who:'另一半',say:'我們要生小孩嗎？',req:'married',
+  l:{t:'生一個',e:[-15,-10,10,10],set:'kid'},r:{t:'生兩個',e:[-25,-15,15,10],set:'kid'},u:{t:'當頂客族',e:[10,0,5,-5]},d:{t:'養貓就好',e:[-5,0,10,0]}},
+ {st:'home',face:'🩺',who:'健檢報告',say:'報告上一整排紅字。',
+  l:{t:'開始運動',e:[-5,15,-5,0]},r:{t:'買保健食品',e:[-10,5,0,0]},u:{t:'不看就沒事',e:[0,-15,5,0]},d:{t:'戒掉手搖飲',e:[5,10,-10,0]}},
+
+ // 中年
+ {st:'mid',face:'🧑‍🎓',who:'孩子',say:'同學都在補習和上才藝，我也要！',req:'kid',
+  l:{t:'全部報名',e:[-20,0,-5,5]},r:{t:'自己教',e:[0,-10,0,5]},u:{t:'讓他自由長大',e:[0,0,10,-5]},d:{t:'送出國念書',e:[-30,0,0,5]}},
+ {st:'mid',face:'👴',who:'爸媽',say:'爸媽年紀大了，需要人照顧。',
+  l:{t:'請外籍看護',e:[-15,0,0,0]},r:{t:'辭職自己照顧',e:[-20,-10,-5,10]},u:{t:'兄弟姊妹輪流',e:[-5,-5,0,-5]},d:{t:'送安養中心',e:[-10,0,-10,-5]}},
+ {st:'mid',face:'🏍️',who:'中年的你',say:'突然好想做點不一樣的事。',
+  l:{t:'買重機',e:[-20,0,15,5]},r:{t:'開始爬百岳',e:[-5,15,10,5]},u:{t:'報名馬拉松',e:[-5,10,5,5]},d:{t:'算了吧',e:[5,0,-10,0]}},
+ {st:'mid',face:'📦',who:'人資',say:'公司組織調整，你被優退了。',
+  l:{t:'拿資遣費休息',e:[10,5,5,-5]},r:{t:'馬上找新工作',e:[0,-10,-5,0]},u:{t:'開早餐店',e:[-15,-5,10,10]},
+  d:{t:'開 YouTube 頻道',chance:{p:.35,ok:{t:'影片爆紅！訂閱破十萬',e:[20,0,15,10]},ng:{t:'三個月 87 個訂閱',e:[-10,0,-10,0]}}}},
+ {st:'mid',face:'🧑‍🦳',who:'里長',say:'要不要加入社區巡守隊？',
+  l:{t:'加入',e:[0,5,0,15]},r:{t:'婉拒',e:[0,0,0,-5]},u:{t:'捐錢就好',e:[-5,0,0,5]},
+  d:{t:'乾脆出來選里長',chance:{p:.4,ok:{t:'高票當選里長！',e:[-10,-5,10,20]},ng:{t:'落選，花光競選經費',e:[-20,0,-10,5]}}}},
+
+ // 退休
+ {st:'old',face:'🎣',who:'退休第一天',say:'退休了，每天要做什麼？',pos:'first',must:true,
+  l:{t:'去公園下棋',e:[0,5,5,10]},r:{t:'環島旅行',e:[-15,5,15,0]},u:{t:'繼續兼差',e:[10,-10,0,0]},d:{t:'學跳廣場舞',e:[0,10,10,10]}},
+ {st:'old',face:'📞',who:'陌生來電',say:'「您好，這裡是健保局，您的帳戶涉及洗錢……」',
+  l:{t:'照指示轉帳',e:[-30,0,-10,0]},r:{t:'直接掛斷',e:[0,0,5,0]},u:{t:'打 165 檢舉',e:[0,0,5,5]},d:{t:'陪他聊天浪費他時間',e:[0,0,10,0]}},
+ {st:'old',face:'🧒',who:'孫子',say:'阿公阿嬤，我教你玩手機遊戲！',req:'kid',
+  l:{t:'好啊學',e:[0,0,10,10]},r:{t:'叫他去讀書',e:[0,0,-5,-10]},u:{t:'偷偷課金',e:[-10,0,15,0]},d:{t:'教他下象棋',e:[0,0,5,10]}},
+ {st:'old',face:'📺',who:'電視購物',say:'神奇關節膠囊，現在打電話買二送一！',
+  l:{t:'買三盒',e:[-15,0,5,0]},r:{t:'去復健科',e:[-5,10,0,0]},u:{t:'問 LINE 群組',e:[0,-5,0,10]},d:{t:'去爬山',e:[0,10,5,5]}},
+];
+
+const EXT={ // 數值歸零 / 爆表的結局
+ '0-0':{t:'卡債人生',d:'卡費、房租、貸款一起來。你只能搬回老家，被爸媽念到老。'},
+ '0-1':{t:'錢多到煩',d:'親戚天天來借錢，詐騙集團也盯上你。你帶著存款搬到國外，從此沒人找得到你。'},
+ '1-0':{t:'爆肝',d:'連續熬夜加班，你在辦公桌前倒下。老闆在告別式上說你是公司的好員工。'},
+ '1-1':{t:'健身狂人',d:'你每天練六小時，蛋白粉當水喝，最後挑戰鐵人三項時受傷，只好提早退休。'},
+ '2-0':{t:'厭世',d:'你對一切都失去興趣，把手機關機，搬到山上種茶，再也沒下山。'},
+ '2-1':{t:'快樂過頭',d:'你每天只做開心的事，帳單全塞在抽屜裡，直到法院的信寄來。'},
+ '3-0':{t:'邊緣人',d:'群組沒人回你，過年也沒人找你。你養了十二隻貓，牠們是你唯一的家人。'},
+ '3-1':{t:'人情壓力',d:'每週都有婚喪喜慶要跑，紅包包到破產，還被推出來當里長，從此沒有私人時間。'},
+};
+const NAT=[ // 平安活到最後，依最高數值決定稱號
+ {id:'n0',t:'富足晚年',d:'你存夠了錢，晚年不愁吃穿。'},
+ {id:'n1',t:'長壽人瑞',d:'你身體硬朗，活成了里民口中的人瑞。'},
+ {id:'n2',t:'知足常樂',d:'你這輩子沒大富大貴，但每天都過得很開心。'},
+ {id:'n3',t:'人緣王',d:'告別式來了好多人，大家都說你是個好人。'},
+];
+const ALL_ENDINGS=[...Object.keys(EXT).map(k=>({id:k,t:EXT[k].t})),...NAT];
+
+const CITIES=[
+ {n:'台北',e:[5,0,-5,0]},{n:'新竹',e:[5,0,0,-5]},{n:'台中',e:[0,0,0,5]},
+ {n:'台南',e:[0,0,5,0]},{n:'高雄',e:[0,0,5,0]},{n:'花蓮',e:[-5,5,0,0]},
+];
+const FAMS=[{n:'富裕',m:65},{n:'小康',m:50},{n:'辛苦',m:35}];
+
+// ---- 小工具 ----
+const $=s=>document.querySelector(s);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const clamp=v=>Math.max(0,Math.min(100,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function loadDex(){try{return JSON.parse(localStorage.getItem('twlife-dex')||'[]')}catch(e){return[]}}
+function saveDex(d){try{localStorage.setItem('twlife-dex',JSON.stringify(d))}catch(e){}}
+
+let G=null;   // 這一世的狀態
+let cur=null; // 目前卡片 {card, age}
+
+function newLife(){
+  const city=pick(CITIES),fam=pick(FAMS),sex=Math.random()<.5?'男':'女';
+  const s=[fam.m,50,50,50].map((v,i)=>clamp(v+city.e[i]));
+  if(fam.n==='辛苦') s[3]+=5;
+  G={stats:s,city:city.n,fam:fam.n,sex,flags:new Set(),log:[],stage:-1,queue:[]};
+}
+const reqOk=c=>(!c.req||G.flags.has(c.req))&&(!c.sex||c.sex===G.sex);
+
+function buildStage(){
+  const st=STAGES[G.stage];
+  const pool=CARDS.filter(c=>c.st===st.id&&reqOk(c));
+  const must=pool.filter(c=>c.must);
+  const opt=shuffle(pool.filter(c=>!c.must)).slice(0,Math.max(0,st.n-must.length));
+  const mid=shuffle([...opt,...must.filter(c=>!c.pos)]);
+  const list=[...must.filter(c=>c.pos==='first'),...mid,...must.filter(c=>c.pos==='last')];
+  G.queue=list.map((c,i)=>({card:c,age:st.from+Math.floor(i*(st.to-st.from)/Math.max(1,list.length))}));
+}
+function nextCard(){
+  for(;;){
+    while(!G.queue.length){
+      G.stage++;
+      if(G.stage>=STAGES.length) return null;
+      buildStage();
+    }
+    const q=G.queue.shift();
+    if(reqOk(q.card)) return q; // 例如分手後就不會出現生小孩
+  }
+}
+
+// ---- 畫面 ----
+function statsHTML(){
+  return `<div class="stats">${STATS.map((s,i)=>`<div class="stat"><div class="dot" id="dot${i}"></div><div class="ico">${s.ico}</div><div class="bar"><b id="bar${i}"></b></div><div class="name">${s.name}</div></div>`).join('')}</div>`;
+}
+function paintStats(){
+  G.stats.forEach((v,i)=>{const b=$('#bar'+i);if(!b)return;b.style.width=v+'%';b.className=v<=20?'low':v>=80?'high':''});
+}
+function paintDots(o){
+  for(let i=0;i<4;i++){
+    const d=$('#dot'+i);if(!d)continue;
+    if(!o){d.innerHTML='';continue}
+    if(o.chance){d.innerHTML=(o.chance.ok.e[i]||o.chance.ng.e[i])?'<i class="q">?</i>':'';continue}
+    const v=Math.abs(o.e[i]);const px=v===0?0:v<=5?6:v<=10?9:12;
+    d.innerHTML=px?`<i style="width:${px}px;height:${px}px"></i>`:'';
+  }
+}
+
+function showIntro(){
+  newLife();
+  $('#app').innerHTML=`<div class="screen"><div class="sheet">
+    <div class="kicker">出生證明</div>
+    <h1>恭喜，你出生了！</h1>
+    <dl class="idcard"><dt>出生地</dt><dd>${G.city}</dd><dt>家境</dt><dd>${G.fam}</dd><dt>性別</dt><dd>${G.sex}</dd></dl>
+    <p class="small">往四個方向拖曳卡片來做選擇（電腦可用方向鍵）。錢、健康、快樂、人際任何一項歸零或爆表，人生就結束了。</p>
+    <div class="btns"><button class="big" id="go">開始人生</button><button class="big ghost" id="dexb">結局圖鑑</button></div>
+  </div></div>`;
+  $('#go').onclick=startPlay;
+  $('#dexb').onclick=()=>showDex(showIntro);
+}
+
+function startPlay(){
+  $('#app').innerHTML=`${statsHTML()}
+    <div class="meta"><span class="age" id="age"></span><span class="stage" id="stg"></span></div>
+    <div class="table" id="table"></div>
+    <div class="hint">拖曳卡片偷看選項，拖到底就決定・電腦可按方向鍵</div>`;
+  paintStats();
+  advance();
+}
+
+function advance(toast){
+  cur=nextCard();
+  if(!cur) return endLife(null);
+  $('#age').textContent=cur.age+' 歲';
+  $('#stg').textContent=STAGES[G.stage].name+'・'+G.city+'出生';
+  const c=cur.card;
+  const lab=(k,arr)=>c[k]?`<div class="opt ${k}" data-k="${k}" tabindex="0"><span class="arr">${arr}</span><span>${esc(c[k].t)}</span></div>`:`<div class="opt ${k} empty"></div>`;
+  $('#table').innerHTML=`${toast?`<div class="toast">${esc(toast)}</div>`:''}
+    <div class="card enter" id="card">
+      ${lab('u','↑')}${lab('l','←')}
+      <div class="body"><div class="face">${c.face}</div><div class="who">${esc(c.who)}</div><div class="say">${esc(c.say)}</div></div>
+      ${lab('r','→')}${lab('d','↓')}
+    </div>`;
+  if(toast) setTimeout(()=>{const t=document.querySelector('.toast');if(t)t.remove()},2200);
+  bindCard($('#card'));
+}
+
+function bindCard(el){
+  let sx=0,sy=0,dragging=false,dir=null;
+  const TH=36,GO=100;
+  const setPeek=k=>{
+    dir=k;
+    el.classList.toggle('peek',!!k);
+    el.querySelectorAll('.opt').forEach(o=>o.classList.toggle('on',o.dataset.k===k));
+    paintDots(k?cur.card[k]:null);
+  };
+  el.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.opt')&&e.pointerType==='mouse') return; // 滑鼠點選項＝直接選
+    dragging=true;sx=e.clientX;sy=e.clientY;el.setPointerCapture(e.pointerId);el.classList.add('dragging');el.style.transition='none';
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!dragging) return;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    el.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/18}deg)`;
+    let k=null;
+    if(Math.hypot(dx,dy)>TH){k=Math.abs(dx)>Math.abs(dy)?(dx<0?'l':'r'):(dy<0?'u':'d')}
+    if(k&&!cur.card[k]) k=null;
+    if(k!==dir) setPeek(k);
+  });
+  const up=e=>{
+    if(!dragging) return;
+    dragging=false;el.classList.remove('dragging');
+    const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(dir&&Math.hypot(dx,dy)>GO){choose(dir);return}
+    el.style.transition='transform .2s';el.style.transform='';setPeek(null);
+  };
+  el.addEventListener('pointerup',up);
+  el.addEventListener('pointercancel',up);
+  el.querySelectorAll('.opt[data-k]').forEach(o=>{
+    o.addEventListener('mouseenter',()=>setPeek(o.dataset.k));
+    o.addEventListener('mouseleave',()=>setPeek(null));
+    o.addEventListener('click',()=>choose(o.dataset.k));
+    o.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(o.dataset.k)}});
+  });
+}
+
+let busy=false;
+function choose(k){
+  if(busy||!cur||!cur.card[k]) return;
+  busy=true;
+  const o=cur.card[k];
+  let eff=o.e,toast=null,logT=o.t;
+  if(o.chance){const win=Math.random()<o.chance.p;const r=win?o.chance.ok:o.chance.ng;eff=r.e;toast=r.t;logT=o.t+'（'+r.t+'）'}
+  G.stats=G.stats.map((v,i)=>clamp(v+(eff[i]||0)));
+  if(o.set) G.flags.add(o.set);
+  if(o.unset) G.flags.delete(o.unset);
+  G.log.push({age:cur.age,t:logT,who:cur.card.who});
+  paintStats();paintDots(null);
+  const el=$('#card');
+  const v={l:[-1,0],r:[1,0],u:[0,-1],d:[0,1]}[k];
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.style.transition=reduce?'none':'transform .25s ease-in,opacity .25s';
+  el.style.transform=`translate(${v[0]*600}px,${v[1]*700}px) rotate(${v[0]*25}deg)`;
+  el.style.opacity='0';
+  setTimeout(()=>{
+    busy=false;
+    const dead=G.stats.findIndex(s=>s<=0||s>=100);
+    if(dead>=0) return endLife(dead+'-'+(G.stats[dead]>=100?1:0),toast);
+    advance(toast);
+  },reduce?0:260);
+}
+
+function endLife(extKey,toast){
+  let id,title,desc,age;
+  if(extKey){
+    id=extKey;title=EXT[extKey].t;desc=EXT[extKey].d;age=cur.age;
+  }else{
+    const hi=G.stats.indexOf(Math.max(...G.stats));
+    const n=NAT[hi];id=n.id;title=n.t;desc=n.d;
+    age=Math.round(72+G.stats[1]/5+Math.random()*6);
+  }
+  const dex=loadDex();const isNew=!dex.includes(id);
+  if(isNew){dex.push(id);saveDex(dex)}
+  const facts=[];
+  if(G.flags.has('master'))facts.push('研究所畢業');
+  if(G.flags.has('tech'))facts.push('科技業');
+  if(G.flags.has('civil'))facts.push('公務員');
+  if(G.flags.has('married'))facts.push('已婚');
+  if(G.flags.has('kid'))facts.push('有小孩');
+  if(G.flags.has('house'))facts.push('有房');
+  $('#app').innerHTML=`<div class="screen"><div class="sheet">
+    <div class="kicker">${age} 歲・${G.city}出生・家境${G.fam}</div>
+    <h1>${esc(title)}</h1>
+    ${toast?`<p class="small">最後一件事：${esc(toast)}</p>`:''}
+    <p>${esc(desc)}</p>
+    ${facts.length?`<p class="small">這一生：${facts.join('、')}</p>`:''}
+    <p class="small">結局圖鑑 ${dex.length} / ${ALL_ENDINGS.length}${isNew?'・新結局！':''}</p>
+    <div class="btns"><button class="big" id="again">再活一次</button><button class="big ghost" id="dexb">結局圖鑑</button></div>
+  </div>
+  <div class="sheet"><h2>人生年表</h2><ol class="timeline">${G.log.map(l=>`<li><span class="y">${l.age}</span><span>${esc(l.who)}：${esc(l.t)}</span></li>`).join('')}</ol></div>
+  </div>`;
+  $('#again').onclick=showIntro;
+  $('#dexb').onclick=()=>showDex(()=>endLifeBack(extKey,toast,id));
+  // 回到結局畫面時不重複計算
+  endLifeBack.html=$('#app').innerHTML;
+}
+function endLifeBack(){ $('#app').innerHTML=endLifeBack.html; $('#again').onclick=showIntro; $('#dexb').onclick=()=>showDex(endLifeBack); }
+
+function showDex(back){
+  const dex=loadDex();
+  $('#app').innerHTML=`<div class="screen"><div class="sheet">
+    <h2>結局圖鑑</h2><p class="small">已解鎖 ${dex.length} / ${ALL_ENDINGS.length}</p>
+    <div class="dex">${ALL_ENDINGS.map(e=>dex.includes(e.id)?`<div>${esc(e.t)}</div>`:`<div class="lock">？？？</div>`).join('')}</div>
+    <div class="btns"><button class="big" id="back">返回</button></div>
+  </div></div>`;
+  $('#back').onclick=back;
+}
+
+addEventListener('keydown',e=>{
+  if(!cur||!$('#card')) return;
+  const k={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d'}[e.key];
+  if(k){e.preventDefault();choose(k)}
+});
+
+showIntro();
+</script>
+</body>
+</html>
