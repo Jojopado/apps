@@ -675,7 +675,7 @@ function foldByPoints(paper,s,t,opt){
   const key=f=>f.src+':'+f.side, want=new Set(cut.facets.filter(f=>moveSet.has(f.id)).map(key));
   for(const f of cut2.facets) if(srcs.has(f.src) && want.has(key(f))) mv2.add(f.id);
   const before=copyPaper(cut2); moveSet=mv2;
-  return applyMove(before, [{ids:moveSet, M:reflM(P,n)}], type, {P,n,preview:o.preview, orig:paper});
+  return applyMove(before, [{ids:moveSet, M:reflM(P,n)}], type, {P,n,preview:o.preview, orig:paper, strict:o.strict});
 }
 /* 套用一組剛體移動（每組 ids 乘上 M），再求層序。type 決定新摺痕（鉸鏈）上誰在上面。 */
 function applyMove(before, groups, type, info={}){
@@ -721,6 +721,7 @@ function applyMove(before, groups, type, info={}){
     p.order=hard; assignZ(p);
   } else {
     let order=solveLayers(p,hard,hints);
+    if(!order && info.strict) return null;   // 嚴格模式（自由創作）：真紙做不到的就不摺
     if(!order && typeof SOLVE_LOG!=='undefined') SOLVE_LOG.push('fallback');
     if(!order){ // 解不出來：放掉「維持原樣」以外的硬限制再試
       const h2=new Map(); for(const [k,v] of hard){ const [a,b]=k.split('|').map(Number); if(!moved.has(a)&&!moved.has(b)) h2.set(k,v); }
@@ -1657,7 +1658,13 @@ function drawScene(c,V,t){
 }
 // 平常就在紙上顯示主要吸附點（角、邊中點、摺痕交點），方便對準
 const dotCache=new WeakMap();
+// 按在紙上或紙的邊緣附近（小朋友常常剛好按在邊或角上）
+function nearPaper(f,h){ if(topAt(paper,f[0],f[1])) return true; const r=14/view.s;
+  if(h&&h.s&&Math.hypot(h.s[0]-f[0],h.s[1]-f[1])<r*2) return true;
+  for(let k=0;k<12;k++){ const a=k*Math.PI/6; if(topAt(paper,f[0]+Math.cos(a)*r,f[1]+Math.sin(a)*r)) return true; } return false; }
+function isKid(){ return !!(lv && !lv.free && $('app').classList.contains('kid')); }
 function drawSnapDots(c,V){
+  if(isKid()) return;   // 兒童版只看提示的起點、終點
   let pts=dotCache.get(paper); if(!pts){ withLevels(paper); pts=snapPoints(paper).filter(e=>e.major).map(e=>{ let z=0; for(const f of paper.facets) if(pipInc(f.pts,e.p)) z=Math.max(z,f.zl||0); return [e.p[0],e.p[1],z]; }); dotCache.set(paper,pts); }
   const r=Math.max(2.8, Math.min(4.2, V.s/85));   // 白點：加大＋深色外框，任何紙色上都看得到
   c.save();
@@ -1727,7 +1734,7 @@ function drawOverlays(c,V){
   }
 }
 function drawLoupe(){
-  if(!drag || drag.pan || drag.paused || drag.compound || !(drag.gain<1)) return;   // 只在慢慢拖（微調）時出現
+  if(!drag || drag.pan || drag.paused || drag.compound || !(drag.gain<1) || isKid()) return;   // 只在慢慢拖（微調）時出現
   const R=Math.min(62, W*.16), off=R+46;
   let lx=drag.hx, ly=drag.hy-off; if(ly<R+6) ly=drag.hy+off;
   lx=Math.max(R+6, Math.min(W-R-6, lx));
@@ -1792,7 +1799,7 @@ cv.addEventListener('pointerdown',e=>{
 },true);
 cv.addEventListener('pointermove',e=>{
   if(v3) return;
-  if(e.pointerType==='mouse'){ mouseW=toWorld(...evPos(e)); if(!drag){ hoverTip(e);
+  if(e.pointerType==='mouse'){ mouseW=toWorld(...evPos(e)); if(!drag && !isKid()){ hoverTip(e);
       const [X,Y]=evPos(e), f=pickWorld(X,Y); let b=null, bd=30/view.s; let sps=spCache.get(paper); if(!sps){ sps=snapPoints(paper).filter(sp=>sp.major); spCache.set(paper,sps); } for(const sp of sps){ const d=Math.hypot(sp.p[0]-f[0],sp.p[1]-f[1]); if(d<bd){ bd=d; b=sp.p; } }
       if((b&&!hoverPt)||(!b&&hoverPt)||(b&&hoverPt&&(b[0]!==hoverPt[0]||b[1]!==hoverPt[1]))){ hoverPt=b; cv.style.cursor=b?'grab':''; draw(); } } }
   if(e.pointerType==='mouse' && e.button===2){ if(e.buttons&2){ if(!drag) setPin(toWorld(...evPos(e)),'rmb'); } else if(pinSrc==='rmb') setPin(null); return; }
@@ -1847,7 +1854,15 @@ function startDrag(e){
   const [X,Y]=evPos(e), f=pickWorld(X,Y);
   if(stickerMode){ placeSticker(f); return; }
   const h=hintCache;
-  if(h && h.vertex && (Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38 || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1])))){
+  // 兒童版教學關：不能摺錯。紙上任何地方拖都只會照這一步摺；拖空白處＝轉視角／平移
+  const kidT=isKid();
+  if(kidT){
+    if(!nearPaper(f,h)){ startPan(e,viewMode==='3d'); return; }
+    if(!h){ SFX.oops(); showToast('按「回去」退一步'); $('undo').classList.add('pulse'); return; }
+    if(h.done) return;
+    if(h.flip||h.rot){ SFX.oops(); showToast(h.flip?'先按「翻面」！':'先把紙轉一下！'); const b=$(h.flip?'flip':'rot'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); return; }
+  }
+  if(h && h.vertex && (kidT || Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38 || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1])))){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
     let out=compoundStep(paper, lv.steps[h.i]);
     if(!out){ out=compoundStep(stages[h.i], lv.steps[h.i]); if(out) paper=stages[h.i]; }
@@ -1861,12 +1876,12 @@ function startDrag(e){
     const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
     drag={s:lockS, follow:lockFollow, points, lines:lineTargets(points,lockS,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, x0:X, y0:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free', pid:e.pointerId, hold:pin, locked:true};
     $('coach').hidden=true; hideToast(); updateDrag(X,Y); return; }
-  if(h && h.s && !h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<40){
+  if(h && h.s && !h.vertex && (kidT || Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<40)){
     follow=h;
-    if(h.type!==foldType || h.scope!==scope || (h.scope==='layers'&&layerN!==h.n)){ setType(h.type); if(h.scope==='layers') layerN=h.n||1; setScope(h.scope); showToast(`照提示：已切成「${TYPES[h.type].name}・${hScope(h)}」`); }
+    if(h.type!==foldType || h.scope!==scope || (h.scope==='layers'&&layerN!==h.n)){ setType(h.type); if(h.scope==='layers') layerN=h.n||1; setScope(h.scope); if(!kidT) showToast(`照提示：已切成「${TYPES[h.type].name}・${hScope(h)}」`); }
   }
   // 教學關照提示摺（不是「位置自己決定」那種）：固定沿著提示的箭頭，避免拖歪了紙亂跳
-  const guideH = !lv.free && h && h.s && !h.vertex && !h.free && !pinMode && (follow || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1]))) ? h : null;
+  const guideH = !lv.free && h && h.s && !h.vertex && (kidT || !h.free) && !pinMode && (kidT || follow || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1]))) ? h : null;
   if(guideH){ const o={type:guideH.type, scope:guideH.scope, n:guideH.n||1, hold:pin};
     const fin=foldByPoints(paper,guideH.s,guideH.t,o), mid=fin&&guideH.type==='crease' ? (foldByPoints(paper,guideH.s,guideH.t,{...o,type:'valley'})||{}).res : null;
     if(fin){ try{ cv.setPointerCapture(e.pointerId); }catch(_){}
@@ -1930,7 +1945,7 @@ function endDrag(e){ if(!drag) return;
     const mid=fin&&foldType==='crease' ? (foldByPoints(paper, d.s, d.t, {...foldOpts(d), type:'valley'})||{}).res : null;
     if(fin) startAnim(fin, mid); else { showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了'); draw(); } } else { if(d.t && Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6) showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了（紙會穿過自己）'); draw(); }
 }
-function foldOpts(d,preview){ return {type:foldType, scope, n:layerN, hold:d&&d.hold||null, preview:!!preview}; }
+function foldOpts(d,preview){ return {type:foldType, scope, n:layerN, hold:d&&d.hold||null, preview:!!preview, strict:!!(lv&&lv.free)}; }
 cv.addEventListener('pointercancel',()=>{ drag=null; $('hud').hidden=true; draw(); });
 
 function updateDrag(X,Y){
@@ -1985,7 +2000,7 @@ function updateHud(kind,major){
   if(drag.hold) items.push('<span>按住中</span>');
   if(drag.blocked) items.push('<span class="fine">到這裡為止（再過去紙會穿過自己）</span>');
   if(drag.gain<1) items.push(`<span class="fine">微調 ×${drag.gain<.35?'1/5':'1/2'}</span>`);
-  hud.innerHTML=items.join(''); hud.hidden=!(drag.gain<1 || drag.blocked || drag.smart || drag.hold);   // 平常不顯示，畫面乾淨
+  hud.innerHTML=items.join(''); hud.hidden=isKid() || !(drag.gain<1 || drag.blocked || drag.smart || drag.hold);   // 平常不顯示，畫面乾淨
 }
 function startAnim(fold,mid){ alive=null;
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2072,7 +2087,7 @@ function mascot(mood='happy'){
 function shortSay(h){
   if(!h) return '咦？按「回去」退一步';
   if(h.done) return '完成囉！';
-  if(h.flip) return '把紙翻過來！';
+  if(h.flip) return h.back?'把紙翻回來！':'把紙翻過來！';
   if(h.rot) return '把紙轉一下！';
   if(h.vertex) return '沿著箭頭拖過去！';
   return {valley:'拖過去，摺起來！', mountain:'往後面摺！', crease:'摺一下，再打開！', outside:'往外翻過去！', inside:'往裡面塞進去！', squash:'壓開它！'}[h.type]||'拖過去，摺起來！'; }
@@ -2093,13 +2108,16 @@ function computeHint(){
   const freeBefore=i=>lv.steps.slice(0,i).some(s=>s.free);
   // 全部步驟都做完了（最後一步可能只是壓摺痕，形狀不變，所以用步數判斷）
   const last=stages.length-1;
-  const okAt=i=>{ const r=stageRotation(paper, stages[i], 40, freeBefore(i)?.9:.985); return r>=0 && (freeBefore(i) || creaseCovered(paper,stages[i],r)) ? r : -1; };
+  const okAt=(i,p=paper)=>{ const r=stageRotation(p, stages[i], 40, freeBefore(i)?.9:.985); return r>=0 && (freeBefore(i) || creaseCovered(p,stages[i],r)) ? r : -1; };
   if(history.length>=last && okAt(last)>=0){ hintCache={done:true, i:last}; return; }
   for(let i=Math.min(stages.length-2, history.length); i>=0; i--){
     const r=okAt(i);
     if(r>=0){ const st=lv.steps[i]; hintCache=st.flip?{flip:true,i}:st.rot?{rot:true,i}:(st.vertex||st.segs||st.region)?{vertex:true, s:rotPt(st.s,r), t:rotPt(st.t,r), r, type:'valley', scope:'all', i}
         :{s:rotPt(st.s,r), t:rotPt(st.t,r), type:st.type, scope:st.scope, n:st.n||1, free:st.free, i}; return; }
   }
+  // 對不上：如果只是紙被翻過來了，就請他翻回來（小朋友常亂按翻面）
+  const fp=flipPaper(paper);
+  for(let i=Math.min(stages.length-1, history.length); i>=0; i--) if(okAt(i,fp)>=0){ hintCache={flip:true, back:true, i}; return; }
 }
 // 教學卡：目前第幾步、要用的摺法與範圍；跟目前設定不一樣就標橘色，點一下切換
 let stepCollapsed=true;   // 詳細說明預設收起來（按 ? 才看）
@@ -2316,7 +2334,7 @@ function drawCP(){
   x.setLineDash([]);
 }
 let tipT=0;
-function hoverTip(e){ if(!paper || anim) return; const [X,Y]=evPos(e), w=toWorld(X,Y), n=stackAtPt(paper,w).length, el=$('tip');
+function hoverTip(e){ if(!paper || anim || isKid()) return; const [X,Y]=evPos(e), w=toWorld(X,Y), n=stackAtPt(paper,w).length, el=$('tip');
   if(!n){ el.hidden=true; return; } el.textContent=n===1?'1 層':`${n} 層`+(scope==='layers'?`・摺上 ${Math.min(layerN,n)} 層`:''); el.style.left=(X+14)+'px'; el.style.top=(Y+12)+'px'; el.hidden=false;
   clearTimeout(tipT); tipT=setTimeout(()=>{ el.hidden=true; },1400); }
 function setType(t){ foldType=t; $('typeLbl').textContent=TYPES[t].name; $('typeBtn').classList.toggle('on',t!=='valley');
@@ -2327,6 +2345,7 @@ function setScope(v){ scope=v; $('scopeLbl').textContent=scopeName(v); $('scopeB
 function setLayerN(n){ layerN=Math.max(1,Math.min(16,n)); setScope('layers'); }
 // 拖的時候：起點底下疊了哪些層，哪些會被摺（點一層＝摺到那一層為止）
 function renderLayers(){
+  if(isKid()){ $('layers').hidden=true; return; }
   const el=$('layers'); if(!drag || drag.pan || drag.compound || !drag.s){ el.hidden=true; return; }
   const P=drag.fold&&drag.fold.P ? drag.fold.P : drag.t||drag.s, st=stackNear(paper.facets, drag.s, P);
   if(scope!=='layers'){ el.hidden=true; return; }
