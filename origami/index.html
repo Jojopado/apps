@@ -55,6 +55,18 @@ body{background:var(--desk);color:var(--ink);font-family:var(--font-b);overflow:
 .zoom button{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(14,30,24,.72);color:#F2EFE4;font:600 18px var(--font-b);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .zoom button:active{background:rgba(14,30,24,.9)}
 .zoom button span{font-size:11px;font-weight:500}
+.layers{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:46px;display:flex;flex-direction:column;gap:3px;z-index:3;max-height:calc(100% - 110px);overflow:auto}
+.layers .ttl{background:rgba(14,30,24,.82);color:#F2EFE4;font-size:11px;padding:4px 7px;border-radius:6px}
+.layers button{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(14,30,24,.72);color:#F2EFE4;font:500 12px var(--font-b);padding:4px 8px 4px 5px;border-radius:7px;cursor:pointer;text-align:left}
+.layers button.on{background:#FF7A59;color:#2A1208;border-color:#FF7A59;font-weight:700}
+.layers button i{width:16px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.3);flex:none}
+.layers .pm{display:flex;gap:3px}.layers .pm button{flex:1;justify-content:center}
+.zoom button.on{background:#8FDBFF;color:#0E1E18}
+.tip{position:absolute;z-index:3;pointer-events:none;background:rgba(14,30,24,.82);color:#F2EFE4;font-size:11px;padding:3px 7px;border-radius:6px;white-space:nowrap}
+.cpcanvas{width:min(78vw,420px);height:min(78vw,420px);display:block;margin:6px auto;background:#FBF8F0;border-radius:10px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;justify-content:center}
+.legend b{display:inline-block;width:26px;height:0;border-top:2px dashed #2F6FB3;vertical-align:middle;margin-right:4px}
+.legend b.m{border-top:2px dashed #C2453A}.legend b.f{border-top:1px solid #9AA3AE}
 .coach{position:absolute;left:12px;right:12px;top:10px;color:#F2EFE4;font-size:13px;line-height:1.5;
   background:rgba(14,30,24,.6);padding:8px 10px;border-radius:8px;pointer-events:none}
 .hud{position:absolute;left:10px;right:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
@@ -161,7 +173,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <div class="coach" id="coach" hidden></div>
     <div class="step" id="stepCard" hidden></div>
     <div class="hud" id="hud" hidden></div>
-    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button></div>
+    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button><button id="pinBtn" type="button" aria-label="按住（另一隻手）" title="按住：點紙上一點當作另一隻手按住（電腦也可以按住空白鍵或滑鼠右鍵）">📌</button><button id="redo" type="button" aria-label="重做" title="重做"><span>重做</span></button><button id="cpBtn" type="button" aria-label="摺痕圖" title="攤開看山線谷線"><span>摺痕</span></button></div>
+    <div class="layers" id="layers" hidden></div>
+    <div class="tip" id="tip" hidden></div>
     <div class="readout" id="readout">150 × 150 mm 標準紙</div>
     <div class="toast" id="toast" hidden></div>
   </div>
@@ -235,6 +249,16 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <p>摺紙圖用不同的線代表不同摺法：谷線是虛線、山線是一長兩點的點虛線。拖曳時紙上的預覽線也照這個畫。</p>
     <div class="typelist" id="typeList"></div>
     <div class="row"><button class="btn" id="typeClose" type="button">關閉</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="cpSheet" hidden>
+  <div class="panel">
+    <h2>摺痕圖</h2>
+    <p>把現在的紙攤開來看：每條摺痕現在是山摺還是谷摺（從紙原本朝上的那面看）。灰線是壓過但現在攤平的摺痕。</p>
+    <canvas class="cpcanvas" id="cpCanvas" width="840" height="840"></canvas>
+    <div class="legend"><span><b></b>谷線</span><span><b class="m"></b>山線</span><span><b class="f"></b>攤平的摺痕</span></div>
+    <div class="row"><button class="btn" id="cpClose" type="button">關閉</button></div>
   </div>
 </div>
 
@@ -493,6 +517,27 @@ function pickTop(list,s,P){
   }
   return best;
 }
+// 起點底下的所有層（由上往下），探測點跟 pickTop 一樣往摺線那邊偏一點
+function stackNear(list,s,P){
+  const dx=P[0]-s[0], dy=P[1]-s[1], L=Math.hypot(dx,dy)||1;
+  for(const a of [0,.5,-.5,1,-1]) for(const r of [.02,.05]){
+    const cs=Math.cos(a), sn=Math.sin(a), q=[s[0]+(dx*cs-dy*sn)/L*r, s[1]+(dx*sn+dy*cs)/L*r];
+    const hit=list.filter(f=>pip(f.pts,q[0],q[1])); if(hit.length) return hit.sort((x,y)=>y.z-x.z); }
+  return [];
+}
+// 某一點底下有幾層（由上往下）
+function stackAtPt(paper,q){ return paper.facets.filter(f=>pip(f.pts,q[0],q[1])).sort((a,b)=>b.z-a.z); }
+// 摺痕圖：每條摺痕在原始紙上的位置，以及現在是山摺、谷摺還是攤平（從紙原本朝上那面看）
+function creasePattern(paper){
+  const byId=new Map(paper.facets.map(f=>[f.id,f])), out=[];
+  for(const f of paper.facets) f.nb.forEach((x,i)=>{ const a=f.sh[i], b=f.sh[(i+1)%f.sh.length];
+    if(x<0){ out.push({a,b,kind:'edge'}); return; } if(x<f.id) return; const g=byId.get(x); if(!g) return;
+    const folded=Math.sign(det(f.T))!==Math.sign(det(g.T));
+    if(!folded){ out.push({a,b,kind:'flat'}); return; }
+    const gAbove=above(paper,g.id,f.id); // +1：g 疊在 f 上面
+    out.push({a,b,kind: gAbove===0 ? 'fold' : ((det(f.T)>0)===(gAbove>0) ? 'V' : 'M')}); });
+  return out;
+}
 // 沿相鄰關係找連著的一團；剛好落在摺線上的邊是「鉸鏈」，不跨過去（這樣才能把一片沿舊摺痕打開）
 function component(list,seed,P,n){
   const byId=new Map(list.map(q=>[q.id,q])), seen=new Set([seed.id]), st=[seed];
@@ -514,7 +559,15 @@ function foldByPoints(paper,s,t,opt){
   const posList=cut.facets.filter(f=>f.side>0);
   let moveSet;
   if(o.scope==='flap'){ const seed=pickTop(posList,s,P); if(!seed) return null; moveSet=component(posList,seed,P,n); }
+  else if(o.scope==='layers'){ // 上面 N 層：起點底下由上往下數 N 層，各自連著的那一團
+    const st=stackNear(posList,s,P).slice(0,Math.max(1,o.n||1)); if(!st.length) return null;
+    moveSet=new Set(); for(const sd0 of st) for(const id of component(posList,sd0,P,n)) moveSet.add(id); }
   else moveSet=new Set(posList.map(f=>f.id));
+  if(o.hold){ // 另一隻手按住的地方：按住的那幾層（和跟它們連著的）不會動
+    const pinned=posList.filter(f=>moveSet.has(f.id) && pip(f.pts,o.hold[0],o.hold[1]));
+    if(pinned.length){ const inM=posList.filter(f=>moveSet.has(f.id)), rm=new Set();
+      for(const f of pinned) for(const id of component(inM,f,P,n)) rm.add(id);
+      moveSet=new Set([...moveSet].filter(id=>!rm.has(id))); } }
   if(!moveSet.size || moveSet.size===cut.facets.length) return null;
   // 只有真的被摺到的層才留下摺痕：重新切一次，只切到動到的那些原始片
   const srcs=new Set(cut.facets.filter(f=>moveSet.has(f.id)).map(f=>f.src));
@@ -879,6 +932,17 @@ function stageRotation(user,stage,N=40,thr=.985){
 const rotPt=(q,k)=>{ const [cs,sn]=ROT[k]; return [q[0]*cs-q[1]*sn, q[0]*sn+q[1]*cs]; };
 
 
+/* 摺痕也要對：範例第 k 步（轉 r 次）的每條邊，使用者的紙上都要有（壓摺痕的步驟形狀不變，只能看摺痕） */
+function creaseCovered(user,stage,r){
+  const segs=[]; for(const f of user.facets) for(let i=0;i<f.pts.length;i++) segs.push([f.pts[i],f.pts[(i+1)%f.pts.length]]);
+  const on=q=>segs.some(([a,b])=>{ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy; if(L2<1e-12) return false;
+    const u=Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/L2)); return Math.hypot(a[0]+dx*u-q[0], a[1]+dy*u-q[1])<2e-3; });
+  const seen=new Set();
+  for(const f of stage.facets) for(let i=0;i<f.pts.length;i++){ const a=rotPt(f.pts[i],r), b=rotPt(f.pts[(i+1)%f.pts.length],r);
+    const key=[a,b].map(q=>q.map(v=>v.toFixed(3)).join(',')).sort().join('|'); if(seen.has(key)) continue; seen.add(key);
+    for(const u of [.25,.5,.75]) if(!on([a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u])) return false; }
+  return true; }
+
 const R=R2;
 /* 步驟資料：s 拖到 t；type 谷摺/山摺/摺痕/外翻/內翻；scope all 全部層、flap 只摺手指下那一片；flip 翻面；rot 逆時針轉 90°；free = 沒有精確對齊點
    基本功與小狗/天鵝/企鵝的步驟由模擬產生（照下面標的教學網站摺法），座標精確到吸附點 */
@@ -950,6 +1014,7 @@ const COLORS=[['#F4C93A','山吹黃'],['#EC8A3C','柿子橘'],['#C9955F','奶茶
 let W=0, H=0, DPR=1;
 let lv=ANIMALS[0], stages=[], target=null, paperColor=lv.color;
 let paper=null, history=[], histFold=[], foldType='valley', scope='all', drag=null, anim=null, hintOn=false, foldCount=0;
+let layerN=2, pin=null, pinSrc=null, pinPid=null, pinMode=false, redoStack=[], mouseW=null, duo=null;
 let view={s:100, cx:0, cy:0}, viewT={s:100, cx:0, cy:0};
 let raf=0, lastMatch=null, doneShown=false, alive=null, stickerMode=false, stickers=[], stickerType='eye';
 let book={animals:{}, mine:[]};
@@ -1069,6 +1134,53 @@ function drawFace(c,items,map,s,opt={}){
 }
 function paperOf(opt){ return opt.color||paperColor; }
 
+/* 3D 摺疊：沿著摺痕一片一片轉（樹狀，從沒動的那片開始），投影到畫面。u=0 是摺之前、u=1 是摺好 */
+function build3D(from,to){
+  const A=new Map(from.facets.map(f=>[f.id,f])), src=f=>A.get(f.id)||A.get(f.src);
+  const F=to.facets, byId=new Map(F.map(f=>[f.id,f]));
+  let root=null, best=-1;
+  for(const f of F){ const o=src(f); if(!o) return null; if(f.T.every((v,i)=>Math.abs(v-o.T[i])<1e-6)){ const a=Math.abs(polyArea(f.sh)); if(a>best){ best=a; root=f; } } }
+  if(!root) return null;
+  const par=new Map([[root.id,null]]), q=[root], order=[root];
+  while(q.length){ const f=q.shift();
+    f.nb.forEach((x,i)=>{ const g=byId.get(x); if(!g || par.has(x)) return;
+      const a=f.sh[i], b=f.sh[(i+1)%f.sh.length];
+      const fa=Math.sign(det(src(f).T))!==Math.sign(det(src(g).T)), fb=Math.sign(det(f.T))!==Math.sign(det(g.T));
+      let sg=1;
+      if(fa!==fb){ // 這條摺痕要轉：從會疊在上面的那邊轉過去（g 疊在 f 上面 → 半路時 g 在 f 前面）
+        const ab=fb ? above(to,g.id,f.id) : above(from,src(g).id,src(f).id), want=ab<0?-1:1;
+        const gc=g.sh.reduce((s,v)=>[s[0]+v[0]/g.sh.length,s[1]+v[1]/g.sh.length],[0,0]);
+        const cr=(b[0]-a[0])*(gc[1]-a[1])-(b[1]-a[1])*(gc[0]-a[0]), nzF=Math.sign(det(fb?f.T:src(f).T))||1;
+        sg = want*(Math.sign(nzF*cr)||1); }
+      par.set(x,{f:f.id, a, b, th0:fa?Math.PI:0, th1:fb?Math.PI:0, sg}); q.push(g); order.push(g); }); }
+  if(par.size!==F.length) return null;
+  return {root, par, order, from, to, src};
+}
+function embed(T){ const sg=Math.sign(det(T))||1; return {R:[[T[0],T[2],0],[T[1],T[3],0],[0,0,sg]], t:[T[4],T[5],0]}; }
+function m3mul(A,B){ const R=[[0,0,0],[0,0,0],[0,0,0]]; for(let i=0;i<3;i++) for(let j=0;j<3;j++) for(let k=0;k<3;k++) R[i][j]+=A.R[i][k]*B.R[k][j];
+  const t=[0,0,0]; for(let i=0;i<3;i++){ t[i]=A.t[i]; for(let k=0;k<3;k++) t[i]+=A.R[i][k]*B.t[k]; } return {R,t}; }
+function hingeRot(a,b,th){ // 繞原始紙上 a→b 這條線轉 th
+  const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, x=dx/L, y=dy/L, c=Math.cos(th), s=Math.sin(th), C=1-c;
+  const Rm=[[c+x*x*C, x*y*C, y*s],[y*x*C, c+y*y*C, -x*s],[-y*s, x*s, c]];
+  const t=[0,0,0], p=[a[0],a[1],0]; for(let i=0;i<3;i++){ t[i]=p[i]; for(let k=0;k<3;k++) t[i]-=Rm[i][k]*p[k]; }
+  return {R:Rm,t};
+}
+function frame3D(m,u){
+  const e=easeInOut(Math.max(0,Math.min(1,u))), pose=new Map([[m.root.id, embed(m.root.T)]]);
+  for(const g of m.order){ const p=m.par.get(g.id); if(!p) continue;
+    const th=p.th0+(p.th1-p.th0)*e;
+    // th0/th1 都是 0 或 π：轉的方向 sg 決定經過哪一側
+    pose.set(g.id, m3mul(pose.get(p.f), hingeRot(p.a,p.b, p.sg*th))); }
+  const zA=new Map(m.from.facets.map(f=>[f.id,f.z])), out=[];
+  for(const f of m.to.facets){ const P3=pose.get(f.id); if(!P3) continue;
+    const w=f.sh.map(q=>{ const v=[0,0,0]; for(let i=0;i<3;i++) v[i]=P3.R[i][0]*q[0]+P3.R[i][1]*q[1]+P3.t[i]; return v; });
+    const zc=w.reduce((s,v)=>s+v[2],0)/w.length, nz=P3.R[2][2];
+    const pts=w.map(v=>{ const k=1+v[2]*.06; return [view.cx+(v[0]-view.cx)*k, view.cy+(v[1]-view.cy)*k]; });   // 一點點透視：翹起來的比較大
+    const upC = det(f.T)>0 ? f.c : !f.c, c = nz>0 ? upC : !upC;
+    const lay = e<.5 ? (zA.get(f.id) ?? zA.get(f.src) ?? f.z) : f.z;
+    out.push({pts, c, z: zc*1000 + lay*1e-3, shade:(1-Math.abs(nz))*.35, lift:Math.abs(zc)>.01}); }
+  return out.sort((a,b)=>a.z-b.z);
+}
 function morphFacets(from,to,u){
   const byId=new Map(from.facets.map(f=>[f.id,f]));
   return sorted(to.facets.map(f=>{ const o=byId.get(f.id)||byId.get(f.src)||f;
@@ -1077,8 +1189,16 @@ function morphFacets(from,to,u){
 }
 function drawScene(c,V,t){
   drawMat(c,V);
-  if(anim && anim.morph){ const u=anim.u0+(1-anim.u0)*easeInOut(anim.u); morphFacets(paper,anim.res,u).forEach(f=>drawFacet(c,f,V,{lift:u>.05&&u<.95})); return; }
-  if(drag && drag.compound){ morphFacets(paper,drag.res,drag.u).forEach(f=>drawFacet(c,f,V,{lift:drag.u>.05})); return; }
+  if(anim && anim.morph){ const u=anim.u0+(1-anim.u0)*anim.u;
+    if(anim.m3===undefined) anim.m3=build3D(paper,anim.res);
+    if(anim.m3) frame3D(anim.m3,u).forEach(f=>drawFacet(c,f,V,{lift:f.lift,shade:f.shade}));
+    else morphFacets(paper,anim.res,easeInOut(u)).forEach(f=>drawFacet(c,f,V,{lift:u>.05&&u<.95}));
+    return; }
+  if(drag && drag.compound){
+    if(drag.m3===undefined) drag.m3=build3D(paper,drag.res);
+    if(drag.m3) frame3D(drag.m3,drag.u).forEach(f=>drawFacet(c,f,V,{lift:f.lift,shade:f.shade}));
+    else morphFacets(paper,drag.res,drag.u).forEach(f=>drawFacet(c,f,V,{lift:drag.u>.05}));
+    return; }
   if(anim){
     const th=anim.type==='crease' ? Math.sin(anim.u*Math.PI)*Math.PI*.45 : easeInOut(anim.u)*Math.PI, cs=Math.cos(th), P=anim.P, n=anim.n, past=th>Math.PI/2;
     const mv=sorted(anim.parts.move); if(past) mv.reverse();
@@ -1132,6 +1252,9 @@ function drawArrow(c,s,t,V,color){
 }
 function drawOverlays(c,V){
   const h=hintCache;
+  if(pin){ const [hx,hy]=toScreen(pin,V); c.save(); c.beginPath(); c.arc(hx,hy,16,0,Math.PI*2); c.fillStyle='rgba(143,219,255,.28)'; c.fill(); c.lineWidth=2; c.strokeStyle=HINT; c.stroke();
+    c.beginPath(); c.arc(hx,hy,3,0,Math.PI*2); c.fillStyle=HINT; c.fill();
+    c.fillStyle='#fff'; c.font='600 11px system-ui'; c.textAlign='center'; c.fillText('按住',hx,hy-22); c.restore(); }
   if(h && h.vertex && !anim && !alive && !(drag&&drag.compound)) drawArrow(c,h.s,h.t,V,HINT);
   if(drag && drag.compound) drawArrow(c,drag.s,drag.t,V,GUIDE);
   if(h && h.s && !h.vertex && hintOn && !anim && !alive){
@@ -1140,8 +1263,8 @@ function drawOverlays(c,V){
     const fl=foldLine(h.s,h.t); drawLineAcross(c,fl.P,fl.n,V,HINT,TYPES[h.type].dash); drawArrow(c,h.s,h.t,V,HINT);
     if(h.type==='crease') drawArrow(c,h.t,h.s,V,'rgba(143,219,255,.55)');
   }
-  if(drag){
-    for(const sp of drag.points){ const [X,Y]=toScreen(sp.p,V); c.beginPath(); c.arc(X,Y,sp.major?3:1.8,0,Math.PI*2); c.fillStyle=sp.major?'rgba(255,255,255,.85)':'rgba(255,255,255,.5)'; c.fill(); }
+  if(drag && !drag.pan){
+    for(const sp of drag.points||[]){ const [X,Y]=toScreen(sp.p,V); c.beginPath(); c.arc(X,Y,sp.major?3:1.8,0,Math.PI*2); c.fillStyle=sp.major?'rgba(255,255,255,.85)':'rgba(255,255,255,.5)'; c.fill(); }
     const [sx,sy]=toScreen(drag.s,V); c.beginPath(); c.arc(sx,sy,9,0,Math.PI*2); c.strokeStyle=GUIDE; c.lineWidth=2; c.stroke();
     if(drag.fold){
       drawLineAcross(c,drag.fold.P,drag.fold.n,V,GUIDE,TYPES[foldType].dash);
@@ -1149,14 +1272,13 @@ function drawOverlays(c,V){
       c.fillStyle=drag.kind==='free'?'rgba(255,122,89,.5)':GUIDE; c.fill();
       if(drag.kind!=='free'){ c.beginPath(); c.arc(tx,ty,13,0,Math.PI*2); c.strokeStyle='rgba(255,255,255,.8)'; c.lineWidth=1.5; c.stroke(); }
     }
-    if(drag.hold){ const [hx,hy]=toScreen(drag.hold,V); c.save(); c.beginPath(); c.arc(hx,hy,16,0,Math.PI*2); c.fillStyle='rgba(143,219,255,.25)'; c.fill(); c.lineWidth=2; c.strokeStyle=HINT; c.stroke();
-      c.fillStyle='#fff'; c.font='600 11px system-ui'; c.textAlign='center'; c.fillText('按住',hx,hy-22); c.restore(); }
+
     if(drag.gain<1){ const [vx,vy]=toScreen(drag.f,V); c.save(); c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=1;
       c.beginPath(); c.moveTo(vx-7,vy); c.lineTo(vx+7,vy); c.moveTo(vx,vy-7); c.lineTo(vx,vy+7); c.stroke(); c.restore(); }
   }
 }
 function drawLoupe(){
-  if(!drag) return;
+  if(!drag || drag.pan || drag.paused) return;
   const R=Math.min(62, W*.16), off=R+46;
   let lx=drag.hx, ly=drag.hy-off; if(ly<R+6) ly=drag.hy+off;
   lx=Math.max(R+6, Math.min(W-R-6, lx));
@@ -1190,19 +1312,55 @@ function drawPet(canvas,facets,color,face){
 function evPos(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
 const ptrs=new Map(); let pinch=null;
 function pinchInfo(){ const [a,b]=[...ptrs.values()]; return {d:Math.hypot(a[0]-b[0],a[1]-b[1])||1, m:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; }
-cv.addEventListener('wheel',e=>{ e.preventDefault(); const [X,Y]=evPos(e); zoomAt(e.deltaY<0?1.15:1/1.15,X,Y); },{passive:false});
-cv.addEventListener('pointerdown',e=>{ ptrs.set(e.pointerId,evPos(e));
-  if(ptrs.size===2 && foldType==='squash' && drag && !drag.compound && !drag.hold){
-    // 第一隻手指變成「按住」，第二隻手指重新開始拖
-    e.stopImmediatePropagation(); const hold=drag.f; drag=null; startDrag(e); if(drag){ drag.hold=hold; drag.pid=e.pointerId; draw(); } return; }
+cv.addEventListener('wheel',e=>{ e.preventDefault();
+  if(drag && !drag.pan && !drag.compound){ setLayerN((scope==='layers'?layerN:1)+(e.deltaY>0?1:-1)); renderLayers(); return; }
+  const [X,Y]=evPos(e); zoomAt(e.deltaY<0?1.15:1/1.15,X,Y); },{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse' && e.button===2){ e.stopImmediatePropagation(); setPin(toWorld(...evPos(e)),'rmb'); return; }   // 右鍵＝左手按住
+  if(e.pointerType==='mouse' && e.button===1){ e.stopImmediatePropagation(); e.preventDefault(); startPan(e); return; }
+  ptrs.set(e.pointerId,evPos(e));
+  if(ptrs.size===2 && drag && !drag.compound && !drag.pan && !drag.hold && Math.hypot(drag.hx-drag.x0,drag.hy-drag.y0)<12){
+    // 第二隻手指：先不決定是縮放還是「一指按住、一指摺」，看接下來誰在動
+    e.stopImmediatePropagation(); duo={first:drag.pid, second:e.pointerId, hold:toWorld(drag.x0,drag.y0), p1:[drag.hx,drag.hy], p2:evPos(e), ev:{clientX:e.clientX, clientY:e.clientY, pointerId:e.pointerId, timeStamp:e.timeStamp}};
+    if(foldType==='squash') duoConfirm(); else { drag.paused=true; draw(); }
+    return; }
   if(ptrs.size===2){ drag=null; $('hud').hidden=true; const pi=pinchInfo(); pinch={d0:pi.d, s0:view.s, w:toWorld(pi.m[0],pi.m[1])}; try{ try{ cv.setPointerCapture(e.pointerId); }catch(_){} }catch(_){} draw(); return; }
   if(ptrs.size>2) return;
 },true);
-cv.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,evPos(e));
+cv.addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse'){ mouseW=toWorld(...evPos(e)); if(!drag) hoverTip(e); }
+  if(e.pointerType==='mouse' && e.button===2){ if(e.buttons&2){ if(!drag) setPin(toWorld(...evPos(e)),'rmb'); } else if(pinSrc==='rmb') setPin(null); return; }
+  if(e.pointerType==='mouse' && e.button===0 && !drag && (e.buttons&1)){ startDrag(e); return; }   // 右鍵按著時再按左鍵
+  if(e.pointerType==='mouse' && e.button===0 && drag && !(e.buttons&1)){ endDrag(e); return; }
+  if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,evPos(e));
+  if(duo && !duo.on){ e.stopImmediatePropagation(); const P=evPos(e);
+    if(e.pointerId===duo.first && Math.hypot(P[0]-duo.p1[0],P[1]-duo.p1[1])>14){ // 第一隻手指也在動＝兩指縮放
+      duo=null; drag=null; $('hud').hidden=true; $('layers').hidden=true; const pi=pinchInfo(); pinch={d0:pi.d, s0:view.s, w:toWorld(pi.m[0],pi.m[1])}; draw(); return; }
+    if(e.pointerId===duo.second && Math.hypot(P[0]-duo.p2[0],P[1]-duo.p2[1])>8){ duoConfirm(); }
+    return; }
   if(pinch && ptrs.size>=2){ e.stopImmediatePropagation(); const pi=pinchInfo(), s2=Math.max(baseScale()*.5, Math.min(baseScale()*16, pinch.s0*pi.d/pinch.d0));
     view={s:s2, cx:pinch.w[0]-(pi.m[0]-W/2)/s2, cy:pinch.w[1]+(pi.m[1]-H/2)/s2}; viewT={...view}; userZoom=true; draw(); }
 },true);
-const endPtr=e=>{ ptrs.delete(e.pointerId); if(pinch){ e.stopImmediatePropagation(); if(ptrs.size<2) pinch=null; } };
+const endPtr=e=>{ ptrs.delete(e.pointerId);
+  if(e.pointerType==='mouse' && e.button===2){ e.stopImmediatePropagation(); if(pinSrc==='rmb') setPin(null); return; }
+  if(duo && !duo.on){ e.stopImmediatePropagation(); duo=null; if(drag){ drag.paused=false; } drag=null; $('hud').hidden=true; $('layers').hidden=true; draw(); return; }
+  if(duo && duo.on && e.pointerId===duo.first){ e.stopImmediatePropagation(); duo=null; if(pinSrc==='touch') setPin(null); return; }   // 按住的手指放開
+  if(duo && duo.on && e.pointerId===duo.second) duo=null;
+  if(pinSrc==='touch' && e.pointerId===pinPid) setPin(null);   // 按住的手指放開
+  if(pinch){ e.stopImmediatePropagation(); if(ptrs.size<2) pinch=null; } };
+function duoConfirm(){ // 第一隻手指＝按住，第二隻手指重新開始拖
+  duo.on=true; setPin(duo.hold,'touch'); pinPid=duo.first; drag=null; startDrag(duo.ev); if(drag){ drag.pid=duo.second; drag.hold=pin; } draw(); }
+function setPin(q,src){ pin=q; pinSrc=q?src:null; $('pinBtn').classList.toggle('on',!!pin||pinMode);
+  if(drag && !drag.pan && !drag.compound){ drag.hold=pin; drag.smartKey=null; if(drag.t) updateDrag(drag.vx,drag.vy); } draw(); }
+function startPan(e){ const [X,Y]=evPos(e); drag={pan:true, x0:X, y0:Y, v0:{...view}, pid:e.pointerId, hx:X, hy:Y}; try{ cv.setPointerCapture(e.pointerId); }catch(_){} }
+// 電腦的「另一隻手」：按住空白鍵或 Shift＝按住滑鼠游標那一點
+addEventListener('keydown',e=>{ if(e.target.closest&&e.target.closest('input,textarea')) return;
+  if((e.code==='Space'||e.key==='Shift') && !e.repeat && mouseW && $('home').hidden && $('cpSheet').hidden && !drag){ e.preventDefault(); if(!pin) setPin(mouseW,'key'); }
+  if(/^Digit[1-9]$/.test(e.code)){ setLayerN(+e.code.slice(5)); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?$('redo').click():$('undo').click(); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); $('redo').click(); } });
+addEventListener('keyup',e=>{ if((e.code==='Space'||e.key==='Shift') && pinSrc==='key') setPin(null); });
 cv.addEventListener('pointerup',endPtr,true); cv.addEventListener('pointercancel',endPtr,true);
 $('zIn').onclick=()=>zoomAt(1.6,W/2,H/2);
 $('zOut').onclick=()=>zoomAt(1/1.6,W/2,H/2);
@@ -1217,7 +1375,8 @@ function startDrag(e){
   const h=hintCache;
   if(h && h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
-    const out=compoundStep(paper, lv.steps[h.i]);
+    let out=compoundStep(paper, lv.steps[h.i]);
+    if(!out){ out=compoundStep(stages[h.i], lv.steps[h.i]); if(out) paper=stages[h.i]; }
     if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1};
       $('coach').hidden=true; hideToast(); draw(); return; }
   }
@@ -1229,16 +1388,19 @@ function startDrag(e){
   }
   let s=follow?follow.s:null, bd=30/view.s;
   if(!follow) for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
-  if(!s){ if(topAt(paper,f[0],f[1])) s=f; else return; }
+  if(pinMode){ setPin(topAt(paper,f[0],f[1])?f:null,'sticky'); pinMode=false; $('pinBtn').classList.toggle('on',!!pin); showToast(pin?'釘住了：這幾層不會動。再按一次 📌 取消':'沒有點在紙上'); return; }
+  if(!s){ if(topAt(paper,f[0],f[1])) s=f; else { startPan(e); return; } }
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
-  drag={s, follow, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free', pid:e.pointerId};
+  drag={s, follow, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, x0:X, y0:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free', pid:e.pointerId, hold:pin};
   $('coach').hidden=true; hideToast();
   updateDrag(X,Y);
 }
 // 微調：手指移動得慢時，游標只跟著走 1/5，可以推到 0.1 mm 等級（放大鏡也會拉到 5 倍）
 cv.addEventListener('pointermove',e=>{ if(!drag) return;
   if(drag.pid!=null && e.pointerId!==drag.pid) return;   // 按住的那隻手指不算
+  if(drag.paused) return;
+  if(drag.pan){ const [X,Y]=evPos(e); view={s:view.s, cx:drag.v0.cx-(X-drag.x0)/view.s, cy:drag.v0.cy+(Y-drag.y0)/view.s}; viewT={...view}; userZoom=true; draw(); return; }
   if(drag.compound){ const [X,Y]=evPos(e), f=toWorld(X,Y), dx=drag.t[0]-drag.s[0], dy=drag.t[1]-drag.s[1];
     drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-drag.s[0])*dx+(f[1]-drag.s[1])*dy)/(dx*dx+dy*dy))); draw(); return; }
   const [X,Y]=evPos(e), dx=X-drag.hx, dy=Y-drag.hy, dt=Math.max(1,e.timeStamp-drag.lt), sp=Math.hypot(dx,dy)/dt;
@@ -1248,19 +1410,23 @@ cv.addEventListener('pointermove',e=>{ if(!drag) return;
   drag.vx=Math.max(0,Math.min(W, drag.vx+dx*drag.gain)); drag.vy=Math.max(0,Math.min(H, drag.vy+dy*drag.gain));
   drag.hx=X; drag.hy=Y; drag.lt=e.timeStamp;
   updateDrag(drag.vx,drag.vy); });
-cv.addEventListener('pointerup',e=>{ if(!drag) return;
-  if(drag.pid!=null && e.pointerId!==drag.pid){ if(drag.hold){ drag.hold=null; drag.smartKey=null; updateDrag(drag.vx,drag.vy); } return; }   // 放開按住的手指：改回自動判斷
-  const d=drag; drag=null; $('hud').hidden=true;
+cv.addEventListener('pointerup',e=>{ if(e.pointerType==='mouse' && e.button!==0 && !(drag&&drag.pan)) return; endDrag(e); });
+function endDrag(e){ if(!drag) return;
+  if(drag.pid!=null && e.pointerId!==drag.pid) return;
+  const d=drag; drag=null; $('hud').hidden=true; $('layers').hidden=true;
+  if(d.pan||d.paused){ draw(); return; }
   if(d.smart){
     const out=d.fold&&d.fold.ok ? d.fold : (Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6 ? smartFold(paper,d.s,d.t,{hold:d.hold}) : null);
-    if(out){ alive=null; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:520, u:0}; kick(); }
+    if(out){ alive=null; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:900, u:0}; kick(); }
     else { showToast('這樣壓不開：起點要按在最上面那片的角，終點拖到它壓平後的位置（摺痕先壓好會更容易）'); draw(); }
     return; }
   if(d.compound){
-    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:300, u:0}; kick(); }
+    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:360, u:0, m3:d.m3}; kick(); }
     else { showToast('沿著箭頭一路拖到終點，紙才會摺過去'); draw(); }
     return; }
-  if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, {type:foldType, scope}); startAnim(fin||d.fold); } else draw(); });
+  if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, foldOpts(d)); if(fin) startAnim(fin); else { showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了'); draw(); } } else { if(d.t && Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6) showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了（紙會穿過自己）'); draw(); }
+}
+function foldOpts(d,preview){ return {type:foldType, scope, n:layerN, hold:d&&d.hold||null, preview:!!preview}; }
 cv.addEventListener('pointercancel',()=>{ drag=null; $('hud').hidden=true; draw(); });
 
 function updateDrag(X,Y){
@@ -1278,7 +1444,8 @@ function updateDrag(X,Y){
   if(!t) t=f;
   drag.t=t; drag.kind=kind;
   if(foldType==='squash'){ drag.smart=true; smartPreview(t); }
-  else drag.fold = Math.hypot(t[0]-drag.s[0], t[1]-drag.s[1])*view.s > 6 ? foldByPoints(paper, drag.s, t, {type:foldType, scope, preview:true}) : null;
+  else drag.fold = Math.hypot(t[0]-drag.s[0], t[1]-drag.s[1])*view.s > 6 ? foldByPoints(paper, drag.s, t, foldOpts(drag,true)) : null;
+  renderLayers();
   updateHud(kind, major);
   draw();
 }
@@ -1293,7 +1460,7 @@ function smartPreview(t){
   if(!far) return;
   const d=drag;
   smartTimer=setTimeout(()=>{ if(drag!==d || d.smartKey!==key) return;
-    const out=smartFold(paper, d.s, t, {hold:d.hold});
+    const out=smartFold(paper, d.s, t, {hold:d.hold||pin});
     d.fold = out ? {...out, P:fl.P, n:fl.n, ok:true} : {res:paper, P:fl.P, n:fl.n, ok:false, none:true};
     updateHud(d.kind,false); draw(); }, 90);
 }
@@ -1313,15 +1480,20 @@ function updateHud(kind,major){
 }
 function startAnim(fold){ alive=null; anim={...fold, type:foldType, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:(foldType==='crease'?560:420), u:0}; kick(); }
 function commitFold(){
-  const res=anim.res; anim=null;
+  const res=anim.res; lastFoldType=anim.type||null; anim=null; redoStack=[];
   history.push(paper); histFold.push(true);
   paper=res;
   foldCount++; afterChange();
 }
 function afterChange(){
   alive=null; doneShown=false;
+  const before=hintCache&&hintCache.i, wasCrease=lastFoldType==='crease'; lastFoldType=null;
   fitView(false); updateUndo(); updateReadout(); computeHint(); computeScore(); renderStepCard(); draw();
+  // 壓摺痕的步驟形狀不會變：壓歪了要講，不然到後面複合摺才會卡住
+  if(wasCrease && !lv.free && hintCache && before!=null && hintCache.i===before && lv.steps[before] && lv.steps[before].type==='crease')
+    showToast('這條摺痕的位置或層跟教學不一樣：按「復原」，照藍色提示再壓一次');
 }
+let lastFoldType=null;
 function updateUndo(){ $('undo').disabled=!history.length; }
 function updateReadout(){ const b=bbox(paper);
   $('readout').textContent=`${fmm(b.x1-b.x0)} × ${fmm(b.y1-b.y0)} mm · 已摺 ${foldCount} 次`; }
@@ -1379,9 +1551,10 @@ function computeHint(){
   const freeBefore=i=>lv.steps.slice(0,i).some(s=>s.free);
   // 全部步驟都做完了（最後一步可能只是壓摺痕，形狀不變，所以用步數判斷）
   const last=stages.length-1;
-  if(history.length>=last && stageRotation(paper, stages[last], 40, freeBefore(last)?.9:.985)>=0){ hintCache={done:true, i:last}; return; }
+  const okAt=i=>{ const r=stageRotation(paper, stages[i], 40, freeBefore(i)?.9:.985); return r>=0 && (freeBefore(i) || creaseCovered(paper,stages[i],r)) ? r : -1; };
+  if(history.length>=last && okAt(last)>=0){ hintCache={done:true, i:last}; return; }
   for(let i=Math.min(stages.length-2, history.length); i>=0; i--){
-    const r=stageRotation(paper, stages[i], 40, freeBefore(i)?.9:.985);
+    const r=okAt(i);
     if(r>=0){ const st=lv.steps[i]; hintCache=st.flip?{flip:true,i}:st.rot?{rot:true,i}:(st.vertex||st.segs||st.region)?{vertex:true, s:rotPt(st.s,r), t:rotPt(st.t,r), r, type:'valley', scope:'all', i}
         :{s:rotPt(st.s,r), t:rotPt(st.t,r), type:st.type, scope:st.scope, free:st.free, i}; return; }
   }
@@ -1426,10 +1599,46 @@ $('hint').onclick=()=>{
 };
 
 /* ---- 工具列 ---- */
-$('undo').onclick=()=>{ if(anim||!history.length) return; paper=history.pop(); if(histFold.pop()) foldCount=Math.max(0,foldCount-1); afterChange(); };
+$('undo').onclick=()=>{ if(anim||!history.length) return; const f=histFold.pop(); redoStack.push({paper, fold:f}); paper=history.pop(); if(f) foldCount=Math.max(0,foldCount-1); afterChange(); };
+$('redo').onclick=()=>{ if(anim||!redoStack.length){ showToast('沒有可以重做的'); return; } const r=redoStack.pop(); history.push(paper); histFold.push(r.fold); paper=r.paper; if(r.fold) foldCount++; const keep=redoStack; afterChange(); redoStack=keep; };
+$('pinBtn').onclick=()=>{ if(pin||pinMode){ pinMode=false; setPin(null); showToast('放開了'); return; } pinMode=true; $('pinBtn').classList.add('on');
+  showToast('點紙上一點＝另一隻手按住那裡（按住的層不會動）。手機也可以一指按住、另一指摺；電腦可按住空白鍵或滑鼠右鍵'); };
+$('cpBtn').onclick=()=>{ drawCP(); $('cpSheet').hidden=false; };
+$('cpClose').onclick=()=>{ $('cpSheet').hidden=true; };
+function drawCP(){
+  const cvs=$('cpCanvas'), x=cvs.getContext('2d'), N=cvs.width, segs=creasePattern(paper);
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const g of segs) for(const q of [g.a,g.b]){ x0=Math.min(x0,q[0]); x1=Math.max(x1,q[0]); y0=Math.min(y0,q[1]); y1=Math.max(y1,q[1]); }
+  const sc=N*.86/Math.max(x1-x0,y1-y0), ox=N/2-(x0+x1)/2*sc, oy=N/2+(y0+y1)/2*sc, M=q=>[ox+q[0]*sc, oy-q[1]*sc];
+  x.clearRect(0,0,N,N); x.fillStyle='#FBF8F0'; x.fillRect(0,0,N,N);
+  // 紙（原本朝上那面的顏色）
+  x.beginPath(); for(const g of segs.filter(g=>g.kind==='edge')){ const A=M(g.a), B=M(g.b); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); }
+  const sty={edge:['#3A2E24',[],3], flat:['#9AA3AE',[],1.5], V:['#2F6FB3',[14,9],3.2], M:['#C2453A',[16,6,3,6,3,6],3.2], fold:['#6B5B4B',[6,6],2.5]};
+  for(const k of ['flat','V','M','fold','edge']) for(const g of segs.filter(g=>g.kind===k)){ const [col,dash,w]=sty[k], A=M(g.a), B=M(g.b);
+    x.strokeStyle=col; x.setLineDash(dash); x.lineWidth=w; x.beginPath(); x.moveTo(A[0],A[1]); x.lineTo(B[0],B[1]); x.stroke(); }
+  x.setLineDash([]);
+}
+let tipT=0;
+function hoverTip(e){ if(!paper || anim) return; const [X,Y]=evPos(e), w=toWorld(X,Y), n=stackAtPt(paper,w).length, el=$('tip');
+  if(!n){ el.hidden=true; return; } el.textContent=n===1?'1 層':`${n} 層`+(scope==='layers'?`・摺上 ${Math.min(layerN,n)} 層`:''); el.style.left=(X+14)+'px'; el.style.top=(Y+12)+'px'; el.hidden=false;
+  clearTimeout(tipT); tipT=setTimeout(()=>{ el.hidden=true; },1400); }
 function setType(t){ foldType=t; $('typeLbl').textContent=TYPES[t].name; $('typeBtn').classList.toggle('on',t!=='valley');
   $('typeIcon').setAttribute('stroke-dasharray', TYPES[t].dash.map(x=>(x/2.2).toFixed(1)).join(' ')); renderStepCard(); }
-function setScope(v){ scope=v; $('scopeLbl').textContent=v==='flap'?'這一片':'全部層'; $('scopeBtn').classList.toggle('on',v==='flap'); renderStepCard(); }
+function scopeName(v){ return v==='flap'?'這一片':v==='layers'?`上 ${layerN} 層`:'全部層'; }
+function setScope(v){ scope=v; $('scopeLbl').textContent=scopeName(v); $('scopeBtn').classList.toggle('on',v!=='all'); renderStepCard(); if(drag&&drag.t&&!drag.pan&&!drag.compound) updateDrag(drag.vx,drag.vy); }
+function setLayerN(n){ layerN=Math.max(1,Math.min(16,n)); setScope('layers'); }
+// 拖的時候：起點底下疊了哪些層，哪些會被摺（點一層＝摺到那一層為止）
+function renderLayers(){
+  const el=$('layers'); if(!drag || drag.pan || drag.compound || !drag.s){ el.hidden=true; return; }
+  const P=drag.fold&&drag.fold.P ? drag.fold.P : drag.t||drag.s, st=stackNear(paper.facets, drag.s, P);
+  if(st.length<2 && scope!=='layers'){ el.hidden=true; return; }
+  const moved=new Set(); if(drag.fold && drag.fold.res && drag.fold.res!==paper) for(const f of drag.fold.res.facets) if(f.moved){ moved.add(f.id); if(f.src!=null) moved.add(f.src); }
+  let h=`<div class="ttl">這裡 ${st.length} 層・要摺的是橘色</div>`;
+  st.slice(0,12).forEach((f,i)=>{ h+=`<button type="button" data-n="${i+1}" class="${moved.has(f.id)?'on':''}"><i style="background:${f.c?paperColor:BACK}"></i>第 ${i+1} 層${i===0?'（最上）':i===st.length-1?'（最下）':''}</button>`; });
+  h+=`<div class="pm"><button type="button" data-d="-1">少一層</button><button type="button" data-d="1">多一層</button></div>`;
+  el.innerHTML=h; el.hidden=false;
+}
+$('layers').addEventListener('pointerdown',e=>{ const b=e.target.closest('button'); if(!b) return; e.preventDefault(); e.stopPropagation();
+  if(b.dataset.n) setLayerN(+b.dataset.n); else setLayerN((scope==='layers'?layerN:1)+(+b.dataset.d)); renderLayers(); });
 function lineSvg(t){ return `<svg viewBox="0 0 64 28"><line x1="4" y1="16" x2="60" y2="16" stroke="currentColor" stroke-width="2.4" stroke-dasharray="${TYPES[t].dash.join(' ')}"/>`
   +(t==='crease'?'<path d="M22 9l10-5 10 5M22 23l10 4 10-4" fill="none" stroke="currentColor" stroke-width="1.6"/>':'')
   +(t==='outside'||t==='inside'?`<text x="32" y="8" font-size="8" text-anchor="middle" fill="currentColor">${t==='outside'?'往外包':'往內塞'}</text>`:'')+'</svg>'; }
@@ -1445,7 +1654,8 @@ function openTypeSheet(){
 }
 $('typeBtn').onclick=openTypeSheet;
 $('typeClose').onclick=()=>{ $('typeSheet').hidden=true; };
-$('scopeBtn').onclick=()=>{ setScope(scope==='all'?'flap':'all'); showToast(scope==='flap'?'只摺這一片：只翻手指下最上面那片，和跟它連著的部分':'全部層：摺線那一側的所有層一起摺'); };
+$('scopeBtn').onclick=()=>{ setScope(scope==='all'?'flap':scope==='flap'?'layers':'all');
+  showToast(scope==='flap'?'只摺這一片：只翻手指下最上面那片，和跟它連著的部分':scope==='layers'?`上 ${layerN} 層：從起點往下數 ${layerN} 層一起摺（拖的時候左邊可以選層，電腦可按數字鍵 1～9 或滾輪）`:'全部層：摺線那一側的所有層一起摺'); };
 $('flip').onclick=()=>{ if(anim) return; history.push(paper); histFold.push(false); paper=flipPaper(paper); afterChange(); };
 $('rot').onclick=()=>{ if(anim) return; history.push(paper); histFold.push(false); paper=rotPaper(paper); afterChange(); };
 let toastT=0;
