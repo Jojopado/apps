@@ -90,9 +90,32 @@ th{color:var(--sub);font-weight:600}
       <h2 style="margin-top:12px">🎚️ 生效中的力道</h2><div id="biasList" class="sub">—</div>
     </div>
   </div>
+  <div class="card" style="margin-top:12px">
+    <h2>🎬 一鍵測試劇本（不懂股市也能測）</h2>
+    <div class="sub">按下去之後，照「你應該會看到」去遊戲裡確認。確認過就打勾（勾選只存在這台電腦）。</div>
+    <div id="scen"></div>
+  </div>
   <div class="cols" style="margin-top:12px">
+    <div class="card"><h2>👨‍👩‍👧 測試玩家（家人）名單</h2>
+      <div class="sub">名單上的名字<b>註冊時</b>起始資金會用下面的金額。一行一個名字。已經註冊的人請用玩家詳細資料裡的「發錢」補。</div>
+      <textarea id="vipNames" rows="4" placeholder="例：&#10;媽媽&#10;爸爸"></textarea>
+      <label>測試玩家起始資金</label><input id="vipCash" type="number" value="500000">
+      <div class="btns"><button class="b go" id="vipBtn">儲存名單</button></div>
+    </div>
+    <div class="card"><h2>🤖 AI 散戶</h2>
+      <div class="sub">20 位電腦玩家會自動交易、走路，讓股市和排行榜熱鬧。在遊戲裡會標示「AI」。</div>
+      <div class="btns"><button class="b" id="aiBtn">AI 散戶</button></div>
+      <h2 style="margin-top:12px">📥 匯出數據</h2>
+      <div class="sub">下載 CSV（Excel 可以開）：每位玩家每天的步數、戶外步數、總資產、交易次數。</div>
+      <div class="btns"><button class="b go" id="csvBtn">下載玩家數據 CSV</button></div>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:12px">
+    <div class="card" style="grid-column:1/-1"><h2>👀 玩家（<span id="pCount">0</span>）<span class="sub">　點一列看詳細資料／發錢</span></h2>
+      <div class="btns"><button class="b on" data-pf="human">真人</button><button class="b" data-pf="all">全部（含 AI）</button></div>
+      <div class="scroll"><table id="plTbl"></table></div></div>
+    <div class="card" id="pDetail" style="grid-column:1/-1;display:none"></div>
     <div class="card"><h2>📈 股價</h2><div class="scroll"><table id="pxTbl"></table></div></div>
-    <div class="card"><h2>👀 玩家（<span id="pCount">0</span>）</h2><div class="scroll"><table id="plTbl"></table></div></div>
     <div class="card"><h2>💰 玩家押在哪（持股市值）</h2><div class="scroll"><table id="exTbl"></table></div></div>
   </div>
   <div class="card" style="margin-top:12px"><h2>☠️ 危險區</h2><div class="sub">清空整個遊戲：所有玩家、股價、K 線重來。</div><div class="btns"><button class="b" id="wipeAsk">清空遊戲…</button><button class="b red" id="wipeYes" style="display:none">真的清空</button></div></div>
@@ -136,6 +159,8 @@ function boot(){
   $('nTgt').innerHTML = '<option value="all">🌐 整個市場</option>' + SEC.map(function(s){ return '<option value="' + s.id + '">' + s.icon + ' ' + esc(s.name) + '（產業）</option>'; }).join('') + opts;
   $('vol').oninput = function(){ $('volV').textContent = (+this.value).toFixed(1); };
   $('bRate').oninput = function(){ $('bRateV').textContent = (this.value > 0 ? '+' : '') + this.value + '%'; };
+  drawScen();
+  document.addEventListener('click', function(ev){ var tr = ev.target.closest && ev.target.closest('.prow'); if(tr) showDetail(tr.getAttribute('data-u')); });
   listen('market', function(d){ M = d; draw(); });
   listen('adm', function(d){ A = d; draw(); });
   setInterval(draw, 5000);
@@ -149,7 +174,14 @@ document.addEventListener('click', function(ev){
     var timed = a === 'crash' || a === 'rally';
     cmd({type:'regime', name:a, min: timed ? +$('regMin').value || 8 : 0, after: $('regAfter').value}); return;
   }
+  if((a = t.getAttribute('data-scen'))){ var sc = SCEN.filter(function(s){ return s.id === a; })[0]; if(sc){ $('scenOut').innerHTML = '<b>' + sc.t + '</b> 已送出。你應該會看到：' + esc(sc.run()); } return; }
+  if((a = t.getAttribute('data-pf'))){ pFilter = a; Array.prototype.forEach.call(document.querySelectorAll('[data-pf]'), function(b){ b.classList.toggle('on', b === t); }); draw(); return; }
   switch(t.id){
+    case 'vipBtn': cmd({type:'vip', names: $('vipNames').value.split(/\n/).map(function(s){ return s.trim(); }).filter(Boolean), cash: +$('vipCash').value || 500000}); break;
+    case 'aiBtn': cmd({type:'ai', v: !(A && A.aiOn)}); break;
+    case 'csvBtn': exportCsv(); break;
+    case 'gBtn': if(detailU){ var amt = +$('gAmt').value || 0; if(!amt){ toast('請輸入金額'); break; } cmd({type:'grant', u: detailU, amount: amt, note: $('gNote').value}); setTimeout(function(){ showDetail(detailU); }, 4000); } break;
+    case 'dClose': $('pDetail').style.display = 'none'; detailU = null; break;
     case 'pauseBtn': cmd({type:'pause', v: !(M && M.paused)}); break;
     case 'autoBtn': cmd({type:'autonews', v: !!(A && A.noAuto)}); break;
     case 'volBtn': cmd({type:'vol', v: +$('vol').value}); break;
@@ -165,6 +197,81 @@ document.addEventListener('click', function(ev){
     case 'wipeYes': cmd({type:'wipe'}); $('wipeYes').style.display = 'none'; break;
   }
 });
+
+var pFilter = 'human', vipLoaded = false, detailU = null;
+function ago(t){ if(!t) return '—'; var s = Math.max(0, (Date.now() - t) / 1000); return s < 90 ? '剛剛' : s < 3600 ? Math.round(s/60) + ' 分前' : s < 86400 ? Math.round(s/3600) + ' 小時前' : Math.round(s/86400) + ' 天前'; }
+function rndCo(){ return COMP[Math.floor(Math.random() * COMP.length)]; }
+
+// ---------- 測試劇本 ----------
+var SCEN = [
+  { id:'up', t:'📈 利多新聞', run: function(){ var c = rndCo(); cmd({type:'news', tgt:c.sym, tag:'快訊', title:c.name + '拿下史上最大訂單（測試）', impact:8, min:1}); return '「' + c.name + '」1 分鐘內上漲約 8%；新聞頁第一則是這則快訊；股市列表按「漲幅」排序時它會排到最前面。'; } },
+  { id:'down', t:'📉 利空新聞', run: function(){ var c = rndCo(); cmd({type:'news', tgt:c.sym, tag:'快訊', title:c.name + '工廠停工（測試）', impact:-8, min:1}); return '「' + c.name + '」1 分鐘內下跌約 8%；新聞頁出現這則快訊。'; } },
+  { id:'crash', t:'💥 崩盤 3 分鐘', run: function(){ cmd({type:'regime', name:'crash', min:3, after:'flat'}); return '股市頁的指數一直往下掉，大部分股票變成「跌」的顏色；3 分鐘後自動恢復盤整。有持股的話資產會變少。'; } },
+  { id:'earn', t:'📊 財報優於預期', run: function(){ var c = rndCo(); cmd({type:'earn', sym:c.sym, exp:10, act:30}); return '新聞出現橘色「財報」標籤：「' + c.name + '公布財報…優於預期」，股價在 1 分鐘內上漲約 10～15%。'; } },
+  { id:'fake', t:'🃏 假消息（2 分鐘後澄清）', run: function(){ var c = rndCo(); cmd({type:'news', tgt:c.sym, tag:'傳聞', title:'網路盛傳' + c.name + '要被收購（測試）', impact:6, min:1, fake:true, revMin:2}); return '「' + c.name + '」先漲約 6%；2 分鐘後出現灰色「澄清」新聞，股價跌回去（甚至更低）。'; } },
+  { id:'bias', t:'🎚️ 主力慢慢拉抬', run: function(){ var c = rndCo(); cmd({type:'bias', sym:c.sym, rate:0.3, min:10}); return '「' + c.name + '」接下來 10 分鐘慢慢往上爬，大約 +5%（玩家看不到任何提示）。'; } },
+  { id:'closed', t:'⏰ 收盤狀態（記得切回）', run: function(){ cmd({type:'mode', mode:'real'}); return '如果現在不是週一～五 09:00–13:30：遊戲右上角顯示「收盤」，股價不動，下市價單會變成「委託中」，開盤才成交。測完請按「市場 → 測試：全天開盤」切回來。'; } },
+];
+var CHECK = [
+  '走路：模擬走路（或真的走）後，「領取」按鈕的金額變多，按下去錢包增加、有金幣動畫',
+  '出門散步：開啟後在戶外走，戶外步數增加，賺的錢算兩倍',
+  '買進：買了以後「資產」頁出現持股，錢包減少',
+  '賣出：賣出後跳出賺／賠的特效，成交紀錄有這筆',
+  '限價單：掛一個比現價低的買單，股價跌到才成交（在資產頁可以取消）',
+  '破產／重來：資產頁按「重新開始」，回到起始資金',
+  '排行榜：點別人（含 AI）可以看到名片',
+  '自訂角色：換髮型衣服後，走路畫面和排行榜都跟著變',
+  '換手機登入：登出後用同一組名字密碼登入，資料都還在',
+  '發錢：下面玩家詳細資料按「發錢」，遊戲裡跳出收到獎勵',
+];
+function loadChecks(){ try{ return JSON.parse(localStorage.getItem('stk_checks') || '{}'); }catch(e){ return {}; } }
+function saveChecks(c){ try{ localStorage.setItem('stk_checks', JSON.stringify(c)); }catch(e){} }
+function drawScen(){
+  var ck = loadChecks(), h = '<div class="btns">';
+  SCEN.forEach(function(s){ h += '<button class="b" data-scen="' + s.id + '">' + s.t + '</button>'; });
+  h += '</div><div id="scenOut" class="sub" style="font-size:13px;color:var(--text);margin:6px 0 10px"></div><b>✅ 測試清單</b>';
+  SCEN.concat(CHECK.map(function(t, i){ return {id:'c' + i, t:t}; })).forEach(function(s){
+    h += '<label style="color:var(--text);font-size:13px;margin:4px 0"><input type="checkbox" data-ck="' + s.id + '"' + (ck[s.id] ? ' checked' : '') + '> ' + esc(s.t) + '</label>';
+  });
+  $('scen').innerHTML = h;
+}
+document.addEventListener('change', function(e){ var k = e.target.getAttribute && e.target.getAttribute('data-ck'); if(!k) return; var c = loadChecks(); c[k] = e.target.checked; saveChecks(c); });
+
+// ---------- 玩家詳細資料 ----------
+function showDetail(u){
+  detailU = u; var box = $('pDetail'); box.style.display = ''; box.innerHTML = '<h2>載入中…</h2>';
+  fetch(DB + '/players/' + encodeURIComponent(u) + '.json').then(function(r){ return r.json(); }).then(function(p){
+    if(!p){ box.innerHTML = '<h2>找不到這位玩家</h2>'; return; }
+    var px = (M && M.px) || {}, hv = 0, hold = Object.keys(p.pos || {}).map(function(s){ var h = p.pos[s], v = h.q * (px[s] || 0); hv += v; return '<tr><td>' + s + ' ' + esc((BY[s]||{}).name) + '</td><td>' + h.q.toLocaleString() + '</td><td>' + money(h.c / h.q) + '</td><td>' + money(v) + '</td><td class="' + cls(v - h.c) + '">' + money(v - h.c) + '</td></tr>'; }).join('');
+    var nw = (p.cash || 0) + hv, base = p.base || G.START_CASH;
+    var hist = Object.keys(p.hist || {}).sort().reverse().map(function(d){ var x = p.hist[d]; return '<tr><td>' + d + '</td><td>' + (x.s || 0).toLocaleString() + '</td><td>' + (x.o || 0).toLocaleString() + '</td><td>' + money(x.nw) + '</td><td>' + (x.tr || 0) + '</td></tr>'; }).join('');
+    var fills = (p.fills || []).filter(Boolean).map(function(f){ return '<tr><td>' + new Date(f.t).toLocaleString() + '</td><td>' + (f.ok ? (f.side === 'buy' ? '買' : '賣') : '❌ ' + esc(f.why || '')) + '</td><td>' + f.sym + '</td><td>' + (f.qty || 0).toLocaleString() + '</td><td>' + (f.px || '') + '</td><td>' + (f.pl != null ? money(f.pl) : '') + '</td></tr>'; }).join('');
+    box.innerHTML = '<h2>' + (p.ai ? '🤖 ' : '') + esc(p.name) + ' <span class="sub">' + esc(u) + '・加入 ' + new Date(p.joined || 0).toLocaleDateString() + '・最後上線 ' + ago(p.seen) + '</span></h2>' +
+      '<div class="stat"><span class="pill">總資產 ' + money(nw) + '</span><span class="pill ' + cls(nw - base) + '">報酬 ' + pct(nw / base - 1) + '</span><span class="pill">現金 ' + money(p.cash) + '</span><span class="pill">本金 ' + money(base) + '</span><span class="pill">累計步數 ' + (p.tot || 0).toLocaleString() + '</span><span class="pill">破產 ' + (p.resets || 0) + ' 次</span></div>' +
+      (p.ai ? '' : '<div class="row2" style="margin-top:8px"><div><label>發錢金額（負數 = 扣錢）</label><input id="gAmt" type="number" value="100000"></div><div><label>附言（玩家看得到）</label><input id="gNote" value="測試玩家獎勵"></div></div><div class="btns"><button class="b go" id="gBtn">💰 發錢</button><button class="b" id="dClose">關閉</button></div>') +
+      '<div class="cols" style="margin-top:8px"><div><b>持股</b><table><tr><th>股票</th><th>股數</th><th>均價</th><th>市值</th><th>損益</th></tr>' + (hold || '<tr><td colspan="5" class="sub">沒有持股</td></tr>') + '</table></div>' +
+      '<div><b>每天紀錄</b><div class="scroll" style="max-height:220px"><table><tr><th>日期</th><th>步數</th><th>戶外</th><th>總資產</th><th>交易</th></tr>' + (hist || '<tr><td colspan="5" class="sub">還沒有紀錄</td></tr>') + '</table></div></div>' +
+      '<div><b>最近成交</b><div class="scroll" style="max-height:220px"><table><tr><th>時間</th><th></th><th>股票</th><th>股數</th><th>價</th><th>損益</th></tr>' + (fills || '<tr><td colspan="6" class="sub">沒有</td></tr>') + '</table></div></div></div>';
+    box.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+}
+
+// ---------- 匯出 CSV ----------
+function exportCsv(){
+  toast('準備中…');
+  fetch(DB + '/players.json').then(function(r){ return r.json(); }).then(function(all){
+    var lines = [['玩家','ID','AI','日期','步數','戶外步數','總資產','交易次數','目前現金','本金','累計步數','破產次數'].join(',')];
+    Object.keys(all || {}).forEach(function(u){
+      var p = all[u]; if(!p) return;
+      var days = Object.keys(p.hist || {}).sort();
+      if(!days.length) days = [''];
+      days.forEach(function(d){ var x = (p.hist || {})[d] || {}; lines.push(['"' + String(p.name).replace(/"/g,'""') + '"', u, p.ai ? 'Y' : '', d, x.s || 0, x.o || 0, x.nw || '', x.tr || 0, p.cash, p.base || G.START_CASH, p.tot || 0, p.resets || 0].join(',')); });
+    });
+    var blob = new Blob(['﻿' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '操盤人生_玩家數據_' + new Date().toISOString().slice(0,10) + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+    toast('已下載 ' + (lines.length - 1) + ' 筆');
+  });
+}
 
 var REG = {bull:'🐂 多頭', flat:'😐 盤整', bear:'🐻 空頭', crash:'💥 崩盤', rally:'🚀 噴出'};
 function draw(){
@@ -184,9 +291,15 @@ function draw(){
   var rows = COMP.map(function(c){ var p = M.px[c.sym], pv = (M.prev || {})[c.sym] || p; return {c:c, p:p, v:p/pv - 1}; }).sort(function(a,b){ return b.v - a.v; });
   $('pxTbl').innerHTML = '<tr><th>股票</th><th>產業</th><th>股價</th><th>漲跌</th></tr>' + rows.map(function(r){ return '<tr><td>' + r.c.sym + ' ' + esc(r.c.name) + '</td><td>' + SECBY[r.c.sec].icon + '</td><td>' + r.p + '</td><td class="' + cls(r.v) + '">' + pct(r.v) + '</td></tr>'; }).join('');
   if(!A) return;
-  var pl = A.players || [];
+  var pl = (A.players || []).filter(function(p){ return pFilter === 'all' || !p.ai; });
   $('pCount').textContent = pl.length;
-  $('plTbl').innerHTML = '<tr><th>玩家</th><th>總資產</th><th>現金</th><th>持股</th></tr>' + pl.map(function(p){ var pos = Object.keys(p.pos || {}).map(function(s){ return s + '×' + p.pos[s]; }).join(' '); return '<tr><td>' + esc(p.name) + (p.resets ? ' 💸' + p.resets : '') + '</td><td>' + money(p.nw) + '</td><td>' + money(p.cash) + '</td><td style="text-align:left;font-size:11px">' + esc(pos || '—') + (p.open ? '（委託 ' + p.open + '）' : '') + '</td></tr>'; }).join('');
+  $('plTbl').innerHTML = '<tr><th>玩家</th><th>總資產</th><th>報酬</th><th>現金</th><th>今日步數（戶外）</th><th>累計步數</th><th>最後上線</th><th>持股</th></tr>' + pl.map(function(p){
+    var pos = Object.keys(p.pos || {}).map(function(s){ return s + '×' + p.pos[s]; }).join(' ');
+    var ret = p.base ? p.nw / p.base - 1 : 0;
+    return '<tr class="prow" data-u="' + esc(p.u) + '" style="cursor:pointer"><td>' + (p.ai ? '🤖 ' : p.vip ? '⭐ ' : '') + esc(p.name) + (p.acct ? '' : ' <span class="sub">(未設密碼)</span>') + (p.resets ? ' 💸' + p.resets : '') + '</td><td>' + money(p.nw) + '</td><td class="' + cls(ret) + '">' + pct(ret) + '</td><td>' + money(p.cash) + '</td><td>' + (p.st || 0).toLocaleString() + '（' + (p.out || 0).toLocaleString() + '）</td><td>' + (p.tot || 0).toLocaleString() + '</td><td>' + (p.ai ? '—' : ago(p.seen)) + '</td><td style="text-align:left;font-size:11px">' + esc(pos || '—') + (p.open ? '（委託 ' + p.open + '）' : '') + '</td></tr>';
+  }).join('');
+  if (!vipLoaded && A.vip) { vipLoaded = true; $('vipNames').value = A.vip.join('\n'); $('vipCash').value = A.vipCash || 500000; }
+  $('aiBtn').textContent = 'AI 散戶：' + (A.aiOn ? '開（按一下關掉）' : '關（按一下打開）');
   var ex = Object.keys(A.expo || {}).map(function(s){ return [s, A.expo[s]]; }).sort(function(a,b){ return b[1] - a[1]; });
   $('exTbl').innerHTML = '<tr><th>股票</th><th>玩家持股市值</th></tr>' + (ex.length ? ex.map(function(e){ return '<tr><td>' + e[0] + ' ' + esc((BY[e[0]]||{}).name) + '</td><td>' + money(e[1]) + '</td></tr>'; }).join('') : '<tr><td colspan="2" class="sub">還沒有人持股</td></tr>');
   $('pending').innerHTML = (A.pending || []).length ? A.pending.map(function(p){ return '・' + Math.max(0, Math.round((p.at - Date.now())/1000)) + ' 秒後：' + esc(p.title) + (p.sym ? '（' + p.sym + (p.pct ? ' ' + pct(p.pct) : '') + '）' : ''); }).join('<br>') : '沒有';

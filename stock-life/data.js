@@ -9,6 +9,8 @@
   var GAME = {
     DB: 'https://minigolf-party-default-rtdb.asia-southeast1.firebasedatabase.app/rooms/stk',
     START_CASH: 50000,
+    VIP_CASH: 500000,       // start cash for names on the admin's test-player list
+    AI_COUNT: 20,           // computer-controlled traders that keep the market and leaderboard alive
     BANKRUPT_BELOW: 1000,
     FEE_RATE: 0.001425, FEE_MIN: 20, TAX_RATE: 0.003,
     STEP_PAY: 0.1,          // $ per step  (1,000 steps = $100)
@@ -30,7 +32,19 @@
     { id: 'air',  name: '航空旅遊', icon: '✈️', beta: 1.1, vol: 0.24 },
     { id: 'game', name: '遊戲娛樂', icon: '🎮', beta: 1.1, vol: 0.22 },
     { id: 'food', name: '食品民生', icon: '🍞', beta: 0.6, vol: 0.10 },
-    { id: 'prop', name: '營建地產', icon: '🏗️', beta: 0.9, vol: 0.18 }
+    { id: 'prop', name: '營建地產', icon: '🏗️', beta: 0.9, vol: 0.18 },
+    { id: 'tele', name: '電信網路', icon: '📡', beta: 0.6, vol: 0.12 },
+    { id: 'auto', name: '汽車機車', icon: '🚗', beta: 1.1, vol: 0.22 },
+    { id: 'aero', name: '航太國防', icon: '🚀', beta: 0.9, vol: 0.22 },
+    { id: 'mat',  name: '鋼鐵化工', icon: '🏭', beta: 1.2, vol: 0.22 },
+    { id: 'fash', name: '服飾時尚', icon: '👗', beta: 1.0, vol: 0.20 },
+    { id: 'dine', name: '餐飲連鎖', icon: '🍔', beta: 0.7, vol: 0.14 },
+    { id: 'media', name: '媒體廣告', icon: '📺', beta: 1.0, vol: 0.20 },
+    { id: 'edu',  name: '教育學習', icon: '📚', beta: 0.7, vol: 0.15 },
+    { id: 'pet',  name: '寵物用品', icon: '🐶', beta: 0.8, vol: 0.16 },
+    { id: 'sport', name: '運動健身', icon: '🏃', beta: 0.9, vol: 0.18 },
+    { id: 'robo', name: '機器人',   icon: '🦾', beta: 1.4, vol: 0.32 },
+    { id: 'home', name: '家電家居', icon: '🛋️', beta: 0.9, vol: 0.16 }
   ];
 
   // vol = annual idiosyncratic volatility, p = starting price
@@ -70,7 +84,43 @@
     { sym: 'FARM', name: '綠野農產',   sec: 'food', p: 25.5, vol: 0.30, desc: '農產品與肥料，天氣影響大' },
     { sym: 'TOWR', name: '高塔建設',   sec: 'prop', p: 36.7, vol: 0.28, desc: '住宅建商，看房市與利率' },
     { sym: 'CRNE', name: '鐵臂工程',   sec: 'prop', p: 49.1, vol: 0.24, desc: '大型公共工程承包' },
-    { sym: 'ROOF', name: '屋頂不動產', sec: 'prop', p: 88.0, vol: 0.18, desc: '商辦與購物中心收租' }
+    { sym: 'ROOF', name: '屋頂不動產', sec: 'prop', p: 88.0, vol: 0.18, desc: '商辦與購物中心收租' },
+    { sym: 'WAVE', name: '波段電信',   sec: 'tele', p: 72.4, vol: 0.14, desc: '行動網路與光纖寬頻，用戶數穩定' },
+    { sym: 'LINK', name: '連線通訊',   sec: 'tele', p: 38.6, vol: 0.18, desc: '5G 基地台與網通設備' },
+    { sym: 'ORBT', name: '軌道衛星網', sec: 'tele', p: 23.2, vol: 0.45, desc: '低軌衛星上網服務，還在燒錢擴張' },
+    { sym: 'MOTO', name: '疾風機車',   sec: 'auto', p: 54.8, vol: 0.26, desc: '機車與電動機車大廠' },
+    { sym: 'DRVE', name: '馳騁汽車',   sec: 'auto', p: 128,  vol: 0.24, desc: '傳統車廠，正在轉型做電動車' },
+    { sym: 'TYRE', name: '圓輪輪胎',   sec: 'auto', p: 41.3, vol: 0.20, desc: '輪胎製造，跟著汽車銷量走' },
+    { sym: 'JETS', name: '蒼穹航太',   sec: 'aero', p: 286,  vol: 0.28, desc: '民航客機零件供應商' },
+    { sym: 'ARMR', name: '鋼盾防衛',   sec: 'aero', p: 97.5, vol: 0.22, desc: '國防裝備與偵察無人機' },
+    { sym: 'RCKT', name: '星箭發射',   sec: 'aero', p: 64.0, vol: 0.55, desc: '火箭發射服務，一次失敗就重挫' },
+    { sym: 'IRON', name: '鐵山鋼鐵',   sec: 'mat',  p: 31.7, vol: 0.26, desc: '鋼鐵冶煉，標準的景氣循環股' },
+    { sym: 'CHEM', name: '晶化化工',   sec: 'mat',  p: 58.9, vol: 0.24, desc: '塑化原料與特用化學品' },
+    { sym: 'GLSS', name: '透光玻璃',   sec: 'mat',  p: 44.6, vol: 0.22, desc: '面板與建築用玻璃' },
+    { sym: 'SILK', name: '絲路服飾',   sec: 'fash', p: 76.2, vol: 0.26, desc: '平價快時尚品牌' },
+    { sym: 'SNKR', name: '飛步球鞋',   sec: 'fash', p: 142,  vol: 0.30, desc: '潮流球鞋，聯名款一出就搶光' },
+    { sym: 'GEMS', name: '星辰珠寶',   sec: 'fash', p: 210,  vol: 0.24, desc: '珠寶與名錶' },
+    { sym: 'NOOD', name: '湯頭麵館',   sec: 'dine', p: 48.3, vol: 0.18, desc: '連鎖麵館，靠外送成長' },
+    { sym: 'BRGR', name: '大口漢堡',   sec: 'dine', p: 66.1, vol: 0.16, desc: '速食連鎖店' },
+    { sym: 'CAFE', name: '晨光咖啡',   sec: 'dine', p: 39.4, vol: 0.20, desc: '連鎖咖啡店，早餐生意最好' },
+    { sym: 'NEWS', name: '天天新聞',   sec: 'media', p: 27.5, vol: 0.22, desc: '新聞網站與電視台' },
+    { sym: 'ADSX', name: '點擊廣告',   sec: 'media', p: 88.7, vol: 0.32, desc: '網路廣告投放平台' },
+    { sym: 'TUNE', name: '旋律音樂',   sec: 'media', p: 52.6, vol: 0.28, desc: '音樂串流與唱片公司' },
+    { sym: 'LERN', name: '學海教育',   sec: 'edu',  p: 34.9, vol: 0.18, desc: '線上課程平台' },
+    { sym: 'BOOK', name: '書香出版',   sec: 'edu',  p: 21.8, vol: 0.16, desc: '出版社與連鎖書店' },
+    { sym: 'LING', name: '語通學習',   sec: 'edu',  p: 46.2, vol: 0.22, desc: '語言學習 App，訂閱制' },
+    { sym: 'PAWS', name: '毛孩百貨',   sec: 'pet',  p: 57.3, vol: 0.20, desc: '寵物用品連鎖店' },
+    { sym: 'VETS', name: '安心動物醫院', sec: 'pet', p: 83.4, vol: 0.16, desc: '連鎖動物醫院' },
+    { sym: 'FEED', name: '汪喵飼料',   sec: 'pet',  p: 29.6, vol: 0.18, desc: '寵物飼料製造' },
+    { sym: 'GYMX', name: '鐵人健身房', sec: 'sport', p: 36.8, vol: 0.24, desc: '連鎖健身房，看會員數' },
+    { sym: 'BALL', name: '全壘打用品', sec: 'sport', p: 49.5, vol: 0.20, desc: '球類與運動器材' },
+    { sym: 'TRAK', name: '足跡穿戴',   sec: 'sport', p: 112,  vol: 0.32, desc: '運動手錶與計步手環' },
+    { sym: 'BOTS', name: '小幫手機器人', sec: 'robo', p: 168, vol: 0.40, desc: '掃地機器人與家用機器人' },
+    { sym: 'ARMS', name: '精密手臂',   sec: 'robo', p: 254,  vol: 0.36, desc: '工廠自動化機械手臂' },
+    { sym: 'DRON', name: '蜂鳥無人機', sec: 'robo', p: 61.2, vol: 0.45, desc: '空拍與送貨無人機' },
+    { sym: 'COZY', name: '暖窩家具',   sec: 'home', p: 42.1, vol: 0.18, desc: '平價家具與收納用品' },
+    { sym: 'COOL', name: '極地家電',   sec: 'home', p: 95.6, vol: 0.20, desc: '冷氣與冰箱' },
+    { sym: 'LITE', name: '亮點照明',   sec: 'home', p: 18.4, vol: 0.26, desc: 'LED 燈具與智慧燈泡' }
   ];
 
   var api = { GAME: GAME, SECTORS: SECTORS, COMPANIES: COMPANIES };
