@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>沉船倒數</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<style>
+/* 版面：上半是船（整艘看得到），下方是動作鍵＋6 格背包；落海後換成海面場景＋事件卡 */
+:root{
+  --sea:#0e2340;
+  --sea-2:#173a63;
+  --panel:#142540;
+  --panel-2:#1d3356;
+  --line:#2c4a75;
+  --ink:#e8f1ff;
+  --dim:#8aa3c7;
+  --gold:#ffcd75;
+  --orange:#ef7d57;
+  --danger:#ef5d5d;
+  --ok:#7be0a0;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-pixel:"Silkscreen",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#app{height:100%;max-width:460px;margin:0 auto;position:relative}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;padding:10px 16px}
+.scr.on{display:flex}
+button{font-family:var(--f-body);font-size:15px;font-weight:700;color:var(--ink);background:var(--panel-2);
+  border:2px solid var(--line);border-radius:6px;padding:10px 12px;box-shadow:0 3px 0 #050c18;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #050c18}
+button:disabled{opacity:.38;cursor:default}
+button.main{background:var(--gold);color:#2a1a08;border-color:#c99a3e}
+button.warn{background:var(--orange);color:#2a1206;border-color:#b0563a}
+.pix{font-family:var(--f-pixel)}
+img.ico{image-rendering:pixelated;width:24px;height:24px;flex:none}
+
+/* 標題 */
+#scr-title{justify-content:center;gap:14px}
+#scr-title h1{font-size:42px;font-weight:900;margin:0;letter-spacing:4px;color:var(--gold);text-shadow:3px 3px 0 #050c18}
+#scr-title .sub{color:var(--dim);margin-top:-8px}
+#scr-title .story{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:12px 14px;line-height:1.7}
+#scr-title ol{margin:0;padding-left:20px;line-height:1.8;color:var(--dim)}
+#scr-title ol b{color:var(--ink)}
+#title-cv{width:100%;image-rendering:pixelated;border-radius:6px}
+
+/* 船上 */
+#scr-ship{padding:6px 12px 10px;gap:6px}
+.hud{display:flex;align-items:center;gap:10px}
+#timer{font-family:var(--f-pixel);font-size:30px;color:var(--gold);min-width:84px}
+#timer.hot{color:var(--danger);animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+.hud .meta{flex:1;font-size:12px;color:var(--dim);line-height:1.5}
+.hud .meta b{color:var(--ink)}
+#stage{flex:1;position:relative;overflow:hidden;border-radius:8px;background:#173a63;touch-action:none;min-height:0}
+#cv{position:absolute;left:50%;top:50%;image-rendering:pixelated;transform-origin:50% 50%}
+#flash{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 60px 10px rgba(239,93,93,0);transition:box-shadow .2s}
+#flash.on{box-shadow:inset 0 0 70px 18px rgba(239,93,93,.55)}
+#joy{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:2px solid rgba(232,241,255,.35);
+  background:rgba(232,241,255,.08);pointer-events:none;display:none}
+#knob{position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;background:rgba(232,241,255,.45)}
+#hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:12px;color:rgba(232,241,255,.7);pointer-events:none}
+#toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:rgba(5,12,24,.85);border:1px solid var(--line);
+  padding:6px 12px;border-radius:6px;font-size:13px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s}
+#toast.on{opacity:1}
+.acts{display:flex;gap:8px;min-height:46px}
+.acts button{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#btn-boat{position:relative;overflow:hidden}
+#btn-boat .bar{position:absolute;left:0;top:0;bottom:0;background:rgba(255,205,117,.45);width:0;pointer-events:none}
+#btn-boat span{position:relative}
+.inv{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.cell{height:50px;min-width:0;overflow:hidden;white-space:nowrap;border:2px dashed var(--line);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:11px;color:var(--dim);gap:1px}
+.cell.full{border-style:solid;background:var(--panel);color:var(--ink);cursor:pointer}
+.cell.full:active{background:var(--panel-2)}
+.invcap{font-size:11px;color:var(--dim);text-align:right;margin-top:-2px}
+
+/* 落海結果 */
+#scr-wreck{justify-content:center;gap:12px}
+#scr-wreck h2,#scr-end h2{font-size:30px;margin:0;font-weight:900;color:var(--gold)}
+.box{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:12px 14px;line-height:1.7}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:2px 8px 2px 4px;font-size:13px}
+.chip.lost{opacity:.45;text-decoration:line-through}
+
+/* 海上 */
+#scr-sea{padding:8px 12px 10px;gap:8px}
+.seatop{display:flex;align-items:baseline;gap:10px}
+#day{font-size:22px;font-weight:900;color:var(--gold)}
+#floatlbl{font-size:12px;color:var(--dim);flex:1;text-align:right}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{font-size:12px;color:var(--dim)}
+.stat .bar{height:8px;background:#0a1830;border:1px solid var(--line);border-radius:3px;margin-top:2px;overflow:hidden}
+.stat .bar i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.stat.low .bar i{background:var(--danger)}
+.stat b{color:var(--ink);font-family:var(--f-pixel);font-weight:400}
+#sea-cv{width:100%;aspect-ratio:160/96;image-rendering:pixelated;border-radius:8px;flex:none}
+#card{flex:1;min-height:0;overflow:auto;background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:8px}
+#card h3{margin:0;font-size:19px}
+#card p{margin:0;line-height:1.7}
+#card .note{font-size:12px;color:var(--dim)}
+#card .res{color:var(--gold)}
+#card button{text-align:left;display:flex;align-items:center;gap:8px}
+#card button small{font-weight:400;color:var(--dim);margin-left:auto;font-size:12px}
+#card button.main small{color:#5b3d10}
+#sea-inv{flex:none}
+
+/* 結局 */
+#scr-end{justify-content:center;gap:12px}
+#scr-end .big{font-size:15px;line-height:1.8}
+#scr-end .tips{font-size:13px;color:var(--dim);line-height:1.7}
+
+#fuzz{position:fixed;inset:0;overflow:auto;background:#000;color:#0f0;font:12px monospace;padding:8px;white-space:pre-wrap;z-index:9;display:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="scr-title" class="scr on">
+    <canvas id="title-cv" width="160" height="72"></canvas>
+    <h1>沉船倒數</h1>
+    <div class="sub">30 秒搜刮，然後在海上活下去</div>
+    <div class="story">凌晨 3:12，貨輪「晨星號」撞上暗礁。船身開始傾斜，船尾已經在進水。廣播只說了一句：<b>所有人棄船。</b></div>
+    <ol>
+      <li><b>拖曳畫面</b>移動，靠近東西按<b>「撿起」</b></li>
+      <li>背包只有 <b>6 格</b>，點背包裡的東西可以丟掉</li>
+      <li>船會<b>越來越斜</b>、水從船尾淹上來</li>
+      <li>30 秒到你一定會落海——<b>在甲板上</b>落海最安全</li>
+      <li>左邊有<b>救生艇</b>，按住按鈕解開纜繩</li>
+    </ol>
+    <button id="btn-start" class="main" style="font-size:18px;padding:14px">警報響了 →</button>
+  </section>
+
+  <section id="scr-ship" class="scr">
+    <div class="hud">
+      <div id="timer">30.0</div>
+      <div class="meta">你在：<b id="room">左船艙</b><br>傾斜 <b id="tilt">0°</b>　進水 <b id="flood">0%</b></div>
+    </div>
+    <div id="stage">
+      <canvas id="cv" width="160" height="320"></canvas>
+      <div id="flash"></div>
+      <div id="joy"><div id="knob"></div></div>
+      <div id="hint">按住任何地方拖曳來移動</div>
+      <div id="toast"></div>
+    </div>
+    <div class="acts">
+      <button id="btn-pick" disabled>附近沒有東西</button>
+      <button id="btn-boat" class="warn" style="display:none"><div class="bar"></div><span>按住解開救生艇</span></button>
+    </div>
+    <div class="inv" id="ship-inv"></div>
+    <div class="invcap" id="invcap">0 / 6 格・點東西可以丟掉</div>
+  </section>
+
+  <section id="scr-wreck" class="scr">
+    <h2 id="wreck-title">船翻了</h2>
+    <div class="box" id="wreck-text"></div>
+    <div class="chips" id="wreck-items"></div>
+    <button id="btn-drift" class="main">開始漂流 →</button>
+  </section>
+
+  <section id="scr-sea" class="scr">
+    <div class="seatop"><div id="day">第 1 天</div><div id="floatlbl"></div></div>
+    <div class="stats" id="stats"></div>
+    <canvas id="sea-cv" width="160" height="96"></canvas>
+    <div id="card"></div>
+    <div class="chips" id="sea-inv"></div>
+  </section>
+
+  <section id="scr-end" class="scr">
+    <h2 id="end-title"></h2>
+    <div class="box big" id="end-text"></div>
+    <div class="chips" id="end-items"></div>
+    <div class="tips" id="end-tips"></div>
+    <button id="btn-again" class="main">再來一次（船艙會重新擺放）</button>
+  </section>
+</div>
+<pre id="fuzz"></pre>
+
+<script>
+'use strict';
+// ============ 基本工具 ============
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rng=Math.random;
+const R=()=>rng(), RI=(a,b)=>a+Math.floor(R()*(b-a+1)), pick=a=>a[Math.floor(R()*a.length)];
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const FUZZ=location.hash.startsWith('#fuzz');
+
+// ============ 調色盤與像素圖（8×8） ============
+const PAL={k:'#1a1c2c',w:'#f4f4f4',o:'#ef7d57',r:'#b13e53',y:'#ffcd75',g:'#38b764',b:'#3b5dc9',B:'#41a6f6',
+  c:'#73eff7',s:'#94b0c2',S:'#566c86',d:'#333c57',p:'#ffccaa',m:'#6b4a2a',M:'#c28a4a'};
+const SPR={
+  jacket:[".oo..oo.","oooooooo","oo.ww.oo","oooooooo","oo.ww.oo","oooooooo","oooooooo",".oo..oo."],
+  ring:["..rrww..",".rrwwrr.","rw....wr","ww....ww","rr....rr","rw....wr",".wwrrww.","..wwrr.."],
+  plank:["........","MMMMMMMM","MmMMMMmM","mmmmmmmm","MMMMMMMM","MMmMMMMM","mmmmmmmm","........"],
+  water:["...ss...","...BB...","..BccB..","..BcBB..","..BcBB..","..BBBB..","..BBBB..","...BB..."],
+  can:["..ssss..",".sSSSSs.",".rrrrrr.",".ryyyyr.",".ryyyyr.",".rrrrrr.",".sSSSSs.","..ssss.."],
+  biscuit:["........",".yyyyyy.","yMyyMyyy","yyyyyMyy","yyMyyyyy","yyyyMyyM",".yyyyyy.","........"],
+  flare:["......w.",".....wy.","....rr..","...rrr..","..rrr...",".rrr....",".kr.....","........"],
+  torch:["........","........","yySSSSSd","ycSSSSSd","ycSSSSSd","yySSSSSd","........","........"],
+  mirror:["..SSSS..",".ScccwS.",".SccwcS.",".ScwccS.",".SwcccS.","..SSSS..","...mm...","...mm..."],
+  tarp:["........",".bbbbbb.",".bBBBBb.",".bbbbbb.",".bBBBBb.",".bbbbbb.","........","........"],
+  knife:["......s.",".....ss.","....ss..","...ss...","..ws....",".mm.....","mm......","........"],
+  rod:[".......m","......m.",".....m.w","....m..w","...m...w","..m....w",".kk....r","kk......"],
+  medkit:["..ssss..",".wwwwww.","wwwrrwww","wwrrrrww","wwrrrrww","wwwrrwww",".wwwwww.","........"],
+  rope:["..MMMM..",".M....M.","M..MM..M","M.M..M.M","M.M..M.M","M..MM..M",".M....M.","..MMMM.."],
+  photo:["wwwwwwww","wBBBBBBw","wBpBBpBw","wBrBBrBw","wgrggrgw","wggggggw","wwwwwwww","........"],
+  laptop:["........",".SSSSSS.",".SccccS.",".SccccS.",".SSSSSS.","ssssssss","SSSSSSSS","........"],
+  man0:["..kkkk..","..kppk..","..pppp..",".bbbbbb.","p.bbbb.p","..bbbb..","..d..d..","..k..k.."],
+  man1:["..kkkk..","..kppk..","..pppp..",".bbbbbb.","p.bbbb.p","..bbbb..","..d.d...","..k.k..."],
+};
+function drawSpr(ctx,name,x,y,sw){
+  const s=SPR[name];
+  for(let j=0;j<8;j++)for(let i=0;i<8;i++){
+    let ch=s[j][i]; if(ch==='.')continue;
+    if(sw&&sw[ch])ch=sw[ch];
+    ctx.fillStyle=PAL[ch]; ctx.fillRect(x+i,y+j,1,1);
+  }
+}
+const ICON={};
+function makeIcons(){
+  for(const id in ITEMS){
+    const c=document.createElement('canvas'); c.width=8;c.height=8;
+    drawSpr(c.getContext('2d'),id,0,0); ICON[id]=c.toDataURL();
+  }
+}
+const ico=id=>`<img class="ico" src="${ICON[id]}" alt="">`;
+
+// ============ 物品 ============
+const ITEMS={
+  jacket:{n:'救生衣',sz:1,d:'穿著不會沉'},
+  ring:{n:'救生圈',sz:2,d:'抱著漂浮'},
+  plank:{n:'木板',sz:2,d:'勉強能浮'},
+  water:{n:'瓶裝水',sz:1,d:'口渴 +35'},
+  can:{n:'罐頭',sz:1,d:'飽足 +40，沒刀難開'},
+  biscuit:{n:'餅乾',sz:1,d:'飽足 +25'},
+  flare:{n:'信號彈',sz:1,d:'讓船看到你'},
+  torch:{n:'手電筒',sz:1,d:'夜裡打 SOS'},
+  mirror:{n:'鏡子',sz:1,d:'白天反光求救'},
+  tarp:{n:'防水布',sz:1,d:'接雨、遮陽'},
+  knife:{n:'刀',sz:1,d:'防身、開罐頭'},
+  rod:{n:'釣竿',sz:2,d:'釣魚'},
+  medkit:{n:'急救包',sz:1,d:'體力 +35'},
+  rope:{n:'繩子',sz:1,d:'綁東西、紮木筏'},
+  photo:{n:'全家福',sz:1,d:'每晚體力 +4'},
+  laptop:{n:'筆電',sz:1,d:'……真的要帶嗎'},
+};
+const CAP=6;
+const invSize=inv=>inv.reduce((a,id)=>a+ITEMS[id].sz,0);
+
+// ============ 船的地圖（20×40 格，每格 8px；上面是船頭甲板，下面是船尾貨艙） ============
+const MAP=[
+"~~~~~~~~####~~~~~~~~",
+"~~~~~~##DDDD##~~~~~~",
+"~~~~~#DDDDDDDD#~~~~~",
+"~~~~#DDDDDDDDDD#~~~~",
+"~~~#DDDDDDDDDDDD#~~~",
+"~~#DDDDDDDDDDDDDD#~~",
+"~~#LLDDDDDDDDDDDD#~~",
+"~~#LLDDDDDDDDDDDD#~~",
+"~~#LLDDDDDDDDDDDD#~~",
+"~~#DDDDDDDDDDDDDD#~~",
+"~~#######..#######~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#######..#######~~",
+"~~#.....#..#.....#~~",
+"~~#.....#..#.....#~~",
+"~~#..............#~~",
+"~~#.....#..#.....#~~",
+"~~#.....#..#.....#~~",
+"~~#######..#######~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#..TTT....TTT..#~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#######..#######~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#.XX........XX.#~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~#....XX..XX....#~~",
+"~~#..............#~~",
+"~~#..............#~~",
+"~~~#............#~~~",
+"~~~~#..........#~~~~",
+"~~~~~##########~~~~~",
+"~~~~~~~~~~~~~~~~~~~~"];
+const TW=8,MW=20,MH=40,CX=80,CY=160;
+const tileAt=(tx,ty)=>(tx<0||ty<0||tx>=MW||ty>=MH)?'~':MAP[ty][tx];
+const SOLID='#TX~L';
+const solidPx=(x,y)=>SOLID.includes(tileAt(Math.floor(x/TW),Math.floor(y/TW)));
+const blocked=(x,y,r)=>solidPx(x-r,y-r)||solidPx(x+r,y-r)||solidPx(x-r,y+r)||solidPx(x+r,y+r);
+const ROOMS=[
+  {id:'deck',n:'甲板',r:[3,1,16,9]},
+  {id:'bridge',n:'駕駛艙',r:[3,10,16,13]},
+  {id:'cabinL',n:'左船艙',r:[3,15,7,19]},
+  {id:'cabinR',n:'右船艙',r:[12,15,16,19]},
+  {id:'hall',n:'走廊',r:[8,14,11,20]},
+  {id:'galley',n:'廚房',r:[3,21,16,26]},
+  {id:'cargo',n:'貨艙',r:[3,27,16,37]},
+];
+function roomAt(x,y){
+  const tx=Math.floor(x/TW),ty=Math.floor(y/TW);
+  for(const rm of ROOMS){const[a,b,c,d]=rm.r;if(tx>=a&&tx<=c&&ty>=b&&ty<=d)return rm}
+  return ROOMS[0];
+}
+const T_SCAV=30;
+
+// ============ 遊戲狀態 ============
+let S={phase:'title'};
+const input={x:0,y:0,hold:false,keys:{}};
+
+function spawnItems(){
+  const spec=[
+    ['deck',['ring','plank','rope']],
+    ['bridge',['torch','mirror','biscuit',R()<.5?'flare':'water']],
+    ['cabinL',['jacket','photo','biscuit']],
+    ['cabinR',[R()<.5?'jacket':'medkit','water','laptop']],
+    ['galley',['water','water','can','can','knife','biscuit']],
+    ['cargo',['flare','tarp','rod','water','medkit','rope','plank','can']],
+  ];
+  const used=new Set(), items=[];
+  for(const[rid,list]of spec){
+    const rm=ROOMS.find(r=>r.id===rid);const[a,b,c,d]=rm.r;
+    for(const id of list){
+      for(let tries=0;tries<200;tries++){
+        const tx=RI(a,c),ty=RI(b,d),k=tx+','+ty,ch=tileAt(tx,ty);
+        if(used.has(k)||(ch!=='.'&&ch!=='D'))continue;
+        if(tx===4&&ty===16)continue; // 玩家起點
+        used.add(k);
+        items.push({id,x:tx*TW+4+RI(-1,1),y:ty*TW+4+RI(-1,1),vx:0,vy:0});
+        break;
+      }
+    }
+  }
+  return items;
+}
+
+function newShip(){
+  return {t:0,x:4*TW+4,y:16*TW+4,face:1,walk:0,busy:0,theta:0,level:150,
+    items:spawnItems(),inv:[],hold:0,released:false,over:false,lastBeep:-1,near:null};
+}
+
+function tiltAt(t){
+  const u=Math.min(1,t/T_SCAV);
+  return 1.5+11*Math.pow(u,1.6)+(2+3*u)*Math.sin(t*1.1);
+}
+function underwater(sh,x,y){
+  const th=sh.theta*Math.PI/180;
+  return (x-CX)*Math.sin(th)+(y-CY)*Math.cos(th)>sh.level;
+}
+function nearBoat(sh){return sh.x<6*TW&&sh.y>5*TW&&sh.y<10*TW}
+function onDeck(sh){return sh.y<10*TW}
+
+function moveBody(o,dx,dy,r){
+  if(!blocked(o.x+dx,o.y,r))o.x+=dx;else o.vx=0;
+  if(!blocked(o.x,o.y+dy,r))o.y+=dy;else o.vy=0;
+}
+
+function shipStep(dt){
+  const sh=S.ship; if(sh.over)return;
+  sh.t+=dt;
+  const u=Math.min(1,sh.t/T_SCAV);
+  sh.theta=tiltAt(sh.t);
+  sh.level=150-222*Math.pow(u,1.3);
+  const sn=Math.sin(sh.theta*Math.PI/180);
+  // 玩家
+  if(sh.busy>0)sh.busy-=dt;
+  let mx=0,my=0;
+  if(sh.busy<=0){
+    mx=input.x;my=input.y;
+    const k=input.keys;
+    if(k.ArrowLeft||k.a)mx-=1; if(k.ArrowRight||k.d)mx+=1; if(k.ArrowUp||k.w)my-=1; if(k.ArrowDown||k.s)my+=1;
+    const m=Math.hypot(mx,my); if(m>1){mx/=m;my/=m}
+  }
+  const wet=underwater(sh,sh.x,sh.y);
+  const spd=36*(wet?.5:1);
+  if(mx)sh.face=mx>0?1:-1;
+  if(mx||my)sh.walk+=dt;
+  moveBody(sh,(mx*spd+sn*48)*dt,(my*spd+7*u)*dt,3);
+  // 地上的東西會跟著傾斜滑動
+  for(const it of sh.items){
+    const w=underwater(sh,it.x,it.y), mu=w?5:14;
+    const ax=sn*90, ay=12*u, a=Math.hypot(ax,ay);
+    if(a>mu){const f=(a-mu)/a;it.vx+=ax*f*dt;it.vy+=ay*f*dt}
+    else{const v=Math.hypot(it.vx,it.vy);if(v>0){const nv=Math.max(0,v-40*dt);it.vx*=nv/v;it.vy*=nv/v}}
+    const v=Math.hypot(it.vx,it.vy); if(v>50){it.vx*=50/v;it.vy*=50/v}
+    moveBody(it,it.vx*dt,it.vy*dt,2);
+  }
+  // 最近的可撿物品
+  let best=null,bd=11;
+  for(const it of sh.items){const d=Math.hypot(it.x-sh.x,it.y-sh.y);if(d<bd){bd=d;best=it}}
+  sh.near=best;
+  // 救生艇纜繩
+  if(!sh.released){
+    if(input.hold&&nearBoat(sh)){
+      sh.hold+=dt;
+      if(sh.hold>=2){sh.released=true;sh.hold=2;beep(330,.3,.06,'triangle');toast('救生艇放下去了！快跳上去')}
+    }else sh.hold=Math.max(0,sh.hold-dt*1.5);
+  }
+  // 警報聲
+  const left=T_SCAV-sh.t, sec=Math.ceil(left);
+  if(sec!==sh.lastBeep){sh.lastBeep=sec; if(left<=10)beep(880,.12,.05); else if(sec%3===0)beep(196,.35,.03,'sawtooth')}
+  if(sh.t>=T_SCAV)endShip('time');
+}
+
+function pickUp(){
+  const sh=S.ship; if(!sh||sh.over||sh.busy>0||!sh.near)return;
+  const it=sh.near;
+  if(invSize(sh.inv)+ITEMS[it.id].sz>CAP){toast('背包滿了！點下面的東西可以丟掉');return}
+  sh.inv.push(it.id);
+  sh.items.splice(sh.items.indexOf(it),1);
+  sh.near=null; sh.busy=.3;
+  beep(660,.08,.05,'triangle');
+  renderShipInv();
+}
+function dropAt(i){
+  const sh=S.ship; if(!sh||sh.over||i<0||i>=sh.inv.length)return;
+  const id=sh.inv.splice(i,1)[0];
+  sh.items.push({id,x:sh.x,y:sh.y,vx:0,vy:0});
+  sh.busy=.15;
+  renderShipInv();
+}
+function boatAction(){
+  const sh=S.ship; if(!sh||sh.over)return;
+  if(sh.released&&nearBoat(sh))endShip('boat');
+  else if(onDeck(sh)&&!nearBoat(sh))endShip('jump');
+}
+
+function endShip(reason){
+  const sh=S.ship; if(sh.over)return;
+  sh.over=true;
+  const kept=sh.inv.slice(), lost=[];
+  let boat=false,pen=0,title,text;
+  const wet=underwater(sh,sh.x,sh.y);
+  if(reason==='boat'||(sh.released&&nearBoat(sh))){
+    boat=true;title='你跳上了救生艇';
+    text='你抓著纜繩滑進救生艇。回頭看，晨星號的船頭慢慢豎起來，然後整艘沒入黑色的海裡。';
+  }else if(reason==='jump'){
+    title='你自己跳進海裡';
+    text='你沒等船翻，抱緊東西從甲板邊跳了下去。冰冷的海水一下子灌進鼻子，但你手上的東西都還在。';
+  }else if(onDeck(sh)){
+    title='船翻了';
+    text='時間到了。船身猛地一斜，你從甲板上被甩進海裡。還好在甲板上，你沒被困住。';
+  }else if(!wet){
+    title='船翻了';
+    text='時間到了。船艙整個翻轉過來，你在黑暗中摸到艙門游了出去，';
+    if(kept.length){const i=Math.floor(R()*kept.length);lost.push(kept.splice(i,1)[0]);text+=`但手上的${ITEMS[lost[0]].n}被沖走了。`}
+    else text+='兩手空空。';
+  }else{
+    title='你被困在進水的船艙';
+    text='水已經淹到胸口，船一翻你整個人被壓在水裡好幾秒，拚命才游出來。';
+    pen=20;
+    for(let n=0;n<2&&kept.length;n++){const i=Math.floor(R()*kept.length);lost.push(kept.splice(i,1)[0])}
+    text+=lost.length?`${lost.map(id=>ITEMS[id].n).join('、')}在掙扎中弄丟了。（體力 -20）`:'（體力 -20）';
+  }
+  if(!boat&&!kept.some(id=>id==='jacket'||id==='ring'||id==='plank'))text+='<br><br><b style="color:var(--danger)">你身上沒有任何能浮的東西……</b>';
+  S.wreck={kept,lost,boat,pen,brought:sh.inv.slice()};
+  S.phase='wreck';
+  $('#wreck-title').textContent=title;
+  $('#wreck-text').innerHTML=text;
+  $('#wreck-items').innerHTML=kept.map(id=>`<span class="chip">${ico(id)}${ITEMS[id].n}</span>`).join('')+
+    lost.map(id=>`<span class="chip lost">${ico(id)}${ITEMS[id].n}</span>`).join('')+
+    (boat?`<span class="chip">🚣 救生艇</span>`:'')+
+    (!kept.length&&!lost.length&&!boat?'<span class="note" style="color:var(--dim)">你什麼都沒帶。</span>':'');
+  input.hold=false;input.x=input.y=0;$('#joy').style.display='none';
+  beep(110,.8,.06,'sawtooth');
+  show('scr-wreck');
+}
+
+// ============ 船上畫面 ============
+const cv=$('#cv'),ctx=cv.getContext('2d');
+let bgCanvas=null;
+function buildBg(){
+  bgCanvas=document.createElement('canvas');bgCanvas.width=160;bgCanvas.height=320;
+  const g=bgCanvas.getContext('2d');
+  const r=mulberry32(99);
+  for(let ty=0;ty<MH;ty++)for(let tx=0;tx<MW;tx++){
+    const ch=MAP[ty][tx],x=tx*TW,y=ty*TW;
+    if(ch==='~'){g.fillStyle='#173a63';g.fillRect(x,y,8,8);g.fillStyle='#1f4f80';if(r()<.5)g.fillRect(x+Math.floor(r()*6),y+Math.floor(r()*7),2,1)}
+    else if(ch==='#'){
+      g.fillStyle='#566c86';g.fillRect(x,y,8,8);
+      g.fillStyle='#94b0c2';if(tileAt(tx,ty-1)!=='#')g.fillRect(x,y,8,1);
+      g.fillStyle='#333c57';if(tileAt(tx,ty+1)!=='#')g.fillRect(x,y+7,8,1);
+      g.fillStyle='#4a5d75';g.fillRect(x+((tx+ty)%2?2:5),y+3,1,1);
+    }else{
+      const deck=ch==='D'||ch==='L';
+      g.fillStyle=deck?'#a0714f':'#6b4a3a';g.fillRect(x,y,8,8);
+      g.fillStyle=deck?'#8b5a3c':'#5a3d30';
+      g.fillRect(x,y+3,8,1);g.fillRect(x,y+7,8,1);
+      g.fillRect(x+((tx*3+ty)%8),y,1,3);g.fillRect(x+((tx*5+ty+4)%8),y+4,1,3);
+      if(ch==='T'){g.fillStyle='#c28a4a';g.fillRect(x,y+1,8,6);g.fillStyle='#8b5a2b';g.fillRect(x,y+6,8,1);g.fillStyle='#e0b070';g.fillRect(x,y+1,8,1)}
+      if(ch==='X'){g.fillStyle='#b07a3f';g.fillRect(x,y,8,8);g.fillStyle='#6b4a2a';g.fillRect(x,y,8,1);g.fillRect(x,y+7,8,1);g.fillRect(x,y,1,8);g.fillRect(x+7,y,1,8);
+        for(let i=1;i<7;i++){g.fillRect(x+i,y+i,1,1);g.fillRect(x+7-i,y+i,1,1)}}
+    }
+  }
+}
+function drawBoat(g,x,y){ // 救生艇（直放，16×24）
+  g.fillStyle='#b0563a';g.fillRect(x+3,y+1,10,22);g.fillRect(x+2,y+3,12,18);
+  g.fillStyle='#ef7d57';g.fillRect(x+4,y+2,8,20);g.fillRect(x+3,y+4,10,16);
+  g.fillStyle='#f4f4f4';g.fillRect(x+3,y+11,10,2);
+  g.fillStyle='#8b5a2b';g.fillRect(x+5,y+6,6,1);g.fillRect(x+5,y+17,6,1);
+}
+function renderShip(now){
+  const sh=S.ship; if(!sh)return;
+  const t=now/1000;
+  ctx.drawImage(bgCanvas,0,0);
+  // 海面閃光
+  ctx.fillStyle='#2b6aa0';
+  for(let i=0;i<26;i++){const x=(i*37+Math.floor(t*6+i*3))%160,y=(i*71)%320;if(tileAt(Math.floor(x/8),Math.floor(y/8))==='~')ctx.fillRect(x,y,2,1)}
+  // 救生艇
+  if(!sh.released)drawBoat(ctx,24,48);
+  else{drawBoat(ctx,0,50+Math.round(Math.sin(t*2)));ctx.fillStyle='#c28a4a';ctx.fillRect(14,52,10,1)}
+  if(sh.hold>0&&!sh.released){ctx.fillStyle='#ffcd75';ctx.fillRect(24,45,Math.round(16*sh.hold/2),2)}
+  // 地上的東西
+  for(const it of sh.items)drawSpr(ctx,it.id,Math.round(it.x-4),Math.round(it.y-4));
+  // 水
+  const th=sh.theta*Math.PI/180;
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(-th);
+  ctx.fillStyle='rgba(40,110,200,.55)';ctx.fillRect(-300,sh.level,600,600);
+  ctx.fillStyle='rgba(170,225,255,.85)';
+  for(let x=-200;x<200;x+=4)ctx.fillRect(x,Math.round(sh.level+Math.sin(x*.3+t*4)),3,1);
+  ctx.restore();
+  // 可撿提示
+  if(sh.near&&Math.floor(t*4)%2===0){
+    const x=Math.round(sh.near.x-6),y=Math.round(sh.near.y-6);
+    ctx.fillStyle='#ffcd75';
+    ctx.fillRect(x,y,3,1);ctx.fillRect(x,y,1,3);ctx.fillRect(x+9,y,3,1);ctx.fillRect(x+11,y,1,3);
+    ctx.fillRect(x,y+11,3,1);ctx.fillRect(x,y+9,1,3);ctx.fillRect(x+9,y+11,3,1);ctx.fillRect(x+11,y+9,1,3);
+  }
+  // 玩家
+  const wet=underwater(sh,sh.x,sh.y);
+  const jacket=sh.inv.includes('jacket');
+  const frame=Math.floor(sh.walk*8)%2?'man1':'man0';
+  const px=Math.round(sh.x-4),py=Math.round(sh.y-5);
+  if(!wet)drawSpr(ctx,frame,px,py,jacket?{b:'o'}:null);
+  else{
+    ctx.save();ctx.beginPath();ctx.rect(px,py,8,5);ctx.clip();drawSpr(ctx,frame,px,py,jacket?{b:'o'}:null);ctx.restore();
+    ctx.fillStyle='#c6ecff';ctx.fillRect(px-1+Math.round(Math.sin(t*6)),py+5,10,1);
+  }
+  // 越接近翻船越暗、燈會閃
+  const u=sh.t/T_SCAV;
+  if(u>.55){ctx.fillStyle=`rgba(5,10,25,${(u-.55)*.6+(Math.sin(t*23)>.85?.25:0)})`;ctx.fillRect(0,0,160,320)}
+  cv.style.transform=`translate(-50%,-50%) scale(${shipScale}) rotate(${sh.theta.toFixed(2)}deg)`+
+    (u>.8?` translate(${(Math.sin(t*50)*1.2).toFixed(1)}px,0)`:'');
+}
+let shipScale=1;
+function fitShip(){
+  const st=$('#stage');const w=st.clientWidth,h=st.clientHeight;
+  shipScale=Math.max(.5,Math.min(w/160,h/320)*.9);
+}
+function updateShipHud(){
+  const sh=S.ship;
+  const left=Math.max(0,T_SCAV-sh.t);
+  const tm=$('#timer');tm.textContent=left.toFixed(1);tm.classList.toggle('hot',left<=10);
+  $('#flash').classList.toggle('on',left<=10&&Math.floor(sh.t*2)%2===0);
+  $('#room').textContent=roomAt(sh.x,sh.y).n+(underwater(sh,sh.x,sh.y)?'（泡在水裡）':'');
+  $('#tilt').textContent=Math.round(Math.abs(sh.theta))+'°';
+  $('#flood').textContent=Math.round(clamp((150-sh.level)/230,0,1)*100)+'%';
+  const pb=$('#btn-pick');
+  if(sh.near){const it=ITEMS[sh.near.id];pb.disabled=false;pb.innerHTML=`撿起 ${it.n}<small style="font-weight:400;opacity:.7">（${it.d}）</small>`}
+  else{pb.disabled=true;pb.textContent='附近沒有東西'}
+  const bb=$('#btn-boat'),lbl=bb.querySelector('span');
+  if(nearBoat(sh)){
+    bb.style.display='';
+    lbl.textContent=sh.released?'跳上救生艇！':'按住解開救生艇纜繩';
+    bb.querySelector('.bar').style.width=(sh.released?100:sh.hold/2*100)+'%';
+  }else if(onDeck(sh)){bb.style.display='';lbl.textContent='提早跳海';bb.querySelector('.bar').style.width='0'}
+  else bb.style.display='none';
+}
+function renderShipInv(){
+  const sh=S.ship,el=$('#ship-inv');
+  let html='';
+  sh.inv.forEach((id,i)=>{html+=`<div class="cell full" data-i="${i}" style="grid-column:span ${ITEMS[id].sz}">${ico(id)}${ITEMS[id].n}</div>`});
+  for(let i=invSize(sh.inv);i<CAP;i++)html+='<div class="cell">空</div>';
+  el.innerHTML=html;
+  $('#invcap').textContent=`${invSize(sh.inv)} / ${CAP} 格・點東西可以丟掉`;
+}
+let toastT=0;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1600)}
+
+// ============ 海上求生 ============
+function floatOf(s){
+  if(s.boat)return'boat'; if(s.raft)return'raft';
+  if(s.inv.includes('jacket')||s.inv.includes('ring'))return'vest';
+  if(s.inv.includes('plank'))return'plank'; return'none';
+}
+const FLOAT={boat:{n:'坐在救生艇裡',drain:0},raft:{n:'躺在自己紮的木筏上',drain:2},vest:{n:'靠救生衣/救生圈漂著',drain:5},
+  plank:{n:'抱著一塊木板',drain:12},none:{n:'沒有浮具，只能踩水',drain:30}};
+const has=(s,id)=>s.inv.includes(id);
+function take(s,id){const i=s.inv.indexOf(id);if(i>=0)s.inv.splice(i,1)}
+function loseRandom(s){const i=Math.floor(R()*s.inv.length);return s.inv.splice(i,1)[0]}
+function rescue(s,p,ok){
+  // 第一艘船很遠、第二艘近一點、第三艘直接經過
+  const k=s.shipDays.indexOf(s.day),far=[.55,.8,1][k<0?2:k];
+  if(R()<p*far){s.rescued=true;return ok}
+  s.hp-=5;return '船沒有看到你。它慢慢開遠，最後消失在海平線上……（體力 -5）';
+}
+const EVENTS=[
+  {id:'sun',w:3,scene:'sun',title:'烈日當頭',text:'一片雲都沒有。太陽曬得皮膚發燙，嘴唇開始裂開。',choices:[
+    {label:'躲在救生艇的遮篷下',show:s=>s.boat,act:s=>{s.thirst-=5;return '遮篷下涼多了，你省下不少水分。（口渴 -5）'}},
+    {label:'撐起防水布遮陽',need:'tarp',show:s=>!s.boat,act:s=>{s.thirst-=5;return '布底下有一小片陰影，你撐過了最熱的中午。（口渴 -5）'}},
+    {label:'把衣服浸濕蓋在頭上',act:s=>{s.thirst-=12;s.hp-=6;return '衣服一下就被曬乾，鹽巴刺得皮膚好痛。（口渴 -12、體力 -6）'}},
+    {label:'什麼都不做，硬撐',act:s=>{s.thirst-=18;s.hp-=3;return '你頭暈眼花，海面一直在晃。（口渴 -18、體力 -3）'}},
+  ]},
+  {id:'rain',w:2,scene:'rain',title:'下雨了！',text:'烏雲飄過來，大顆的雨滴打在海面上。這是淡水！',choices:[
+    {label:'攤開防水布接雨',need:'tarp',act:s=>{s.thirst+=40;s.inv.push('water');return '布上積了好多水！你喝個痛快，還裝滿了一瓶。（口渴 +40、得到瓶裝水）'}},
+    {label:'仰頭張嘴接雨',act:s=>{s.thirst+=15;return '你張大嘴，喝到了一點點。（口渴 +15）'}},
+  ]},
+  {id:'shark',w:2,scene:'shark',title:'鯊魚',text:'一片背鰭在你身邊繞圈，越繞越近……',choices:[
+    {label:'拿刀戒備',need:'knife',act:s=>{if(R()<.7)return '牠衝過來時你朝牠鼻子一刀，牠甩尾逃走了。';
+      s.hp-=15;s.food+=20;return '牠撲上來，你一陣亂刺……牠逃了，你也受了傷，還割下一塊肉。（體力 -15、飽足 +20）'}},
+    {label:'保持不動',act:s=>{if(R()<(s.boat?.85:.5))return '你屏住呼吸。過了好久，背鰭消失了。';
+      s.hp-=30;s.cause='被鯊魚咬傷';return '牠咬住了你的腿……你拚命踢開牠。（體力 -30）'}},
+    {label:'拍水嚇牠',act:s=>{if(R()<.4)return '水花嚇到牠了，牠游走了。';
+      s.hp-=35;s.cause='被鯊魚咬傷';return '拍水反而引起牠的興趣……（體力 -35）'}},
+  ]},
+  {id:'fish',w:3,scene:'fish',title:'魚群',text:'一群小魚聚在你身體底下的陰影裡。',choices:[
+    {label:'用釣竿釣魚',need:'rod',act:s=>{if(R()<.9){s.food+=35;return '一條接一條！今天吃生魚片。（飽足 +35）'}return '魚餌被吃掉了，什麼都沒釣到。'}},
+    {label:'用刀刺魚',need:'knife',act:s=>{if(R()<.45){s.food+=25;return '刺中一條！（飽足 +25）'}s.hp-=3;return '魚太快了。（體力 -3）'}},
+    {label:'徒手抓',act:s=>{if(R()<.15){s.food+=15;return '奇蹟！你抓到一條小魚。（飽足 +15）'}s.hp-=5;return '撲了好幾次水，一條都沒抓到。（體力 -5）'}},
+    {label:'不浪費力氣',act:s=>'你看著魚群游走。'},
+  ]},
+  {id:'debris',w:2,scene:'debris',title:'漂流物',text:'不遠處漂來一個木箱和一堆碎木頭，大概是晨星號的。',choices:[
+    {label:'抱住一塊碎木頭',show:s=>floatOf(s)==='none',act:s=>{s.hp-=5;s.inv.push('plank');return '你游過去抱住它。終於不用一直踩水了！（體力 -5、得到木板）'}},
+    {label:'用繩子把碎木綁成木筏',need:'rope',show:s=>!s.boat&&!s.raft,act:s=>{s.raft=true;s.hp-=5;return '你花了一整個下午，綁出一個能躺上去的木筏！之後每天消耗的體力少很多。（體力 -5）'}},
+    {label:'游過去打開木箱',act:s=>{s.hp-=10;const it=pick(['water','water','biscuit','can','flare','rope','medkit','laptop']);s.inv.push(it);
+      return `游過去好累，但箱子裡有……${ITEMS[it].n}！（體力 -10）`}},
+    {label:'太遠了，不去',act:s=>'你看著它慢慢漂遠。'},
+  ]},
+  {id:'bird',w:2,scene:'bird',title:'海鳥',text:'一隻海鳥停在你旁邊，歪著頭看你。',choices:[
+    {label:'用釣竿的魚餌引牠過來',need:'rod',act:s=>{if(R()<.6){s.food+=20;return '牠上鉤了。對不起。（飽足 +20）'}return '牠叼走魚餌飛走了。'}},
+    {label:'伸手抓',act:s=>{if(R()<.25){s.food+=20;return '抓到了！（飽足 +20）'}return '牠一下就飛走了。'}},
+    {label:'看著牠',act:s=>{s.hp+=4;return '牠陪了你一會兒。你覺得沒那麼孤單了。（體力 +4）'}},
+  ]},
+  {id:'storm',w:2,scene:'storm',title:'大浪',text:'風突然變大，浪頭比人還高，一波一波打過來。',choices:[
+    {label:'用繩子把東西綁在身上',need:'rope',act:s=>{const d=s.boat?5:10;s.hp-=d;return `你被浪打得暈頭轉向，但東西一件都沒掉。（體力 -${d}）`}},
+    {label:'死命抱緊',act:s=>{const d=s.boat?5:15;s.hp-=d;s.cause='被大浪捲走';
+      if(s.inv.length&&R()<(s.boat?.3:.6)){const l=loseRandom(s);return `一個大浪打來，${ITEMS[l].n}被沖走了！（體力 -${d}）`}
+      return `你撐過來了。（體力 -${d}）`}},
+  ]},
+  {id:'calm',w:3,scene:'calm',title:'平靜的一天',text:'海面平得像鏡子。什麼都沒發生。',choices:[
+    {label:'用急救包處理傷口',need:'medkit',consume:true,act:s=>{s.hp+=35;return '消毒、包紮。好多了。（體力 +35）'}},
+    {label:'看看全家福',need:'photo',act:s=>{s.hp+=10;return '你一定要回家。（體力 +10）'}},
+    {label:'睡一覺保留體力',act:s=>{s.hp+=8;return '你漂著漂著就睡著了。（體力 +8）'}},
+  ]},
+  {id:'seawater',w:5,when:s=>s.thirst<35,scene:'calm',title:'好渴……',text:'喉嚨像火在燒。四周全是水，只是全都是鹹的。',choices:[
+    {label:'喝一點海水',act:s=>{s.thirst+=20;s.hp-=22;s.cause='喝海水脫水';return '一時解渴，但很快開始頭痛、想吐。（口渴 +20、體力 -22）'}},
+    {label:'忍住',act:s=>'你咬緊牙關。'},
+  ]},
+];
+const SHIP_DAY={id:'ship',scene:'ship',title:'有船！',text:'海平線上出現一艘貨輪，正往這個方向開，但距離還很遠。',choices:[
+  {label:'發射信號彈',need:'flare',consume:true,act:s=>rescue(s,.95,'紅色的煙在天上炸開。貨輪鳴了一聲長笛，轉向你開過來！')},
+  {label:'用鏡子反射陽光',need:'mirror',act:s=>rescue(s,.7,'你對準貨輪一閃、一閃……船轉向了！')},
+  {label:'用筆電螢幕反光',need:'laptop',act:s=>rescue(s,.35,'泡過水的筆電螢幕居然還能反光。船轉向了！原來它有用！')},
+  {label:'拚命揮手大喊',act:s=>rescue(s,.12,'你喊到破音……船上有人看到你了！')},
+]};
+const SHIP_NIGHT={id:'shipnight',scene:'shipnight',title:'遠方的燈',text:'半夜，黑暗中有一盞燈在移動。是船！',choices:[
+  {label:'發射信號彈',need:'flare',consume:true,act:s=>rescue(s,.95,'紅光照亮整片海面。船上的探照燈掃了過來！')},
+  {label:'用手電筒打 SOS',need:'torch',act:s=>rescue(s,.75,'三短、三長、三短。那盞燈閃了兩下回應你！')},
+  {label:'大喊救命',act:s=>rescue(s,.08,'風剛好往那邊吹，有人聽到了！')},
+]};
+
+function newSea(){
+  const w=S.wreck;
+  return {day:1,thirst:70,food:70,hp:100-w.pen,inv:w.kept.slice(),boat:w.boat,raft:false,
+    shipDays:[RI(3,4),RI(6,7),RI(9,10)],last:null,stage:'event',ev:null,res:'',night:'',report:'',
+    rescued:false,cause:'',canTried:false,brought:w.brought};
+}
+function clampSea(s){s.thirst=clamp(s.thirst,0,100);s.food=clamp(s.food,0,100);s.hp=clamp(s.hp,0,100)}
+function startDay(){
+  const s=S.sea;
+  if(s.shipDays.includes(s.day)){s.ev=R()<.5?SHIP_DAY:SHIP_NIGHT;s.shipNo=s.shipDays.indexOf(s.day)}
+  else{
+    const pool=EVENTS.filter(e=>e.id!==s.last&&(!e.when||e.when(s)));
+    let tot=pool.reduce((a,e)=>a+e.w,0),r=R()*tot;
+    s.ev=pool[pool.length-1];
+    for(const e of pool){r-=e.w;if(r<0){s.ev=e;break}}
+  }
+  s.last=s.ev.id;s.stage='event';s.canTried=false;
+  renderSea();
+}
+function choose(i){
+  const s=S.sea; if(!s||s.stage!=='event')return;
+  const c=visibleChoices(s)[i]; if(!c||(c.need&&!has(s,c.need)))return;
+  if(c.consume)take(s,c.need);
+  s.res=c.act(s); clampSea(s);
+  s.stage='result';
+  renderSea();
+}
+function visibleChoices(s){return s.ev.choices.filter(c=>!c.show||c.show(s))}
+function afterResult(){
+  const s=S.sea; if(!s||s.stage!=='result')return;
+  if(s.rescued)return endGame('rescued');
+  if(s.hp<=0)return endGame('dead');
+  s.stage='night';s.night='';
+  renderSea();
+}
+function useItem(id){
+  const s=S.sea; if(!s||s.stage!=='night'||!has(s,id))return;
+  let msg='';
+  if(id==='water'){take(s,id);s.thirst+=35;msg='你小口小口地喝完一瓶水。（口渴 +35）'}
+  else if(id==='biscuit'){take(s,id);s.food+=25;s.thirst-=5;msg='餅乾很乾，但很香。（飽足 +25、口渴 -5）'}
+  else if(id==='medkit'){take(s,id);s.hp+=35;msg='你把傷口包好。（體力 +35）'}
+  else if(id==='can'){
+    if(has(s,'knife')){take(s,id);s.food+=40;msg='用刀撬開罐頭，是鳳梨！（飽足 +40）'}
+    else if(s.canTried)msg='你的手已經沒力氣了，明天再試。';
+    else if(R()<.5){take(s,id);s.food+=40;msg='你用牙齒咬、用指甲摳，終於打開了！（飽足 +40）'}
+    else{s.canTried=true;msg='沒有刀，罐頭怎麼樣都打不開……'}
+  }
+  clampSea(s);s.night=msg;
+  renderSea();
+}
+function sleep(){
+  const s=S.sea; if(!s||s.stage!=='night')return;
+  const f=floatOf(s),parts=[];
+  s.thirst-=20;s.food-=12;parts.push('口渴 -20','飽足 -12');
+  const d=FLOAT[f].drain; let hp=-d;
+  if(f==='none')s.cause='沒有浮具，踩水到力氣用盡';
+  clampSea(s);
+  if(s.thirst<=0){hp-=25;s.cause='脫水';parts.push('脫水')}
+  if(s.food<=0){hp-=12;if(s.thirst>0)s.cause='飢餓';parts.push('飢餓')}
+  if(has(s,'photo'))hp+=4;
+  s.hp+=hp;clampSea(s);
+  parts.push(`體力 ${hp>=0?'+':''}${hp}`);
+  s.report='昨晚：'+parts.join('、');
+  if(s.hp<=0)return endGame('dead');
+  s.day++;
+  if(s.day>12)return endGame('island');
+  startDay();
+}
+
+const SEA_SCENE_NIGHT=new Set(['shipnight','night']);
+function renderSea(){
+  const s=S.sea;
+  $('#day').textContent=`第 ${s.day} 天`;
+  $('#floatlbl').textContent=FLOAT[floatOf(s)].n;
+  const st=[['口渴','thirst'],['飽足','food'],['體力','hp']];
+  $('#stats').innerHTML=st.map(([n,k])=>`<div class="stat${s[k]<30?' low':''}">${n} <b>${Math.round(s[k])}</b><div class="bar"><i style="width:${s[k]}%"></i></div></div>`).join('');
+  const card=$('#card');let h='';
+  if(s.stage==='event'){
+    const e=s.ev;
+    if(s.report)h+=`<div class="note">${s.report}</div>`;
+    h+=`<h3>${e.title}</h3><p>${e.text}${e===SHIP_DAY||e===SHIP_NIGHT?['<br><b>距離非常遠</b>，不一定看得到你。','<br>距離有點遠。','<br>這艘船<b>離你很近</b>！'][s.shipNo]??'':''}</p>`;
+    visibleChoices(s).forEach((c,i)=>{
+      const ok=!c.need||has(s,c.need);
+      h+=`<button data-c="${i}"${ok?'':' disabled'}${c.need&&ok?' class="main"':''}>${c.need?ico(c.need):''}<span>${c.label}</span>${c.need&&!ok?`<small>需要${ITEMS[c.need].n}</small>`:''}</button>`;
+    });
+  }else if(s.stage==='result'){
+    h+=`<h3>${s.ev.title}</h3><p class="res">${s.res}</p>`;
+    h+=`<button data-act="next" class="main">${s.rescued?'得救了 →':s.hp<=0?'……':'天黑了 →'}</button>`;
+  }else if(s.stage==='night'){
+    h+=`<h3>第 ${s.day} 天・夜晚</h3><p>睡前要吃點、喝點什麼嗎？過一夜會：口渴 -20、飽足 -12、體力 -${FLOAT[floatOf(s)].drain}（${FLOAT[floatOf(s)].n}）${has(s,'photo')?'，全家福 +4':''}。</p>`;
+    if(s.night)h+=`<p class="res">${s.night}</p>`;
+    const usable=['water','biscuit','can','medkit'].filter(id=>has(s,id));
+    for(const id of usable){
+      const cnt=s.inv.filter(x=>x===id).length;
+      const verb=id==='water'?'喝':id==='medkit'?'用':'吃';
+      h+=`<button data-use="${id}">${ico(id)}<span>${verb} ${ITEMS[id].n}${cnt>1?' ×'+cnt:''}</span><small>${ITEMS[id].d}</small></button>`;
+    }
+    if(!usable.length)h+='<p class="note">你沒有任何能吃能喝的東西。</p>';
+    h+='<button data-act="sleep" class="main">睡覺 →</button>';
+  }
+  card.innerHTML=h;
+  const counts={};s.inv.forEach(id=>counts[id]=(counts[id]||0)+1);
+  $('#sea-inv').innerHTML=(s.boat?'<span class="chip">🚣 救生艇</span>':'')+(s.raft?'<span class="chip">🪵 木筏</span>':'')+
+    Object.keys(counts).map(id=>`<span class="chip">${ico(id)}${ITEMS[id].n}${counts[id]>1?' ×'+counts[id]:''}</span>`).join('')||
+    '<span class="chip lost" style="text-decoration:none">身上什麼都沒有</span>';
+}
+$('#card').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(b.dataset.c!==undefined)choose(+b.dataset.c);
+  else if(b.dataset.use)useItem(b.dataset.use);
+  else if(b.dataset.act==='next')afterResult();
+  else if(b.dataset.act==='sleep')sleep();
+});
+
+// 海面像素場景
+const scv=$('#sea-cv'),sctx=scv.getContext('2d');
+function drawFloat(g,f,x,y,t){
+  const head=(hx,hy)=>{g.fillStyle='#1a1c2c';g.fillRect(hx,hy,4,2);g.fillStyle='#ffccaa';g.fillRect(hx,hy+2,4,3)};
+  if(f==='boat'){
+    g.fillStyle='#b0563a';g.fillRect(x-13,y,26,5);g.fillStyle='#ef7d57';g.fillRect(x-12,y,24,4);g.fillRect(x-14,y-2,28,2);
+    g.fillStyle='#f4f4f4';g.fillRect(x-12,y+1,24,1);
+    g.fillStyle='#3b5dc9';g.fillRect(x-2,y-6,5,4);head(x-2,y-11);
+  }else if(f==='raft'){
+    g.fillStyle='#6b4a2a';g.fillRect(x-12,y,24,4);g.fillStyle='#c28a4a';for(let i=0;i<6;i++)g.fillRect(x-12+i*4,y,3,3);
+    g.fillStyle='#3b5dc9';g.fillRect(x-4,y-3,9,3);head(x+5,y-4);
+  }else{
+    head(x-2,y-6);
+    if(f==='vest'){g.fillStyle='#ef7d57';g.fillRect(x-5,y-1,10,3);g.fillStyle='#f4f4f4';g.fillRect(x-3,y-1,2,1)}
+    if(f==='plank'){g.fillStyle='#c28a4a';g.fillRect(x-9,y,18,2);g.fillStyle='#ffccaa';g.fillRect(x-5,y-1,2,1);g.fillRect(x+3,y-1,2,1)}
+    if(f==='none'&&Math.floor(t*3)%2){g.fillStyle='#f4f4f4';g.fillRect(x-6,y-2,1,1);g.fillRect(x+5,y-3,1,1)}
+  }
+}
+function renderSeaScene(now){
+  const s=S.sea; if(!s)return;
+  const t=now/1000,g=sctx;
+  const scene=s.stage==='night'?'night':s.ev?s.ev.scene:'calm';
+  const night=SEA_SCENE_NIGHT.has(scene), storm=scene==='storm'||scene==='rain';
+  const sky=night?['#0b1026','#121a3a','#1a2550']:storm?['#3a4252','#4a5366','#5d6779']:['#41a6f6','#6cc0fa','#9fd8ff'];
+  for(let i=0;i<3;i++){g.fillStyle=sky[i];g.fillRect(0,i*16,160,16)}
+  if(night){g.fillStyle='#f4f4f4';const r=mulberry32(s.day);for(let i=0;i<22;i++){if((i+Math.floor(t*2))%9)g.fillRect(Math.floor(r()*160),Math.floor(r()*44),1,1)}
+    g.fillStyle='#f4f4d0';g.fillRect(126,8,8,8);g.fillStyle='#0b1026';g.fillRect(129,7,6,7)}
+  else if(!storm){g.fillStyle=scene==='sun'?'#fff3b0':'#ffcd75';const sz=scene==='sun'?14:10;g.fillRect(122,6,sz,sz)}
+  else{g.fillStyle='#2c3240';for(let i=0;i<5;i++)g.fillRect((i*41+Math.floor(t*4))%190-20,4+i*5,34,6)}
+  // 海
+  const seaC=night?['#0d2238','#0a1b2e']:storm?['#2b4a63','#203b52']:['#1f6fb0','#175a92'];
+  g.fillStyle=seaC[0];g.fillRect(0,48,160,24);g.fillStyle=seaC[1];g.fillRect(0,72,160,24);
+  g.fillStyle=night?'#2a4766':'#73c2f0';
+  const amp=storm?3:1;
+  for(let row=0;row<6;row++){const y=52+row*8;for(let x=-8;x<168;x+=12){const xx=Math.round(x+((t*(6+row*2))%12)*(row%2?1:-1));
+    g.fillRect(xx,y+Math.round(Math.sin(t*2+x)*amp),4,1)}}
+  // 遠方的船
+  if(scene==='ship'){const x=Math.round(20+(t*3)%40);g.fillStyle='#333c57';g.fillRect(x,43,22,4);g.fillRect(x+4,39,9,4);g.fillRect(x+15,36,3,7);g.fillStyle='#b13e53';g.fillRect(x+15,36,3,2)}
+  if(scene==='shipnight'){if(Math.floor(t*2)%2){g.fillStyle='#ffcd75';g.fillRect(36,44,2,2)}g.fillStyle='#ffcd7544';g.fillRect(30,46,14,1)}
+  // 天氣與生物
+  if(scene==='rain'||scene==='storm'){g.fillStyle='#c6dcf0';const r=mulberry32(Math.floor(t*12));for(let i=0;i<40;i++)g.fillRect(Math.floor(r()*160),Math.floor(r()*96),1,3)}
+  if(scene==='fish'){g.fillStyle=night?'#0a1626':'#124a78';for(let i=0;i<6;i++){const a=t*.8+i;g.fillRect(Math.round(80+Math.cos(a)*(14+i*3)),Math.round(82+Math.sin(a*1.3)*4),5,2)}}
+  if(scene==='debris'){g.fillStyle='#b07a3f';const y=62+Math.round(Math.sin(t*2));g.fillRect(124,y,9,7);g.fillStyle='#6b4a2a';g.fillRect(124,y+3,9,1);g.fillStyle='#c28a4a';g.fillRect(108,y+5,10,2);g.fillRect(138,y+2,7,2)}
+  if(scene==='bird'){g.fillStyle='#f4f4f4';const y=60+Math.round(Math.sin(t*3));g.fillRect(98,y,6,3);g.fillRect(103,y-2,3,2);g.fillStyle='#ffcd75';g.fillRect(106,y-1,2,1)}
+  if(scene==='shark'){const a=t*.9,x=Math.round(80+Math.cos(a)*42),y=Math.round(72+Math.sin(a)*12);g.fillStyle='#566c86';
+    for(let i=0;i<6;i++)g.fillRect(x+Math.floor(i/2),y-i,6-i,1);g.fillStyle='#c6dcf0';g.fillRect(x-2,y+1,10,1)}
+  drawFloat(g,s.boat?'boat':floatOf(s),80,70+Math.round(Math.sin(t*2)*(storm?2:1)),t);
+}
+
+// ============ 結局 ============
+function endGame(kind){
+  const s=S.sea;S.phase='end';
+  const days=s.day;
+  let title,text;
+  if(kind==='rescued'){title='獲救！';text=`漂流第 ${days} 天，你被救上船。<br>船員給你披上毯子，問你是怎麼撐下來的。`}
+  else if(kind==='island'){title='漂到小島';text=`第 12 天清晨，你被浪沖上一座小島的沙灘。<br>島上有椰子樹，還有……一個漁夫的小屋。你活下來了。`}
+  else{title='你沒能撐過去';text=`漂流第 ${days} 天。<br>死因：${s.cause||'體力耗盡'}。`}
+  $('#end-title').textContent=title;
+  $('#end-text').innerHTML=text+`<br><br>口渴 ${Math.round(s.thirst)}・飽足 ${Math.round(s.food)}・體力 ${Math.round(s.hp)}`;
+  $('#end-items').innerHTML='<span style="font-size:12px;color:var(--dim);width:100%">你從船上帶出來的：</span>'+
+    (s.brought.length?s.brought.map(id=>`<span class="chip">${ico(id)}${ITEMS[id].n}</span>`).join(''):'<span class="chip">什麼都沒有</span>')+
+    (S.wreck.boat?'<span class="chip">🚣 救生艇</span>':'');
+  const tips=[];
+  const b=s.brought;
+  if(!b.some(id=>['flare','mirror','torch'].includes(id)))tips.push('信號彈、鏡子、手電筒能讓路過的船看到你——船大概在第 3～4、6～7、9～10 天經過，越後面的越近。');
+  if(!S.wreck.boat&&!b.some(id=>['jacket','ring','plank'].includes(id)))tips.push('沒有浮具每天會掉 30 體力。左船艙通常有救生衣，甲板有救生圈。');
+  if(!S.wreck.boat)tips.push('救生艇在甲板左邊：按住按鈕 2 秒解開纜繩。有遮篷、不怕鯊魚，每天不掉體力。');
+  if(!b.includes('water')&&!b.includes('tarp'))tips.push('水比食物重要：廚房、貨艙有瓶裝水，防水布可以接雨。');
+  if(S.wreck.lost.length)tips.push('時間到時人在船艙裡會弄丟東西，提早回到甲板吧。');
+  $('#end-tips').innerHTML=tips.length?'<b>下次試試：</b><br>'+tips.slice(0,3).map(x=>'・'+x).join('<br>'):'';
+  show('scr-end');
+}
+
+// ============ 流程 ============
+function show(id){document.querySelectorAll('.scr').forEach(e=>e.classList.toggle('on',e.id===id))}
+function startShip(seed){
+  rng=seed!=null?mulberry32(seed):Math.random;
+  S={phase:'ship',ship:newShip(),wreck:null,sea:null};
+  input.x=input.y=0;input.hold=false;
+  show('scr-ship');fitShip();renderShipInv();updateShipHud();
+  $('#hint').style.display='';
+}
+function startSea(){
+  if(S.phase!=='wreck')return;
+  S.phase='sea';S.sea=newSea();
+  show('scr-sea');startDay();
+}
+$('#btn-start').addEventListener('click',()=>{initAudio();startShip()});
+$('#btn-drift').addEventListener('click',startSea);
+$('#btn-again').addEventListener('click',()=>{S={phase:'title'};show('scr-title')});
+$('#btn-pick').addEventListener('click',pickUp);
+$('#ship-inv').addEventListener('click',e=>{const c=e.target.closest('.cell.full');if(c)dropAt(+c.dataset.i)});
+const bb=$('#btn-boat');
+bb.addEventListener('pointerdown',e=>{if(S.phase!=='ship')return;const sh=S.ship;
+  if(nearBoat(sh)&&!sh.released)input.hold=true; else boatAction()});
+for(const ev of['pointerup','pointercancel','pointerleave'])bb.addEventListener(ev,()=>input.hold=false);
+bb.addEventListener('contextmenu',e=>e.preventDefault());
+
+// 搖桿：在船的畫面上任意位置按住拖曳
+const stage=$('#stage'),joy=$('#joy'),knob=$('#knob');
+let joyId=null,jox=0,joy0=0;
+stage.addEventListener('pointerdown',e=>{
+  if(S.phase!=='ship'||joyId!==null)return;
+  joyId=e.pointerId;const r=stage.getBoundingClientRect();jox=e.clientX-r.left;joy0=e.clientY-r.top;
+  joy.style.left=jox+'px';joy.style.top=joy0+'px';joy.style.display='block';knob.style.transform='';
+  $('#hint').style.display='none';
+  try{stage.setPointerCapture(e.pointerId)}catch(_){}
+});
+stage.addEventListener('pointermove',e=>{
+  if(e.pointerId!==joyId)return;
+  const r=stage.getBoundingClientRect();let dx=e.clientX-r.left-jox,dy=e.clientY-r.top-joy0;
+  const m=Math.hypot(dx,dy),max=30;if(m>max){dx*=max/m;dy*=max/m}
+  knob.style.transform=`translate(${dx}px,${dy}px)`;
+  const dead=4;input.x=Math.abs(dx)<dead?0:dx/max;input.y=Math.abs(dy)<dead?0:dy/max;
+});
+function joyEnd(e){if(e.pointerId!==joyId)return;joyId=null;input.x=input.y=0;joy.style.display='none'}
+stage.addEventListener('pointerup',joyEnd);stage.addEventListener('pointercancel',joyEnd);
+addEventListener('keydown',e=>{input.keys[e.key.length===1?e.key.toLowerCase():e.key]=true;
+  if(S.phase==='ship'&&(e.key===' '||e.key==='e'))pickUp();
+  if(S.phase==='ship'&&e.key==='q'){if(nearBoat(S.ship)&&!S.ship.released)input.hold=true;else boatAction()}});
+addEventListener('keyup',e=>{input.keys[e.key.length===1?e.key.toLowerCase():e.key]=false;if(e.key==='q')input.hold=false});
+addEventListener('blur',()=>{input.keys={};input.hold=false});
+addEventListener('resize',()=>{if(S.phase==='ship')fitShip()});
+
+// 音效（第一次點按後才啟動）
+let AC=null;
+function initAudio(){if(AC||FUZZ)return;try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(_){}}
+function beep(f,d,v=.05,type='square'){
+  if(!AC)return;
+  try{const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d)}catch(_){}
+}
+
+// 標題畫面的小動畫
+const tcv=$('#title-cv'),tctx=tcv.getContext('2d');
+function renderTitle(now){
+  const t=now/1000,g=tctx;
+  g.fillStyle='#0b1026';g.fillRect(0,0,160,40);
+  g.fillStyle='#f4f4f4';for(let i=0;i<14;i++)if((i+Math.floor(t))%5)g.fillRect((i*53)%160,(i*17)%34,1,1);
+  g.save();g.translate(80,44);g.rotate(-.12-.04*Math.sin(t));
+  g.fillStyle='#566c86';g.fillRect(-40,-6,80,10);g.fillStyle='#b13e53';g.fillRect(-40,2,80,3);
+  g.fillStyle='#94b0c2';g.fillRect(-12,-16,30,10);g.fillStyle='#ffcd75';
+  for(let i=0;i<4;i++)if(Math.sin(t*9+i*2)>-.3)g.fillRect(-9+i*7,-13,3,3);
+  g.fillStyle='#333c57';g.fillRect(10,-24,5,8);g.restore();
+  g.fillStyle='#0d2238';g.fillRect(0,46,160,26);g.fillStyle='#2a4766';
+  for(let r=0;r<3;r++)for(let x=-8;x<168;x+=14)g.fillRect(Math.round(x+(t*(5+r*3))%14),50+r*7,5,1);
+}
+
+function frame(now){
+  if(!frame.last)frame.last=now;
+  let dt=Math.min(.25,(now-frame.last)/1000);frame.last=now;
+  if(S.phase==='ship'){
+    while(dt>0&&S.phase==='ship'){const d=Math.min(dt,1/60);shipStep(d);dt-=d}
+    if(S.phase==='ship'){renderShip(now);updateShipHud()}
+  }else if(S.phase==='sea')renderSeaScene(now);
+  else if(S.phase==='title')renderTitle(now);
+  requestAnimationFrame(frame);
+}
+
+makeIcons();buildBg();
+
+// ============ 小孩亂玩測試（網址加 #fuzz&n=30&seed=1） ============
+function runFuzz(){
+  const out=$('#fuzz');out.style.display='block';
+  const P=new URLSearchParams(location.hash.slice(1));
+  const n=+P.get('n')||20,seed0=+P.get('seed')||1;
+  const log=[],errs=[];let stats={rescued:0,island:0,dead:0,boat:0,days:0,items:0};
+  window.addEventListener('error',e=>errs.push('onerror '+e.message));
+  const st=$('#stage');
+  for(let k=0;k<n;k++){
+    const seed=seed0+k,fr=mulberry32(seed*7919+1);
+    try{
+      startShip(seed);
+      let ticks=0,now=0;
+      while(S.phase==='ship'&&ticks<5000){
+        const r=fr(),rc=st.getBoundingClientRect();
+        if(r<.06){const x=rc.left+(fr()*1.6-.3)*rc.width,y=rc.top+(fr()*1.6-.3)*rc.height,id=1;
+          st.dispatchEvent(new PointerEvent('pointerdown',{clientX:x,clientY:y,pointerId:id,bubbles:true}));
+          st.dispatchEvent(new PointerEvent('pointermove',{clientX:x+(fr()-.5)*140,clientY:y+(fr()-.5)*140,pointerId:id,bubbles:true}));
+          if(fr()<.3)st.dispatchEvent(new PointerEvent('pointerup',{clientX:x,clientY:y,pointerId:id,bubbles:true}));}
+        else if(r<.11)$('#btn-pick').click();
+        else if(r<.13){const c=document.querySelectorAll('#ship-inv .cell');c[Math.floor(fr()*c.length)]?.click()}
+        else if(r<.16){bb.dispatchEvent(new PointerEvent('pointerdown',{pointerId:2,bubbles:true}))}
+        else if(r<.17){bb.dispatchEvent(new PointerEvent('pointerup',{pointerId:2,bubbles:true}))}
+        else if(r<.175){const x=$('#ship-inv .cell.full');if(x)x.click()}
+        // 偶爾「走向」甲板或救生艇，讓各種結局都會出現
+        if(fr()<.002){input.x=-.6;input.y=-1}
+        let dt=fr()<.01?.25:1/30; now+=dt*1000;
+        while(dt>0&&S.phase==='ship'){const d=Math.min(dt,1/60);shipStep(d);dt-=d}
+        if(S.phase==='ship'){
+          if(ticks%15===0){renderShip(now);updateShipHud()}
+          const sh=S.ship;
+          if(!isFinite(sh.x)||!isFinite(sh.y))throw Error('player NaN');
+          if(blocked(sh.x,sh.y,3))throw Error(`player in wall ${sh.x.toFixed(1)},${sh.y.toFixed(1)}`);
+          if(invSize(sh.inv)>CAP)throw Error('inv over cap');
+          for(const it of sh.items){if(!isFinite(it.x)||!isFinite(it.y))throw Error('item NaN');if(blocked(it.x,it.y,2))throw Error('item in wall '+it.id)}
+          const cnt=sh.items.length+sh.inv.length;if(cnt!==S.ship._cnt&&S.ship._cnt!==undefined)throw Error('item count changed');S.ship._cnt=cnt;
+        }
+        ticks++;
+      }
+      if(S.phase!=='wreck')throw Error('ship phase did not end: '+S.phase);
+      if(S.wreck.boat)stats.boat++;
+      stats.items+=S.wreck.brought.length;
+      for(let i=0;i<3;i++)$('#btn-drift').click();
+      let clicks=0;
+      while(S.phase==='sea'&&clicks<400){
+        const btns=[...document.querySelectorAll('#scr-sea button'),$('#btn-drift'),$('#btn-pick')];
+        const b=btns[Math.floor(fr()*btns.length)];b.click();
+        if(clicks%7===0)renderSeaScene(clicks*100);
+        const s=S.sea;
+        for(const k of['thirst','food','hp'])if(!(s[k]>=0&&s[k]<=100))throw Error(`stat ${k}=${s[k]}`);
+        if(s.day>12)throw Error('day overflow');
+        if(S.phase==='sea'&&!document.querySelector('#card button:not([disabled])'))throw Error('stuck: no enabled button, stage '+s.stage);
+        clicks++;
+      }
+      if(S.phase!=='end')throw Error('sea did not end, day '+S.sea.day+' stage '+S.sea.stage);
+      const t=$('#end-title').textContent;
+      stats[t==='獲救！'?'rescued':t==='漂到小島'?'island':'dead']++;stats.days+=S.sea.day;
+      $('#btn-again').click();
+      if(S.phase!=='title')throw Error('retry failed');
+      log.push(`seed ${seed}: ok — ${t}, day ${S.sea?S.sea.day:'-'}`);
+    }catch(e){errs.push(`seed ${seed}: ${e.message}\n${e.stack}`)}
+  }
+  const res=`FUZZ ${errs.length?'FAIL':'PASS'} n=${n}\nerrors=${errs.length}\n`+
+    `rescued=${stats.rescued} island=${stats.island} dead=${stats.dead} boat=${stats.boat} avgItems=${(stats.items/n).toFixed(1)} avgDay=${(stats.days/n).toFixed(1)}\n`+
+    errs.slice(0,8).join('\n')+'\n'+log.slice(0,10).join('\n');
+  out.textContent=res;document.title=(errs.length?'FAIL':'PASS')+' '+errs.length;
+}
+// ============ 會玩的機器人（網址加 #bot&n=30）：照路線撿東西→放救生艇，確認好的玩法真的能贏 ============
+function botPath(sh,tx,ty){ // 格子 BFS，回傳下一個要走的格子中心
+  const sx=Math.floor(sh.x/TW),sy=Math.floor(sh.y/TW);
+  const prev=new Map(),q=[[sx,sy]];prev.set(sx+','+sy,null);
+  while(q.length){const[x,y]=q.shift();if(x===tx&&y===ty)break;
+    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;
+      if(prev.has(k)||SOLID.includes(tileAt(nx,ny)))continue;prev.set(k,[x,y]);q.push([nx,ny])}}
+  let cur=[tx,ty];if(!prev.has(tx+','+ty))return null;
+  while(prev.get(cur[0]+','+cur[1])&&!(prev.get(cur[0]+','+cur[1])[0]===sx&&prev.get(cur[0]+','+cur[1])[1]===sy))cur=prev.get(cur[0]+','+cur[1]);
+  return cur;
+}
+function botShip(sh){
+  const want=['jacket','water','flare','water','knife','tarp','mirror','torch'];
+  input.hold=false;
+  const left=T_SCAV-sh.t;
+  let target=null;
+  if(left>12&&invSize(sh.inv)<CAP){
+    let bd=1e9;
+    for(const it of sh.items){if(!want.includes(it.id)||invSize(sh.inv)+ITEMS[it.id].sz>CAP)continue;
+      if(want.filter(w=>w===it.id).length<=sh.inv.filter(w=>w===it.id).length)continue;
+      const d=Math.hypot(it.x-sh.x,it.y-sh.y);if(d<bd){bd=d;target=it}}
+  }
+  if(target&&sh.near===target){input.x=input.y=0;pickUp();return}
+  let tx,ty;
+  if(target){tx=Math.floor(target.x/TW);ty=Math.floor(target.y/TW)}
+  else{tx=5;ty=7;if(nearBoat(sh)){input.x=input.y=0;if(!sh.released)input.hold=true;else boatAction();return}}
+  const nx=botPath(sh,tx,ty);
+  if(!nx){input.x=input.y=0;return}
+  const gx=target&&nx[0]===tx&&nx[1]===ty?target.x:nx[0]*TW+4, gy=target&&nx[0]===tx&&nx[1]===ty?target.y:nx[1]*TW+4;
+  const dx=gx-sh.x,dy=gy-sh.y,m=Math.hypot(dx,dy)||1;input.x=dx/m;input.y=dy/m;
+}
+function botSea(s){
+  if(s.stage==='night'){
+    if(s.thirst<65&&has(s,'water'))return useItem('water');
+    if(s.food<55&&(has(s,'can')||has(s,'biscuit'))&&!s.canTried)return useItem(has(s,'can')?'can':'biscuit');
+    if(s.hp<60&&has(s,'medkit'))return useItem('medkit');
+    return sleep();
+  }
+  if(s.stage==='result')return afterResult();
+  const cs=visibleChoices(s);let i=cs.findIndex(c=>c.need&&has(s,c.need));
+  if(i<0)i=cs.findIndex(c=>/保持不動|睡一覺|張嘴|忍住|浸濕|看著牠|不浪費|太遠|揮手|大喊|抱住|死命/.test(c.label));
+  choose(Math.max(0,i));
+}
+function runBot(){
+  const out=$('#fuzz');out.style.display='block';
+  const P=new URLSearchParams(location.hash.slice(1)),n=+P.get('n')||20;
+  const st={boat:0,rescued:0,island:0,dead:0,items:0,lost:0};const lines=[];
+  for(let k=0;k<n;k++){
+    startShip(1000+k);let ticks=0;
+    while(S.phase==='ship'&&ticks<3000){botShip(S.ship);for(let j=0;j<2&&S.phase==='ship';j++)shipStep(1/60);ticks++}
+    const w=S.wreck;if(w.boat)st.boat++;st.items+=w.brought.length;st.lost+=w.lost.length;
+    startSea();let c=0;while(S.phase==='sea'&&c<500){botSea(S.sea);c++}
+    const t=$('#end-title').textContent;st[t==='獲救！'?'rescued':t==='漂到小島'?'island':'dead']++;
+    lines.push(`${k}: boat=${w.boat} items=${w.brought.join(',')} → ${t} day ${S.sea.day} ${S.sea.cause||''}`);
+  }
+  out.textContent=`BOT n=${n} boat=${st.boat} rescued=${st.rescued} island=${st.island} dead=${st.dead} avgItems=${(st.items/n).toFixed(1)} lost=${st.lost}\n`+lines.join('\n');
+}
+// 截圖用（#shot=ship&t=20 或 #shot=sea）
+function runShot(){
+  const P=new URLSearchParams(location.hash.slice(1)),what=P.get('shot'),tt=+P.get('t')||18;
+  startShip(1001);
+  while(S.phase==='ship'&&S.ship.t<(what==='ship'?tt:99)){botShip(S.ship);shipStep(1/60)}
+  input.hold=false;input.x=input.y=0;
+  if(what==='ship'){renderShip(tt*1000);updateShipHud();return}
+  if(what==='wreck')return;
+  startSea();
+  if(P.get('ev')){S.sea.ev=[...EVENTS,SHIP_DAY,SHIP_NIGHT].find(e=>e.id===P.get('ev'));renderSea()}
+  renderSeaScene(1234);
+}
+if(FUZZ)runFuzz();
+else if(location.hash.startsWith('#bot'))runBot();
+else if(location.hash.startsWith('#shot'))runShot();
+else requestAnimationFrame(frame);
+</script>
+</body>
+</html>
