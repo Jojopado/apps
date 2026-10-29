@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>最後一顆種子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap">
+<style>
+/* 版面：上方季節/資源 → 🔮 未來預測 → 6×6 玻璃瓶 → 種子托盤＋按鈕 → 格子資訊 */
+:root{
+  --bg:#13201a;
+  --bg-2:#1b2c23;
+  --panel:#22382c;
+  --line:#35533f;
+  --ink:#eef5e9;
+  --dim:#9db3a2;
+  --gold:#ffd166;
+  --danger:#ff6b6b;
+  --ok:#8be28b;
+  --water:#5cc8ff;
+  --soil:#c48a4f;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 0%,#24402f 0%,var(--bg) 70%);background-color:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#app{max-width:440px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;min-height:100%}
+header{display:flex;align-items:center;gap:8px}
+header h1{font-size:17px;font-weight:900;margin:0;letter-spacing:1px;flex:1;white-space:nowrap}
+header h1 small{font-size:11px;color:var(--dim);font-weight:400;margin-left:4px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:13px;font-weight:700;white-space:nowrap}
+.icon-btn{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px;width:34px;height:30px;font-size:15px;padding:0}
+#status{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#season{font-weight:900}
+.s0{color:#9be38f}.s1{color:#ffcf5a}.s2{color:#ff9b5a}.s3{color:#a9d4ff}
+#future{background:linear-gradient(90deg,#2a2346,#22382c);border:1px solid #4d4380;border-radius:12px;padding:7px 10px;font-size:13px;line-height:1.45}
+#future b{color:var(--gold)}
+#future .stars{color:var(--gold);letter-spacing:1px}
+#jar{position:relative;border-radius:22px;padding:8px;background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 40%,rgba(255,255,255,.08));border:2px solid rgba(220,255,230,.25);box-shadow:inset 0 0 18px rgba(200,255,220,.08),0 6px 20px rgba(0,0,0,.35)}
+#grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.tile{position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;cursor:pointer;border:2px solid transparent}
+.tile svg.pl{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);transform-origin:50% 100%;transition:width .25s,height .25s}
+.tile.rock{background:repeating-linear-gradient(135deg,#6b6f73 0 6px,#5c6064 6px 12px)}
+.tile.pond{background:radial-gradient(circle at 40% 40%,#8fe0ff,#2a8cc7 70%)}
+.tile .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,20,40,.55),rgba(10,20,40,.25));pointer-events:none}
+.tile .res{position:absolute;left:2px;right:2px;bottom:1px;display:flex;justify-content:space-between;font-size:10px;font-weight:700;line-height:1;pointer-events:none;text-shadow:0 1px 2px #000}
+.res .w{color:var(--water)}.res .n{color:#ffc58a}
+.res .w::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--water);margin-right:2px;vertical-align:1px}
+.res .n::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;background:#b77a3f;margin-right:2px;vertical-align:1px}
+.tile .hp{position:absolute;top:2px;left:3px;font-size:8px;letter-spacing:-1px;color:#ff8d8d;pointer-events:none;text-shadow:0 1px 1px #000}
+.tile .badge{position:absolute;top:1px;right:2px;font-size:13px;pointer-events:none;filter:drop-shadow(0 1px 1px #000)}
+.tile.wilt svg.pl{filter:saturate(.35) brightness(.85)}
+.tile.sel{border-color:#fff!important}
+.tile.good{border-color:#8be28b}
+.tile.bad{border-color:rgba(255,107,107,.55)}
+.tile.waterable{border-color:var(--water)}
+.tile.flash{animation:flash .5s}
+@keyframes flash{0%{filter:brightness(2)}100%{filter:none}}
+#msg{min-height:20px;font-size:13px;color:var(--dim);text-align:center;line-height:1.4}
+#msg.hot{color:var(--gold)}
+#tray{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+#tray::-webkit-scrollbar{display:none}
+.card{flex:1 0 0;min-width:76px;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:5px 4px 6px;text-align:center;color:var(--ink);font-family:inherit}
+.card svg{width:38px;height:38px;display:block;margin:0 auto}
+.card .nm{font-weight:900;font-size:13px}
+.card .nd{font-size:11px;color:var(--dim);margin-top:1px}
+.card.on{border-color:var(--gold);background:#3a3a22}
+.card:disabled{opacity:.45}
+#trayTitle{font-size:12px;color:var(--dim);display:flex;justify-content:space-between}
+#trayTitle.last{color:var(--gold);font-weight:900}
+#btns{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:6px}
+.btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 4px;font-size:14px;font-weight:700;font-family:inherit}
+.btn.main{background:#3f8a4f;border-color:#5fb36f}
+.btn.on{background:#1f5f86;border-color:var(--water)}
+.btn:disabled{opacity:.4}
+#letgo{width:100%;background:transparent;border:1px dashed #6d5fb3;color:#c8bdff;padding:8px}
+#letgo.confirm{background:#4d3f8f;border-style:solid;color:#fff}
+#info{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:9px 11px;font-size:13px;line-height:1.55;min-height:62px}
+#info h3{margin:0 0 2px;font-size:15px}
+#info .why{color:var(--danger)}
+#info .ok{color:var(--ok)}
+#info .dim{color:var(--dim)}
+.overlay{position:fixed;inset:0;background:rgba(5,12,8,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay[hidden]{display:none}
+.sheet{background:var(--bg-2);border:1px solid var(--line);border-radius:18px;padding:16px;max-width:420px;width:100%;max-height:92vh;overflow:auto;line-height:1.6}
+.sheet h2{margin:0 0 6px;font-size:20px}
+.sheet p{margin:6px 0}
+.sheet .row{display:flex;gap:8px;margin-top:12px}
+.sheet .row .btn{flex:1}
+.dex{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)}
+.dex svg{flex:0 0 40px;width:40px;height:40px}
+.dex b{font-size:14px}
+.dex div{font-size:12.5px}
+.big-stars{font-size:34px;color:var(--gold);text-align:center;letter-spacing:4px}
+#chart{width:100%;height:auto;background:#101a14;border-radius:10px;margin-top:6px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;margin-top:4px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>最後一顆種子<small id="jarNo"></small></h1>
+    <button class="icon-btn" id="dexBtn" data-act="dex" aria-label="植物圖鑑">📖</button>
+    <button class="icon-btn" id="helpBtn" data-act="help" aria-label="玩法">？</button>
+  </header>
+  <div id="status"></div>
+  <div id="future"></div>
+  <div id="jar"><div id="grid"></div></div>
+  <div id="msg"></div>
+  <div id="trayTitle"></div>
+  <div id="tray"></div>
+  <div id="btns">
+    <button class="btn" id="waterBtn" data-act="water"></button>
+    <button class="btn" id="undoBtn" data-act="undo">↶ 重來本季</button>
+    <button class="btn main" id="nextBtn" data-act="next">下一季 ▶</button>
+  </div>
+  <button class="btn" id="letgo" data-act="letgo"></button>
+  <div id="info"></div>
+</div>
+
+<div class="overlay" id="helpOv" hidden><div class="sheet">
+  <h2>🌱 最後一顆種子</h2>
+  <p>瓶子裡是一個小小的生態系。你只有 <b>10 顆種子</b>、<b>3 桶水</b>。</p>
+  <p>每一季可以<b>種 1 顆</b>（從 3 種裡挑）、<b>澆 1 次水</b>，然後按「下一季」。</p>
+  <p>每株植物每季都要吃自己那格的 <span style="color:var(--water)">💧水</span> 和 <span style="color:#ffc58a">■養分</span>，吃不到就掉 ❤，掉光就死掉、變成養分。</p>
+  <p>植物會互相影響：三葉草會給旁邊養分、藤蔓會搶、長高的植物會擋住旁邊的陽光。秋天成熟的植物會撒種子，春天發芽。</p>
+  <p>3 年後（或你提早按「放手」），你就不能再碰了——生態系要<b>自己再活 3 年</b>。</p>
+  <p>上面的 <b>🔮</b> 會即時算出：「如果現在放手，3 年後會剩下什麼」。每一個選擇都會改變它。</p>
+  <p class="dim" style="color:var(--dim)">⭐ 有生命存活　⭐⭐ 4 種以上　⭐⭐⭐ 6 種以上＋12 株以上</p>
+  <div class="row"><button class="btn main" data-act="closeOv">開始</button></div>
+</div></div>
+
+<div class="overlay" id="dexOv" hidden><div class="sheet">
+  <h2>📖 植物圖鑑</h2>
+  <div id="dexList"></div>
+  <p style="color:var(--dim);font-size:12.5px">☀ 需要陽光（旁邊有長高的植物就會被擋住）· ☾ 需要陰影 · ◐ 都可以。<br>季節：春 💧+2、發芽｜夏 💧−1｜秋 💧+1、撒種子｜冬 休眠、一年生植物枯萎。水池讓上下左右每季 💧+1。</p>
+  <div class="row"><button class="btn main" data-act="closeOv">關閉</button></div>
+</div></div>
+
+<div class="overlay" id="endOv" hidden><div class="sheet" id="endSheet"></div></div>
+
+<script id="logic">
+// ===== 純邏輯（沒有 DOM，node 測試直接抽出來跑） =====
+const GW=6, GH=6, NT=GW*GH;
+const PLAYER_SEASONS=12, AUTO_SEASONS=12, START_SEEDS=10, START_CANS=3, CAP=6;
+const SEASON=['春','夏','秋','冬'];
+// w/n = 每季要吃的水/養分；light: sun 要陽光、shade 要陰影、any 都行；tallAge = 幾歲開始遮蔭
+const TYPES={
+  moss:     {name:'苔蘚',  w:1,n:0,light:'any',  mature:1,spread:1,score:1,color:'#a8cc4a',desc:'保水：自己這格每季 💧+1。春天會長孢子到旁邊濕的空格（💧3 以上，小心佔位子）。'},
+  clover:   {name:'三葉草',w:1,n:0,light:'sun',  mature:1,spread:1,score:2,color:'#5fbf5a',desc:'固氮：上下左右每季 ■養分+1。怕被遮住。'},
+  flower:   {name:'野花',  w:1,n:1,light:'sun',  mature:1,spread:2,score:3,annual:true,color:'#ef7db8',desc:'授粉：旁邊成熟的植物秋天多撒 1 顆種子。一年生，冬天枯萎。'},
+  sunflower:{name:'向日葵',w:2,n:2,light:'sun',  mature:2,spread:2,score:5,annual:true,tall:true,tallAge:1,color:'#f2c230',desc:'很會吃。長高後遮住上下左右的陽光。一年生，冬天枯萎。'},
+  mushroom: {name:'蘑菇',  w:1,n:1,light:'shade',mature:1,spread:1,score:3,color:'#d77452',desc:'分解者：旁邊有植物死掉時，那格養分 +4（平常 +2）。只能活在陰影下。'},
+  cactus:   {name:'仙人掌',w:0,n:1,light:'sun',  mature:2,spread:1,score:2,color:'#3fb0a0',desc:'不用喝水。死掉時放出 💧+3。'},
+  vine:     {name:'藤蔓',  w:1,n:1,light:'any',  mature:1,spread:1,score:1,color:'#9a6cc8',desc:'入侵者：每季從上下左右各搶 ■1 給自己。春天直接爬進旁邊空格。'},
+  tree:     {name:'小樹',  w:2,n:1,light:'any',  mature:4,spread:1,score:8,tall:true,tallAge:2,color:'#2f8a45',desc:'根會吸走上下左右各 💧1。2 歲後遮蔭。秋天落葉：上下左右 ■+1。'},
+};
+const TYPE_KEYS=Object.keys(TYPES);
+const OFFER_W={moss:3,clover:3,flower:3,sunflower:2,mushroom:2,cactus:2,vine:2,tree:1};
+const NB4=[], NB8=[];
+for(let i=0;i<NT;i++){
+  const x=i%GW, y=(i/GW)|0, a=[], b=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;
+    const X=x+dx,Y=y+dy; if(X<0||Y<0||X>=GW||Y>=GH)continue;
+    b.push(Y*GW+X); if(!dx||!dy)a.push(Y*GW+X);
+  }
+  NB4.push(a); NB8.push(b);
+}
+function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clone=o=>JSON.parse(JSON.stringify(o));
+const clamp=v=>v<0?0:v>CAP?CAP:v;
+
+function newGame(seed){
+  const R=rng(seed), tiles=[];
+  for(let i=0;i<NT;i++) tiles.push({w:1+Math.floor(R()*3), n:Math.floor(R()*3), rock:false, pond:false, plant:null, seed:null});
+  const pick=()=>Math.floor(R()*NT);
+  const x=1+Math.floor(R()*4), y=1+Math.floor(R()*4);
+  tiles[y*GW+x].pond=true; tiles[y*GW+x].w=CAP; tiles[y*GW+x].n=0;
+  let rocks=0;
+  while(rocks<3){const i=pick(); if(!tiles[i].pond&&!tiles[i].rock){tiles[i].rock=true;tiles[i].w=0;tiles[i].n=0;rocks++}}
+  const S={seed, t:0, seeds:START_SEEDS, cans:START_CANS, tiles, phase:'play', letGoAt:null, nid:1, planted:false, watered:false, hist:[]};
+  S.hist.push(counts(S));
+  return S;
+}
+const open=(S,i)=>{const t=S.tiles[i];return !t.rock&&!t.pond&&!t.plant&&!t.seed};
+const alive=p=>p&&p.hp>0;
+function isShaded(S,i){
+  return NB4[i].some(j=>{const p=S.tiles[j].plant;if(!alive(p))return false;const ty=TYPES[p.type];return ty.tall&&p.age>=ty.tallAge});
+}
+function lightOK(type,shaded){const l=TYPES[type].light;return l==='any'||(l==='sun'?!shaded:shaded)}
+// 種下去這格大概行不行（用「這一季天氣之後」的水量估）
+function weatherDW(S,i){const s=S.t%4;let d=[2,-1,1,0][s];if(s!==3&&NB4[i].some(j=>S.tiles[j].pond))d+=1;return d}
+function suitWhy(S,i,type){
+  const t=S.tiles[i], ty=TYPES[type], why=[];
+  if(clamp(t.w+weatherDW(S,i))<ty.w)why.push('缺水');
+  if(t.n<ty.n)why.push('缺養分');
+  if(!lightOK(type,isShaded(S,i)))why.push(ty.light==='sun'?'被遮住、太暗':'太亮、需要陰影');
+  return why;
+}
+function suitScore(S,i,type){
+  const t=S.tiles[i], ty=TYPES[type], sh=isShaded(S,i);
+  return (t.w>=ty.w?2:0)+(t.n>=ty.n?2:0)+(lightOK(type,sh)?3:0)+t.w*.1+t.n*.1-i*.001;
+}
+function bestOpen(S,list,type,k){
+  return list.filter(j=>open(S,j)).sort((a,b)=>suitScore(S,b,type)-suitScore(S,a,type)).slice(0,k);
+}
+function addPlant(S,i,type){S.tiles[i].plant={id:S.nid++,type,age:0,hp:2,why:[]}}
+
+// 走一季：天氣 → 發芽 → 吃/長大 → 影響鄰居 → 死亡變養分 → 散播
+function step(S){
+  const s=S.t%4, T=S.tiles, ev=[];
+  for(const t of T){
+    if(t.rock||t.pond)continue;
+    t.w=clamp(t.w+[2,-1,1,0][s]);
+  }
+  if(s!==3) T.forEach((t,i)=>{if(t.pond)NB4[i].forEach(j=>{if(!T[j].rock&&!T[j].pond)T[j].w=clamp(T[j].w+1)})});
+  if(s===0) T.forEach((t,i)=>{if(t.seed){if(!t.plant){addPlant(S,i,t.seed);ev.push({k:'sprout',i,type:t.seed})}t.seed=null}});
+  const shade=T.map((_,i)=>isShaded(S,i));
+  const dead=[];
+  T.forEach((t,i)=>{
+    const p=t.plant; if(!p)return;
+    const ty=TYPES[p.type];
+    if(s===3){p.why=[]; if(ty.annual){p.hp=0;p.why=['一年生，冬天枯萎'];dead.push(i)} return}
+    const why=[];
+    if(t.w<ty.w)why.push('缺水');
+    if(t.n<ty.n)why.push('缺養分');
+    if(!lightOK(p.type,shade[i]))why.push(ty.light==='sun'?'被遮住、太暗':'太亮、需要陰影');
+    p.why=why;
+    if(!why.length){t.w-=ty.w;t.n-=ty.n;p.hp=Math.min(3,p.hp+1);p.age++}
+    else{p.hp--; if(p.hp<=0)dead.push(i)}
+  });
+  const dW=new Array(NT).fill(0), dN=new Array(NT).fill(0);
+  const soil=j=>!T[j].rock&&!T[j].pond;
+  if(s!==3) T.forEach((t,i)=>{
+    const p=t.plant; if(!alive(p))return;
+    if(p.type==='moss')dW[i]+=1;
+    if(p.type==='clover')NB4[i].forEach(j=>{if(soil(j))dN[j]+=1});
+    if(p.type==='vine'){let g=0;NB4[i].forEach(j=>{if(soil(j)&&T[j].n>0&&g<2){dN[j]-=1;g++}});dN[i]+=g}
+    if(p.type==='tree'&&p.age>=1){
+      let g=0;NB4[i].forEach(j=>{if(soil(j)&&T[j].w>0&&g<2){dW[j]-=1;g++}});dW[i]+=g;
+      if(s===2)NB4[i].forEach(j=>{if(soil(j))dN[j]+=1});
+    }
+  });
+  for(const i of dead){
+    const p=T[i].plant;
+    const mush=NB4[i].some(j=>alive(T[j].plant)&&T[j].plant.type==='mushroom');
+    dN[i]+=mush?4:2;
+    if(p.type==='cactus')dW[i]+=3;
+    ev.push({k:'die',i,type:p.type,id:p.id,why:p.why.slice()});
+    T[i].plant=null;
+  }
+  T.forEach((t,i)=>{if(soil(i)){t.w=clamp(t.w+dW[i]);t.n=clamp(t.n+dN[i])}});
+  // 散播（照格子順序，先到先佔）
+  const grown=T.map((t,i)=>alive(t.plant)&&t.plant.age>=TYPES[t.plant.type].mature?i:-1).filter(i=>i>=0);
+  for(const i of grown){
+    const p=T[i].plant;
+    if(s===0&&p.type==='moss'){for(const j of bestOpen(S,NB4[i].filter(j=>T[j].w>=3),'moss',1)){addPlant(S,j,'moss');ev.push({k:'spread',i:j,type:'moss'})}}
+    if(s===0&&p.type==='vine'){for(const j of bestOpen(S,NB4[i],'vine',1)){addPlant(S,j,'vine');ev.push({k:'spread',i:j,type:'vine'})}}
+    if(s===2&&p.type!=='moss'&&p.type!=='vine'&&p.hp>=2){
+      const pol=p.type!=='flower'&&NB4[i].some(j=>alive(T[j].plant)&&T[j].plant.type==='flower')?1:0;
+      for(const j of bestOpen(S,NB8[i],p.type,TYPES[p.type].spread+pol)){T[j].seed=p.type;ev.push({k:'seed',i:j,type:p.type})}
+    }
+  }
+  S.t++;
+  S.hist.push(counts(S));
+  return ev;
+}
+function counts(S){
+  const c={};let seeds=0;
+  for(const t of S.tiles){if(alive(t.plant))c[t.plant.type]=(c[t.plant.type]||0)+1;if(t.seed)seeds++}
+  return {c,seeds};
+}
+function summary(S){
+  const sp=new Set();let plants=0,seeds=0,score=0;
+  for(const t of S.tiles){
+    if(alive(t.plant)){sp.add(t.plant.type);plants++;score+=TYPES[t.plant.type].score}
+    if(t.seed){sp.add(t.seed);seeds++;score+=1}
+  }
+  score+=sp.size*10;
+  const stars=sp.size===0?0:(sp.size>=6&&plants>=12)?3:sp.size>=4?2:1;
+  return {species:[...sp],plants,seeds,score,stars};
+}
+function futureIfLetGo(S){const c=clone(S);for(let k=0;k<AUTO_SEASONS;k++)step(c);return summary(c)}
+// 下一季每格會怎樣：{id: {die, why, hpd}}
+function forecastNext(S){
+  const c=clone(S), ev=step(c), out={};
+  S.tiles.forEach((t,i)=>{
+    const p=t.plant;if(!p)return;
+    const d=ev.find(e=>e.k==='die'&&e.id===p.id);
+    if(d)out[i]={die:true,why:d.why};
+    else{const q=c.tiles[i].plant;out[i]={die:false,why:q?q.why:[],hpd:q?q.hp-p.hp:0}}
+  });
+  return out;
+}
+function offers(S){
+  if(S.seeds<=0||S.planted)return [];
+  if(S.seeds===1)return TYPE_KEYS.slice();
+  const R=rng(S.seed*31+S.t*7919+17), pool=TYPE_KEYS.slice(), out=[];
+  while(out.length<3){
+    const tot=pool.reduce((a,k)=>a+OFFER_W[k],0);let r=R()*tot;
+    const k=pool.find(k=>(r-=OFFER_W[k])<0)||pool[pool.length-1];
+    out.push(k);pool.splice(pool.indexOf(k),1);
+  }
+  return out;
+}
+function plantSeed(S,i,type){
+  if(S.phase!=='play'||S.planted||S.seeds<=0||!open(S,i))return false;
+  if(S.t%4===3)S.tiles[i].seed=type; else addPlant(S,i,type);
+  S.seeds--;S.planted=true;return true;
+}
+function waterTile(S,i){
+  const t=S.tiles[i];
+  if(S.phase!=='play'||S.watered||S.cans<=0||t.rock||t.pond)return false;
+  t.w=clamp(t.w+2);NB4[i].forEach(j=>{const u=S.tiles[j];if(!u.rock&&!u.pond)u.w=clamp(u.w+1)});
+  S.cans--;S.watered=true;return true;
+}
+function checkInvariants(S){
+  const bad=[];
+  S.tiles.forEach((t,i)=>{
+    if(!(t.w>=0&&t.w<=CAP)||!(t.n>=0&&t.n<=CAP))bad.push('range@'+i);
+    if(t.plant&&!(t.plant.hp>=1&&t.plant.hp<=3))bad.push('hp@'+i);
+    if((t.rock||t.pond)&&(t.plant||t.seed))bad.push('blocked@'+i);
+    if(t.plant&&!TYPES[t.plant.type])bad.push('type@'+i);
+  });
+  if(S.seeds<0||S.cans<0)bad.push('res');
+  return bad;
+}
+</script>
+
+<script>
+// ===== 畫面 =====
+const $=id=>document.getElementById(id);
+const URLQ=new URLSearchParams(location.hash.slice(1));
+let S, turnStart, sel=null, mode=null, info=null, confirmLetGo=false, autoTimer=null, lastEv=[], flashIds=new Set(), note='';
+let AUTO_MS=380;
+
+function plantSVG(type,size){
+  const c=TYPES[type].color;let g='';
+  switch(type){
+    case 'moss':g=`<ellipse cx="13" cy="34" rx="9" ry="5" fill="#7f9e33"/><ellipse cx="25" cy="33" rx="11" ry="6" fill="${c}"/><ellipse cx="19" cy="30" rx="8" ry="5" fill="#bfe066"/><circle cx="30" cy="27" r="1.5" fill="#e3f59a"/><circle cx="12" cy="28" r="1.3" fill="#e3f59a"/>`;break;
+    case 'clover':g=`<path d="M20 38 Q19 28 20 20" stroke="#3e8a3a" stroke-width="2.4" fill="none"/><circle cx="14" cy="16" r="7" fill="${c}"/><circle cx="26" cy="16" r="7" fill="${c}"/><circle cx="20" cy="9" r="7" fill="#74d26e"/><path d="M14 16 L20 14 L26 16" stroke="#3e8a3a" stroke-width="1" fill="none"/>`;break;
+    case 'flower':g=`<path d="M20 38 Q21 28 20 18" stroke="#4f9a45" stroke-width="2.2" fill="none"/><path d="M20 30 Q12 27 11 22 Q17 23 20 28" fill="#5fbf5a"/>${[0,72,144,216,288].map(a=>`<circle cx="${20+6*Math.cos(a*Math.PI/180)}" cy="${14+6*Math.sin(a*Math.PI/180)}" r="4.6" fill="${c}"/>`).join('')}<circle cx="20" cy="14" r="3.4" fill="#ffe07a"/>`;break;
+    case 'sunflower':g=`<path d="M20 39 L20 14" stroke="#4f9a45" stroke-width="3" /><path d="M20 28 Q9 26 8 19 Q16 20 20 26" fill="#5fbf5a"/><path d="M20 24 Q31 22 32 15 Q24 16 20 22" fill="#5fbf5a"/>${Array.from({length:12},(_,k)=>{const a=k*30*Math.PI/180;return `<ellipse cx="${20+7.5*Math.cos(a)}" cy="${11+7.5*Math.sin(a)}" rx="3.6" ry="2" transform="rotate(${k*30} ${20+7.5*Math.cos(a)} ${11+7.5*Math.sin(a)})" fill="${c}"/>`}).join('')}<circle cx="20" cy="11" r="5.2" fill="#7a4a1e"/>`;break;
+    case 'mushroom':g=`<path d="M16 38 Q15 28 17 24 L23 24 Q25 28 24 38 Z" fill="#f3e6cf"/><path d="M5 25 Q8 8 20 8 Q32 8 35 25 Z" fill="${c}"/><circle cx="14" cy="17" r="2.4" fill="#fff3e3"/><circle cx="24" cy="13" r="2" fill="#fff3e3"/><circle cx="28" cy="20" r="1.8" fill="#fff3e3"/>`;break;
+    case 'cactus':g=`<rect x="15" y="8" width="10" height="31" rx="5" fill="${c}"/><path d="M15 26 L10 26 Q7 26 7 22 L7 16" stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M25 22 L30 22 Q33 22 33 18 L33 13" stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M20 10 L20 37" stroke="#2c7f74" stroke-width="1.2"/><circle cx="20" cy="7.5" r="2.2" fill="#ff7aa8"/>`;break;
+    case 'vine':g=`<path d="M8 38 Q4 26 14 24 Q24 22 18 14 Q13 7 24 5 Q33 4 32 13" stroke="#6f4a96" stroke-width="2.6" fill="none"/><ellipse cx="13" cy="30" rx="5" ry="3" transform="rotate(-30 13 30)" fill="${c}"/><ellipse cx="23" cy="20" rx="5" ry="3" transform="rotate(25 23 20)" fill="${c}"/><ellipse cx="15" cy="11" rx="4.5" ry="2.8" transform="rotate(-20 15 11)" fill="${c}"/><ellipse cx="31" cy="15" rx="4" ry="2.5" transform="rotate(40 31 15)" fill="#b892e0"/>`;break;
+    case 'tree':g=`<path d="M18 39 L19 24 L21 24 L22 39 Z" fill="#7a5230"/><circle cx="20" cy="15" r="11" fill="${c}"/><circle cx="12" cy="20" r="6.5" fill="#257238"/><circle cx="28" cy="20" r="6.5" fill="#3ea158"/><circle cx="17" cy="11" r="3" fill="#56b96d"/>`;break;
+  }
+  return `<svg class="pl" viewBox="0 0 40 40" width="${size}" height="${size}">${g}</svg>`;
+}
+function seedSVG(type,size){
+  return `<svg class="pl" viewBox="0 0 40 40" width="${size}" height="${size}"><ellipse cx="20" cy="30" rx="7" ry="5" fill="#8a5a2b"/><ellipse cx="18" cy="28.5" rx="3" ry="1.6" fill="#b88350"/><circle cx="25" cy="27" r="2.4" fill="${TYPES[type].color}"/></svg>`;
+}
+function lightIcon(l){return l==='sun'?'☀':l==='shade'?'☾':'◐'}
+function needsText(type){const ty=TYPES[type];return `💧${ty.w} ■${ty.n} ${lightIcon(ty.light)}`}
+function yearSeason(t){return `第${Math.floor(t/4)+1}年 ${SEASON[t%4]}`}
+function starStr(n){return '★'.repeat(n)+'☆'.repeat(3-n)}
+
+function start(seed){
+  clearTimeout(autoTimer);
+  S=newGame(seed); lastEv=[]; info=null; note='';
+  beginTurn(); render();
+  ['endOv','dexOv'].forEach(id=>$(id).hidden=true);
+  try{localStorage.setItem('lastseed.jar',String(seed))}catch(e){}
+}
+function beginTurn(){turnStart=clone(S); sel=null; mode=null; confirmLetGo=false}
+function say(t){note=t}
+
+function evSummary(ev){
+  if(!ev.length)return '';
+  const by=k=>ev.filter(e=>e.k===k);
+  const parts=[];
+  const sp=by('sprout').length+by('spread').length; if(sp)parts.push(`🌱 ${sp} 株新芽`);
+  const sd=by('seed').length; if(sd)parts.push(`🌰 撒了 ${sd} 顆種子`);
+  const d=by('die');
+  if(d.length){
+    const names={};d.forEach(e=>{const key=TYPES[e.type].name+(e.why[0]?'（'+e.why[0]+'）':'');names[key]=(names[key]||0)+1});
+    parts.push('💀 '+Object.entries(names).map(([k,v])=>v>1?`${k}×${v}`:k).join('、'));
+  }
+  return parts.join('　');
+}
+
+function render(){
+  const s=S.t%4, play=S.phase==='play';
+  $('jarNo').textContent=`瓶子 #${S.seed}`;
+  const left=play?`還能照顧 ${PLAYER_SEASONS-S.t} 季`:`放手中 ${S.t-S.letGoAt}/${AUTO_SEASONS} 季`;
+  $('status').innerHTML=`<span class="pill" id="season"><span class="s${s}">${yearSeason(S.t)}</span></span><span class="pill">🌰 ×${S.seeds}</span><span class="pill">💧 水桶 ×${S.cans}</span><span class="pill" style="color:var(--dim);font-weight:400">${left}</span>`;
+  // 🔮 未來
+  if(play){
+    const f=futureIfLetGo(S);
+    const sp=f.species.length?f.species.map(k=>TYPES[k].name).join('、'):'什麼都不剩';
+    $('future').innerHTML=`🔮 現在放手 → 3 年後：<b>${f.species.length} 種、${f.plants} 株</b>${f.seeds?`＋${f.seeds} 顆種子`:''} <span class="stars">${starStr(f.stars)}</span><br><span style="color:var(--dim);font-size:12px">${sp}</span>`;
+  }else{
+    const f=summary(S);
+    $('future').innerHTML=`🍃 生態系自己運作中… 目前 <b>${f.species.length} 種、${f.plants} 株</b> <span class="stars">${starStr(f.stars)}</span>`;
+  }
+  // 格子
+  const fc=play?forecastNext(S):{};
+  const tileSize=$('grid').clientWidth/GW||52;
+  let h='';
+  S.tiles.forEach((t,i)=>{
+    let cls='tile', inner='';
+    if(t.rock)cls+=' rock';
+    else if(t.pond)cls+=' pond';
+    else{
+      const r=200-t.n*14, g=150-t.n*12, b=100-t.n*9;
+      const wa=t.w/CAP*.3;
+      inner+=`<div style="position:absolute;inset:0;background:linear-gradient(rgba(70,150,230,${wa}),rgba(70,150,230,${wa})),rgb(${r},${g},${b})"></div>`;
+      if(isShaded(S,i))inner+='<div class="shade"></div>';
+      if(t.plant){
+        const p=t.plant, ty=TYPES[p.type];
+        const sc=.5+.5*Math.min(1,(p.age+1)/(ty.mature+1));
+        inner+=plantSVG(p.type,Math.round(tileSize*.82*sc));
+        inner+=`<div class="hp">${'♥'.repeat(p.hp)}</div>`;
+        if(p.hp===1)cls+=' wilt';
+        const f=fc[i];
+        if(f){if(f.die)inner+='<div class="badge">💀</div>';else if(f.hpd<0)inner+='<div class="badge">⚠️</div>'}
+      }else if(t.seed){inner+=seedSVG(t.seed,Math.round(tileSize*.7))}
+      inner+=`<div class="res"><span class="w">${t.w}</span><span class="n">${t.n}</span></div>`;
+      if(play&&sel&&open(S,i))cls+=suitWhy(S,i,sel).length?' bad':' good';
+      if(play&&mode==='water')cls+=' waterable';
+    }
+    if(info===i)cls+=' sel';
+    if(t.plant&&flashIds.has(t.plant.id))cls+=' flash';
+    h+=`<div class="${cls}" data-i="${i}">${inner}</div>`;
+  });
+  $('grid').innerHTML=h; flashIds.clear();
+  // 訊息
+  const m=$('msg');
+  if(note){m.textContent=note;m.className='hot'}
+  else{m.textContent=evSummary(lastEv)||(play?(mode==='water'?'點一格澆水：那格 💧+2、上下左右 💧+1':sel?'點一格種下去（綠框＝適合、紅框＝會吃不飽）':'選一顆種子，或點格子看狀態'):'');m.className=''}
+  // 托盤
+  const of=play?offers(S):[];
+  const tt=$('trayTitle');
+  if(!play){tt.textContent='';tt.className=''}
+  else if(S.seeds<=0){tt.textContent='種子用完了。接下來只能澆水、等待，或放手。';tt.className=''}
+  else if(S.planted){tt.textContent='這一季已經種過了，按「下一季」。';tt.className=''}
+  else if(S.seeds===1){tt.innerHTML='<span>🌰 最後一顆種子 — 任選一種，想清楚</span><span>→ 滑</span>';tt.className='last'}
+  else{tt.innerHTML=`<span>這一季的種子（挑 1 顆）</span><span>${s===3?'冬天種下會先休眠，春天發芽':''}</span>`;tt.className=''}
+  $('tray').innerHTML=of.map(k=>`<button class="card${sel===k?' on':''}" data-card="${k}">${plantSVG(k,38).replace('class="pl" ','')}<div class="nm">${TYPES[k].name}</div><div class="nd">${needsText(k)}</div></button>`).join('');
+  // 按鈕
+  $('waterBtn').textContent=`💧 澆水 ×${S.cans}`;
+  $('waterBtn').className='btn'+(mode==='water'?' on':'');
+  $('waterBtn').disabled=!play||S.cans<=0||S.watered;
+  $('undoBtn').disabled=!play||(!S.planted&&!S.watered);
+  $('nextBtn').disabled=!play;
+  $('nextBtn').textContent=play?(S.t===PLAYER_SEASONS-1?'最後一季 ▶':'下一季 ▶'):'⏩ 直接看結局';
+  if(!play){$('nextBtn').disabled=false;$('nextBtn').dataset.act='skip'}else $('nextBtn').dataset.act='next';
+  const lg=$('letgo');
+  lg.hidden=!play;
+  lg.className='btn'+(confirmLetGo?' confirm':'');
+  lg.textContent=confirmLetGo?'確定放手？再按一次（之後不能再碰）':'🕊 提早放手，讓它自己活 3 年';
+  renderInfo(fc);
+}
+
+function renderInfo(fc){
+  const el=$('info');
+  if(sel&&info===null){
+    const ty=TYPES[sel];
+    el.innerHTML=`<h3>${ty.name}　<span class="dim">${needsText(sel)}</span></h3>${ty.desc}<br><span class="dim">${ty.mature} 歲成熟${ty.annual?'・一年生':''}・分數 ${ty.score}</span>`;
+    return;
+  }
+  if(info===null){el.innerHTML='<span class="dim">點格子看狀態。格子左下 <span style="color:var(--water)">藍數字＝水</span>、右下 <span style="color:#ffc58a">橘數字＝養分</span>；暗色＝被遮住；💀＝下一季會死、⚠️＝會掉血。</span>';return}
+  const t=S.tiles[info];
+  if(t.rock){el.innerHTML='<h3>岩石</h3>不能種東西。';return}
+  if(t.pond){el.innerHTML='<h3>小水池</h3>春夏秋每季讓上下左右 💧+1。';return}
+  const base=`<span class="dim">💧${t.w}　■${t.n}　${isShaded(S,info)?'☾ 有陰影':'☀ 有陽光'}</span>`;
+  if(t.plant){
+    const p=t.plant, ty=TYPES[p.type], f=fc[info];
+    let st='';
+    if(S.phase==='play'&&f){
+      if(f.die)st=`<span class="why">💀 下一季會死：${f.why.join('、')}</span>`;
+      else if(f.why.length)st=`<span class="why">⚠️ 下一季：${f.why.join('、')}，❤−1</span>`;
+      else st=S.t%4===3?'<span class="dim">❄ 冬天休眠</span>':'<span class="ok">👍 下一季吃得飽、會長大</span>';
+    }
+    el.innerHTML=`<h3>${ty.name}　<span style="color:#ff8d8d">${'♥'.repeat(p.hp)}${'♡'.repeat(3-p.hp)}</span>　<span class="dim">${p.age} 歲${p.age>=ty.mature?'（成熟）':''}</span></h3>${st}<br>需要 ${needsText(p.type)}｜${base}<br><span class="dim">${ty.desc}</span>`;
+    return;
+  }
+  if(t.seed){el.innerHTML=`<h3>${TYPES[t.seed].name}的種子</h3>正在休眠，春天會發芽（如果這格還空著）。<br>${base}`;return}
+  let extra='';
+  if(sel){const w=suitWhy(S,info,sel);extra=w.length?`<br><span class="why">種${TYPES[sel].name}：${w.join('、')}</span>`:`<br><span class="ok">種${TYPES[sel].name}：OK</span>`}
+  el.innerHTML=`<h3>空地</h3>${base}${extra}`;
+}
+
+function tapTile(i){
+  note='';
+  if(S.phase!=='play'){info=i;render();return}
+  const t=S.tiles[i];
+  if(mode==='water'){
+    if(waterTile(S,i)){mode=null;info=i;say('澆好了 💧')}
+    else say(t.rock||t.pond?'這格不用澆':'這季已經澆過了');
+    render();return;
+  }
+  if(sel){
+    if(plantSeed(S,i,sel)){
+      info=i;
+      if(S.tiles[i].plant)flashIds.add(S.tiles[i].plant.id);
+      say(S.seeds===0?'最後一顆種子種下去了。🌰':(S.tiles[i].seed?'冬天種下：先休眠，春天發芽':`種下${TYPES[sel].name}！看看 🔮 有沒有變`));
+      sel=null;
+    }else{info=i;say('這格不能種（有東西了）')}
+    render();return;
+  }
+  info=info===i?null:i;render();
+}
+function act(a){
+  if(a!=='letgo')confirmLetGo=false;
+  note='';
+  switch(a){
+    case 'water':
+      if(S.phase!=='play')break;
+      if(S.cans<=0)say('水桶用完了');else if(S.watered)say('這季已經澆過了');
+      else{mode=mode==='water'?null:'water';sel=null}
+      break;
+    case 'undo':if(S.phase==='play'){S=clone(turnStart);sel=null;mode=null;info=null;say('本季重來')}break;
+    case 'next':
+      if(S.phase!=='play')break;
+      lastEv=step(S);S.planted=false;S.watered=false;info=info;
+      lastEv.filter(e=>e.k==='sprout'||e.k==='spread').forEach(e=>{const p=S.tiles[e.i].plant;if(p)flashIds.add(p.id)});
+      if(S.t>=PLAYER_SEASONS){startAuto();return}
+      beginTurn();
+      break;
+    case 'letgo':
+      if(S.phase!=='play')break;
+      if(!confirmLetGo){confirmLetGo=true;break}
+      startAuto();return;
+    case 'skip':
+      if(S.phase!=='auto')break;
+      clearTimeout(autoTimer);
+      while(S.t<S.letGoAt+AUTO_SEASONS)lastEv=step(S);
+      finish();return;
+    case 'help':$('helpOv').hidden=false;break;
+    case 'dex':$('dexOv').hidden=false;break;
+    case 'closeOv':$('helpOv').hidden=true;$('dexOv').hidden=true;try{localStorage.setItem('lastseed.seen','1')}catch(e){}break;
+    case 'same':start(S.seed);return;
+    case 'newjar':start(1+Math.floor(Math.random()*9999));return;
+  }
+  render();
+}
+function startAuto(){
+  S.phase='auto';S.letGoAt=S.t;sel=null;mode=null;confirmLetGo=false;
+  render();
+  const tick=()=>{
+    if(S.phase!=='auto')return;
+    lastEv=step(S);
+    if(S.t>=S.letGoAt+AUTO_SEASONS){finish();return}
+    render();autoTimer=setTimeout(tick,AUTO_MS);
+  };
+  autoTimer=setTimeout(tick,AUTO_MS);
+}
+function finish(){
+  clearTimeout(autoTimer);
+  S.phase='end';render();
+  const f=summary(S);
+  const verdict=['瓶子裡安靜了下來。什麼都沒留下。','還有一點點生命在撐著。','一個小小的生態系，自己活下來了。','一座會自己呼吸的小森林。'][f.stars];
+  const sp=f.species.map(k=>`<span style="color:${TYPES[k].color}">${TYPES[k].name}</span>`).join('、')||'—';
+  $('endSheet').innerHTML=`<h2>${yearSeason(S.t)}・結局</h2><div class="big-stars">${starStr(f.stars)}</div><p style="text-align:center">${verdict}</p>
+  <p>存活：<b>${f.species.length} 種、${f.plants} 株</b>（＋${f.seeds} 顆種子）<br>${sp}<br>生態分數：<b>${f.score}</b></p>
+  <div style="font-size:12.5px;color:var(--dim)">整個瓶子的歷史（虛線＝你放手的那一季）</div>${chartSVG()}
+  <div class="row"><button class="btn" data-act="same">同一瓶再玩</button><button class="btn main" data-act="newjar">換一瓶</button></div>`;
+  $('endOv').hidden=false;
+  try{const k='lastseed.best.'+S.seed, b=+localStorage.getItem(k)||0;if(f.score>b)localStorage.setItem(k,String(f.score))}catch(e){}
+}
+function chartSVG(){
+  const Wd=320,Ht=120,n=S.hist.length-1||1;
+  const maxTot=Math.max(4,...S.hist.map(h=>Object.values(h.c).reduce((a,b)=>a+b,0)));
+  const x=k=>k/n*Wd, y=v=>Ht-v/maxTot*(Ht-8);
+  let base=S.hist.map(()=>0), paths='';
+  for(const k of TYPE_KEYS){
+    if(!S.hist.some(h=>h.c[k]))continue;
+    const top=S.hist.map((h,j)=>base[j]+(h.c[k]||0));
+    const pts=top.map((v,j)=>`${x(j).toFixed(1)},${y(v).toFixed(1)}`).concat(base.map((v,j)=>`${x(j).toFixed(1)},${y(v).toFixed(1)}`).reverse());
+    paths+=`<polygon points="${pts.join(' ')}" fill="${TYPES[k].color}" opacity=".9"/>`;
+    base=top;
+  }
+  const lx=x(S.letGoAt);
+  const leg=TYPE_KEYS.filter(k=>S.hist.some(h=>h.c[k])).map(k=>`<span><i style="background:${TYPES[k].color}"></i>${TYPES[k].name}</span>`).join('');
+  return `<svg id="chart" viewBox="0 0 ${Wd} ${Ht}">${paths}<line x1="${lx}" y1="0" x2="${lx}" y2="${Ht}" stroke="#fff" stroke-dasharray="4 3" opacity=".8"/></svg><div class="legend">${leg}</div>`;
+}
+
+document.addEventListener('click',e=>{
+  const tile=e.target.closest('[data-i]');
+  if(tile){tapTile(+tile.dataset.i);return}
+  const card=e.target.closest('[data-card]');
+  if(card){
+    note='';confirmLetGo=false;
+    if(S.phase!=='play'||S.planted)return;
+    const k=card.dataset.card;sel=sel===k?null:k;mode=null;info=null;render();return;
+  }
+  const b=e.target.closest('[data-act]');
+  if(b&&!b.disabled)act(b.dataset.act);
+});
+$('dexList').innerHTML=TYPE_KEYS.map(k=>`<div class="dex">${plantSVG(k,40).replace('class="pl" ','')}<div><b style="color:${TYPES[k].color}">${TYPES[k].name}</b>　<span style="color:var(--dim)">${needsText(k)}・${TYPES[k].mature} 歲成熟${TYPES[k].annual?'・一年生':''}</span><br>${TYPES[k].desc}</div></div>`).join('');
+window.addEventListener('resize',()=>S&&render());
+
+// ===== 測試：#fuzz&n=400&seed=1（亂按）→ 結果寫在 document.title =====
+function fuzz(n,seed){
+  const R=rng(seed), errs=[], hits={};
+  window.onerror=(m)=>{errs.push(String(m))};
+  AUTO_MS=0;
+  const targets=()=>[...document.querySelectorAll('[data-i],[data-card],[data-act]')].filter(el=>el.offsetParent!==null||el.closest('.overlay:not([hidden])'));
+  let k=0, ends=0;
+  const go=()=>{
+    for(let b=0;b<20&&k<n;b++,k++){
+      try{
+        const r=R();
+        if(r<.1){const W=innerWidth,H=innerHeight;const el=document.elementFromPoint(R()*W,R()*H);el&&el.dispatchEvent(new MouseEvent('click',{bubbles:true}))}
+        else{const all=targets(),nt=all.filter(e=>!e.dataset.i),ts=(R()<.4||!nt.length)?all.filter(e=>e.dataset.i):nt;const el=ts[Math.floor(R()*ts.length)];if(el){hits[el.dataset.act||(el.dataset.card?'card':'tile')]=(hits[el.dataset.act||(el.dataset.card?'card':'tile')]||0)+1;el.click()}}
+        if(!$('helpOv').hidden&&R()<.5)act('closeOv');
+        const bad=checkInvariants(S);if(bad.length)errs.push('inv '+bad.join(','));
+        if(S.phase==='play'&&S.t>=PLAYER_SEASONS)errs.push('stuck play');
+        if(S.phase==='end'&&!$('endOv').hidden)ends++;
+      }catch(e){errs.push(e.message)}
+    }
+    if(k<n&&errs.length<5)setTimeout(go,0);
+    else document.title=(errs.length?'FUZZ FAIL ':'FUZZ OK ')+`seed=${seed} t=${S.t} phase=${S.phase} `+errs.slice(0,3).join(' | ')+' ends='+ends;
+  };
+  go();
+}
+
+let jar=+URLQ.get('jar')||0;
+if(!jar){try{jar=+localStorage.getItem('lastseed.jar')||0}catch(e){}}
+start(jar||1+Math.floor(Math.random()*9999));
+let seen=false;try{seen=localStorage.getItem('lastseed.seen')==='1'}catch(e){}
+if(URLQ.has('demo')){for(let d=+URLQ.get('demo');d>0;d--){const of=offers(S);const i=of.length?S.tiles.findIndex((t,j)=>open(S,j)&&!suitWhy(S,j,of[0]).length):-1;if(i>=0)plantSeed(S,i,of[0]);act('next')}seen=true;sel=offers(S)[0]||null;render()}
+if(!seen&&!URLQ.has('fuzz'))$('helpOv').hidden=false;
+if(URLQ.has('fuzz'))fuzz(+URLQ.get('n')||400,+URLQ.get('seed')||1);
+</script>
+</body>
+</html>
