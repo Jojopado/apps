@@ -7,23 +7,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;700&display=swap">
 <style>
-/* 版面：上方人生紀錄（逐年往下長），遇到選擇時跳出紙卡（左／右／下三個選項），最下方是年齡進度條 */
+/* 版面：上方人生紀錄（逐年往下長）；遇到抉擇時，年齡停下，選擇卡從下方滑上來（左／右／下三個選項），選完顯示結果再繼續 */
 :root{
   --board:#17423f;      /* 教室黑板綠 */
   --board-2:#1f544f;
   --board-3:#2a6660;
   --paper:#fbfaf5;
+  --paper-2:#eef1ec;
   --ink:#1d2b2a;
   --ink-soft:#5d6f6c;
   --chalk:#d9e6e2;
   --chalk-dim:#8fb0aa;
   --taxi:#f2c230;       /* 計程車黃 */
   --danger:#ef7a64;
+  --good:#2f8f6b;
   --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--board);color:var(--chalk);font-family:var(--f-body);font-size:14px;overflow:hidden;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -31,62 +34,89 @@ body{background:var(--board);color:var(--chalk);font-family:var(--f-body);font-s
 #app{height:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-block:12px;position:relative}
 
 .who-am-i{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;color:var(--chalk-dim)}
-.who-am-i b{font-family:var(--f-display);font-weight:400;font-size:17px;color:var(--paper)}
+.who-am-i b{font-family:var(--f-display);font-weight:400;font-size:16px;color:var(--paper)}
 
 /* 人生紀錄 */
 .feed{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;scroll-behavior:smooth}
 .yr{display:grid;grid-template-columns:48px 1fr;gap:10px;align-items:start;animation:fadein .35s ease-out}
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.yr .a{font-family:var(--f-display);font-size:15px;color:var(--taxi);text-align:right;font-variant-numeric:tabular-nums;padding-top:1px}
-.yr .t{display:flex;flex-direction:column;gap:3px;line-height:1.55}
+.yr .a{font-family:var(--f-display);font-size:15px;color:var(--taxi);text-align:right;font-variant-numeric:tabular-nums;padding-top:1px;line-height:1.2}
+.yr .a small{display:block;font-size:10px;color:var(--chalk-dim);font-family:var(--f-body)}
+.yr .t{display:flex;flex-direction:column;gap:3px;line-height:1.55;min-width:0}
 .yr .t span.big{color:var(--paper);font-weight:700}
 .yr .t span.stat{font-size:12px;color:var(--chalk-dim)}
 .yr .t span.sad{color:var(--danger)}
+.yr .t span.hist{color:#9fd3c7}
+.yr .t span.why{font-size:12px;color:var(--taxi)}
+.yr .t span.pick{color:var(--paper)}
+.yr .t span.pick::before{content:"✔ ";color:var(--taxi)}
+.ahead{color:var(--taxi);font-size:13px;padding-left:58px;animation:blink 1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
 
 /* 年齡進度條 */
 .clock{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--board-2);border-radius:16px;padding:10px 12px}
-.clock .age{font-family:var(--f-display);font-size:30px;color:var(--paper);font-variant-numeric:tabular-nums;min-width:74px}
-.clock .age small{font-size:14px;color:var(--chalk-dim);margin-left:2px}
-.track{position:relative;height:10px;border-radius:5px;background:var(--board);overflow:visible}
+.clock .age{font-family:var(--f-display);font-size:28px;color:var(--paper);font-variant-numeric:tabular-nums;min-width:70px;line-height:1.1}
+.clock .age small{font-size:13px;color:var(--chalk-dim);margin-left:2px}
+.clock .age i{display:block;font-style:normal;font-size:11px;color:var(--chalk-dim);font-family:var(--f-body)}
+.track{position:relative;height:10px;border-radius:5px;background:var(--board)}
 .track b{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--taxi);transition:width .4s linear}
 .track i{position:absolute;top:-3px;width:2px;height:16px;background:var(--chalk-dim);opacity:.6}
-.track em{position:absolute;top:14px;font-size:10px;color:var(--chalk-dim);font-style:normal;transform:translateX(-50%)}
+.track em{position:absolute;top:14px;font-size:10px;color:var(--chalk-dim);font-style:normal;transform:translateX(-50%);white-space:nowrap}
 .ctrl{display:flex;gap:6px}
 .ctrl button{font:inherit;font-size:13px;border:0;border-radius:10px;padding:8px 10px;background:var(--board-3);color:var(--paper);cursor:pointer;min-width:40px}
 .ctrl button.on{background:var(--taxi);color:var(--ink)}
 button:focus-visible{outline:3px solid var(--taxi);outline-offset:2px}
 
-/* 選擇卡 */
-.veil{position:absolute;inset:0;background:rgba(10,30,28,.55);display:flex;align-items:center;justify-content:center;z-index:5;padding:30px 0 96px}
-.card{position:relative;width:100%;max-width:360px;height:100%;max-height:440px;background:var(--paper);color:var(--ink);
-  border-radius:20px;box-shadow:0 14px 30px rgba(0,0,0,.4);touch-action:none;user-select:none;-webkit-user-select:none;
-  cursor:grab;display:grid;grid-template-columns:46px 1fr 46px;grid-template-rows:1fr auto;will-change:transform;animation:enter .28s ease-out}
+/* 下方抉擇區（取代年齡條） */
+.sheet-wrap{flex:0 0 auto;height:min(60%,430px);display:flex;align-items:stretch;justify-content:center;animation:rise .35s ease-out}
+@keyframes rise{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.card{position:relative;width:100%;background:var(--paper);color:var(--ink);
+  border-radius:20px;box-shadow:0 -6px 26px rgba(0,0,0,.35);touch-action:none;user-select:none;-webkit-user-select:none;
+  cursor:grab;display:grid;grid-template-columns:52px 1fr 52px;grid-template-rows:1fr auto;will-change:transform}
 .card.dragging{cursor:grabbing}
-@keyframes enter{from{transform:scale(.92) translateY(14px);opacity:0}to{transform:none;opacity:1}}
-.opt{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;line-height:1.35;color:var(--ink-soft);
-  padding:10px 6px;border-radius:12px;margin:6px;transition:background .12s,color .12s,opacity .12s;cursor:pointer;text-align:center}
-.opt .arr{font-weight:700;color:var(--ink)}
-.opt.d{grid-column:1/4;grid-row:2}
-.opt.l,.opt.r{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.05em;padding:8px 4px;grid-row:1}
+.opt{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;line-height:1.35;color:var(--ink);
+  padding:8px 4px;border-radius:12px;margin:6px;transition:background .12s,opacity .12s;cursor:pointer;text-align:center;background:var(--paper-2)}
+.opt .arr{font-weight:700}
+.opt .hint{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px}
+.opt.d{grid-column:1/4;grid-row:2;flex-direction:column;gap:0}
+.opt.l,.opt.r{grid-row:1;flex-direction:column;gap:6px}
+.opt.l .lab,.opt.r .lab{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.05em}
+.opt.l .hint,.opt.r .hint{writing-mode:horizontal-tb;font-size:10px;line-height:1.3}
 .opt.l{grid-column:1}
 .opt.r{grid-column:3}
 .card.peek .opt{opacity:.35}
-.opt.on{background:var(--taxi);color:var(--ink);opacity:1!important;font-weight:700}
+.opt.on{background:var(--taxi);opacity:1!important;font-weight:700}
 .opt:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
-.body{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:14px 2px 4px;min-width:0}
-.face{font-size:56px;line-height:1}
-.who{font-family:var(--f-display);font-size:15px;background:var(--board);color:var(--paper);padding:3px 12px;border-radius:999px}
-.say{font-family:var(--f-display);font-size:18px;line-height:1.55;text-wrap:balance}
+.body{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:14px 2px 4px;min-width:0}
+.face{font-size:46px;line-height:1}
+.who{font-family:var(--f-display);font-size:14px;background:var(--board);color:var(--paper);padding:3px 12px;border-radius:999px}
+.say{font-family:var(--f-display);font-size:17px;line-height:1.5;text-wrap:balance}
 .fact{font-size:11px;color:var(--ink-soft);line-height:1.45}
+.result{width:100%;background:var(--paper);color:var(--ink);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 26px rgba(0,0,0,.35);overflow:auto}
+.result .k{font-size:12px;letter-spacing:.12em;color:var(--ink-soft)}
+.result .picked{font-family:var(--f-display);font-size:19px}
+.result .out{font-size:15px;line-height:1.6}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--paper-2);color:var(--ink)}
+.chip.up{background:#dcefe5;color:#1d5b44}
+.chip.down{background:#f6ddd6;color:#8a3420}
+.chip.luck{background:#f7ecc4;color:#6b5306}
+.result .later{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.result button{margin-top:auto;flex:0 0 auto}
 
 /* 全頁畫面 */
 .screen{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px}
-.sheet{background:var(--paper);color:var(--ink);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
-.sheet h1,.sheet h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance}
-.sheet h1{font-size:30px}
-.sheet h2{font-size:21px}
-.sheet p{margin:0;line-height:1.65}
+.panel{background:var(--paper);color:var(--ink);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.panel h1,.panel h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance}
+.panel h1{font-size:28px}
+.panel h2{font-size:20px}
+.panel p{margin:0;line-height:1.65}
 .kicker{font-size:12px;letter-spacing:.15em;color:var(--ink-soft)}
+.eras{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.era{font:inherit;text-align:left;border:1.5px solid var(--paper-2);background:var(--paper-2);border-radius:14px;padding:12px;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;gap:4px}
+.era b{font-family:var(--f-display);font-weight:400;font-size:20px}
+.era span{font-size:12px;color:var(--ink-soft);line-height:1.45}
+.era:hover{border-color:var(--taxi)}
 .idcard{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px;border:1.5px dashed var(--ink-soft);border-radius:12px;padding:12px 14px;margin:0}
 .idcard dt{color:var(--ink-soft)}
 .idcard dd{margin:0;font-weight:700}
@@ -94,9 +124,18 @@ button:focus-visible{outline:3px solid var(--taxi);outline-offset:2px}
 button.big{font-family:var(--f-display);font-size:17px;border:0;border-radius:14px;padding:12px 16px;cursor:pointer;background:var(--taxi);color:var(--ink);flex:1;white-space:nowrap}
 button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink-soft)}
 .cmp{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
-.cmp li{display:grid;grid-template-columns:72px 1fr;gap:10px;font-size:14px;line-height:1.55}
+.cmp li{display:grid;grid-template-columns:64px 1fr;gap:10px;font-size:14px;line-height:1.55}
 .cmp li b{color:var(--ink-soft);font-weight:700;font-size:13px}
 .cmp li small{display:block;color:var(--ink-soft);font-size:12px}
+.people{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.people li{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:start;font-size:14px;line-height:1.5}
+.people li .ic{font-size:24px;line-height:1.2}
+.people li small{display:block;color:var(--ink-soft);font-size:12px}
+.alt{border-radius:14px;background:var(--paper-2);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.alt .q{font-size:13px;color:var(--ink-soft)}
+.alt .q b{color:var(--ink)}
+.alt .sum{font-family:var(--f-display);font-size:16px;line-height:1.5}
+.alt ul{margin:0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--ink)}
 .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
 .timeline li{display:grid;grid-template-columns:40px 1fr;gap:8px;line-height:1.5}
 .timeline .y{font-variant-numeric:tabular-nums;color:var(--ink-soft);text-align:right}
@@ -104,7 +143,7 @@ button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--in
 .src a{color:#1f6f66;word-break:break-all}
 .small{font-size:13px;color:var(--ink-soft)}
 .title-badge{align-self:flex-start;background:var(--board);color:var(--paper);font-family:var(--f-display);padding:4px 12px;border-radius:999px;font-size:15px}
-@media (prefers-reduced-motion:reduce){.yr,.card{animation:none}.track b{transition:none}.feed{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.yr,.sheet-wrap,.ahead{animation:none}.track b{transition:none}.feed{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -127,14 +166,33 @@ const val=(x,...a)=>typeof x==='function'?x(...a):x;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pct=x=>(x*100).toFixed(x<0.1?1:0)+'%';
 const fmt=n=>Math.round(n).toLocaleString('zh-TW');
+const strip=s=>String(s).replace(/<[^>]+>/g,'');
 function weighted(list,key='share'){const tot=list.reduce((t,x)=>t+(x[key]||0),0);let r=rnd()*tot;for(const x of list){r-=x[key]||0;if(r<=0)return x}return list[list.length-1]}
+
+/* ======= 出生年代 =======
+ * 年代會改變：升學考試名稱（高中聯考→基測→會考；大學聯考→學測指考→學測分科）、兵役年限、
+ * 會遇到的歷史事件。生命表、死因等統計一律用最新一年（簡化，資料來源頁有註明）。 */
+const ERAS=[
+ {y:1950,blurb:'九年國教還沒開始，小學畢業要考初中；長大遇上經濟起飛。'},
+ {y:1970,blurb:'國中畢業考高中聯考、大學聯考；29 歲遇上 921 大地震。'},
+ {y:1990,blurb:'國三考基測、高三考學測指考；畢業時遇上金融海嘯。'},
+ {y:2010,blurb:'國三考會考、高三考學測分科；今日的台灣。'},
+];
+const NAMES={ // 各年代隨機取名用（只是常見名字，不代表統計排名）
+ 1950:{m:['志明','俊雄','文雄','金龍','明德','國華'],f:['美玲','秀英','淑貞','玉蘭','麗華','月娥']},
+ 1970:{m:['志偉','建宏','俊傑','家明','志豪','文彬'],f:['淑芬','雅惠','美惠','靜宜','惠雯','佩君']},
+ 1990:{m:['家豪','冠宇','承翰','宗翰','冠廷','柏翰'],f:['怡君','雅婷','佳穎','欣怡','郁婷','詩涵']},
+ 2010:{m:['承恩','宥廷','品睿','宇恩','柏宇','睿恩'],f:['品妍','子涵','詠晴','宜蓁','芯語','語彤']},
+};
+const SURN=['陳','林','黃','張','李','王','吳','劉','蔡','楊','許','鄭','謝','郭'];
+function newName(year,sex){const k=year<1960?1950:year<1980?1970:year<2000?1990:2010;return pick(SURN)+pick(NAMES[k][sex==='男'?'m':'f'])}
+const given=n=>n.slice(1);
 
 // ---- 從統計資料推出來的數字 ----
 function qx(sex,age){
   const t=V('life_table',null);
-  const a=Math.min(age,100);
+  const a=Math.min(Math.max(age,0),100);
   if(t&&t[sex==='男'?'male':'female']) return t[sex==='男'?'male':'female'][a]??0.5;
-  // 預設：粗略的 Gompertz 曲線（只在資料缺漏時使用）
   return Math.min(0.6,0.00005*Math.exp(0.09*a)+(a===0?0.004:0));
 }
 function survival(sex,age){let s=1;for(let a=0;a<age;a++)s*=1-qx(sex,a);return s}
@@ -144,8 +202,10 @@ function neverMarried(sex,age){
   const g=t[sex==='男'?'male':'female'];const k=Object.keys(g).find(r=>{const [a,b]=r.split('-').map(Number);return age>=a&&age<=b});
   return k?g[k]:null;
 }
-// 每年「開始一段認真感情」的機率：用各年齡層未婚比例的下降速度換算
-function meetHazard(sex,age){
+// 每年「開始一段認真感情」的機率：用各年齡層未婚比例的下降速度換算；早年代的人比較早結婚，往前挪幾歲
+function meetHazard(G){
+  const shift=G.birthYear<1960?5:G.birthYear<1980?3:0;
+  const age=G.age+shift,sex=G.sex;
   const t=V('never_married_by_age',null);
   if(t){
     const g=t[sex==='男'?'male':'female'];const ks=Object.keys(g).sort();
@@ -160,450 +220,576 @@ function salaryFor(G){
   const m={none:.75,uni:1,master:1.3,phd:1.4}[G.edu]||1;
   return base*m*(G.flags.has('tech')?1.4:1)*(G.flags.has('civil')?1.05:1);
 }
-function cityList(){return V('population_by_city',[{city:'新北市',share:.17},{city:'台中市',share:.12},{city:'高雄市',share:.12},{city:'台北市',share:.11},{city:'桃園市',share:.10},{city:'台南市',share:.08},{city:'其他縣市',share:.30}])}
-function housePer(G){
-  const t=V('house_price_per_ping_by_city',{});
-  const key=Object.keys(t).find(k=>k.replace(/臺/g,'台')===G.city);
-  return key?t[key]:null;
+function cityList(){return V('population_by_city',[{city:'新北市',share:.17},{city:'台中市',share:.12},{city:'高雄市',share:.12},{city:'台北市',share:.11},{city:'桃園市',share:.10},{city:'台南市',share:.08}])}
+function housePer(G){const t=V('house_price_per_ping_by_city',{});const key=Object.keys(t).find(k=>k.replace(/臺/g,'台')===G.city);return key?t[key]:null}
+function cancerRate(age){
+  const c=V('cancer',{new_cases_per_year:130000});
+  const base=(c.new_cases_per_year||130000)/23300000;
+  return Math.min(.04,base*(age<40?.25:age<50?.7:age<60?1.4:age<70?2.4:3.2));
 }
+const Y=G=>G.birthYear+G.age;                // 今年是西元幾年
+const modern=G=>Y(G)>=2020;                   // 今日統計只在 2020 年以後才直接套用
+const MID=['台中市','南投縣','彰化縣','苗栗縣','雲林縣'],SOUTH=['高雄市','屏東縣','台南市','嘉義縣','嘉義市','台東縣'];
+
+// 卡片上的統計小字：不是今日的年代，標明「今日數據」
+let CUR=null;
+function nowTag(){return CUR&&!modern(CUR)?'（今日數據）':''}
+function stat(key,f){const v=V(key,null);if(v==null)return '';const s=f(v);return s?`<span class="stat">📊 ${s}${nowTag()}</span>`:''}
+function statLine(key,f){const v=V(key,null);if(v==null)return '';const s=f(v);return s?'📊 '+s+nowTag():''}
+
+// ---- 一生的人物 ----
+function meet(G,role,rel,opts={}){
+  if(G.chars[role]) return G.chars[role];
+  const sex=opts.sex||(opts.opposite?(G.sex==='男'?'女':'男'):(rnd()<.5?'男':'女'));
+  G.chars[role]={role,rel,name:opts.name||newName(G.birthYear+(opts.dy||0),sex),sex,ageDiff:opts.ageDiff??0,metAt:G.age};
+  return G.chars[role];
+}
+const N=(G,role)=>G.chars[role]?given(G.chars[role].name):'朋友';
+function why(G,flag){const w=G.why[flag];return w?`<span class="why">📎 因為你 ${w.age} 歲選了「${w.t}」</span>`:''}
 
 /* ======= 人生事件 =======
- * at(G) 這一年會不會檢查這件事；p 機率（可為函式）；once 一生只發生一次
- * log：自動發生、只寫進紀錄；choice：暫停讓玩家選（l 左、r 右、d 下）
- * 選項：t 文字、log 選完寫進紀錄的話、set/unset 旗標、fx(G) 其他效果、chance 碰運氣、need/alt 依旗標換選項
+ * at(G) 這一年會不會檢查這件事；p 機率（可為函式）；once 一生只發生一次；key 關鍵抉擇（人生回顧的「平行人生」會用）
+ * log：自動發生、只寫進紀錄；choice：停下來讓玩家選（l 左、r 右、d 下）
+ * 選項：t 文字、log 選完寫進紀錄的話、set/unset 旗標、fx(G) 其他效果、chance 碰運氣、need/alt 條件不符時換成另一個選項
  */
 const EV=[
- // ---- 童年 ----
- {at:G=>G.age===0,log:G=>[`<span class="big">你在${G.city}出生了，是個${G.sex==='男'?'男孩':'女孩'}。</span>`,stat('fertility',f=>`那一年台灣大約有 ${fmt(f.births_per_year)} 個寶寶出生。`)]},
- {at:G=>G.age===3,log:'上幼兒園，第一天哭著不想進教室。'},
- {at:G=>G.age===6,log:'上小學了，背著比你還大的書包。'},
- {at:G=>G.age===8,choice:{face:'👩',who:'媽媽',say:'暑假要幫你報才藝班，你想學什麼？',
-   l:{t:'鋼琴',log:'開始學鋼琴，每天被逼練一小時。',set:'piano'},
+ // ---- 出生 ----
+ {at:G=>G.age===0,log:G=>[`<span class="big">${G.birthYear} 年（民國 ${G.birthYear-1911} 年），你在${G.city}出生了，是個${G.sex==='男'?'男孩':'女孩'}。</span>`,
+   `媽媽 ${G.parents[0].age0} 歲、爸爸 ${G.parents[1].age0} 歲。`,modern(G)?stat('fertility',f=>`那一年台灣大約有 ${fmt(f.births_per_year)} 個寶寶出生`):'']},
+
+ // ---- 每年：重要的人會不會離開（用同一張生命表） ----
+ {at:G=>G.age>0,log:G=>{const out=[];
+   for(const p of G.parents){if(p.dead)continue;const pa=p.age0+G.age;if(rnd()<qx(p.sex,pa)){p.dead=true;p.deadAt=G.age;out.push(`<span class="sad">${p.name}過世了，享年 ${pa} 歲。</span>`)}}
+   for(const c of Object.values(G.chars)){if(!c||c.dead)continue;const ca=G.age+c.ageDiff;if(ca<5)continue;if(rnd()<qx(c.sex,ca)*(c.role==='partner'?1:1.1)){c.dead=true;c.deadAt=G.age;
+     if(c.role==='partner'&&G.flags.has('married')){G.flags.delete('married');G.flags.add('widowed');out.push(`<span class="sad">另一半${given(c.name)}過世了，你們一起走過了 ${G.age-(G.marriedAt??G.age)} 年。</span>`)}
+     else if(c.role==='partner'){G.flags.delete('partner');out.push(`<span class="sad">${given(c.name)}過世了。</span>`)}
+     else out.push(`<span class="sad">${c.rel}${given(c.name)}過世了。</span>`)}}
+   return out}},
+
+ // ---- 歷史事件（依出生年代） ----
+ {at:G=>Y(G)===1971&&G.age>=8,log:'<span class="hist">📰 台灣退出聯合國，大人們都在看新聞。</span>'},
+ {at:G=>Y(G)===1973&&G.age>=10,log:'<span class="hist">📰 石油危機，物價一直漲，媽媽說菜變好貴。</span>'},
+ {at:G=>Y(G)===1978&&G.age>=6,log:'<span class="hist">📰 十大建設之一的中山高速公路全線通車，回老家快多了。</span>'},
+ {at:G=>Y(G)>=1972&&Y(G)<=1988&&G.age>=22&&G.age<=50,p:.25,once:'homework',choice:{face:'🧵',who:'鄰居',say:'大家都在客廳接家庭代工，要不要一起做？',
+   l:{t:'一起做',log:'下班後在客廳做家庭代工，全家一起幫忙。',fx:G=>{G.wealth+=1;G.healthMul*=1.02}},
+   r:{t:'不做，休息要緊',log:'沒有接家庭代工。'},
+   d:{t:'只在週末做',log:'週末接一點家庭代工，多賺些零用錢。',fx:G=>G.wealth+=.5}}},
+ {at:G=>Y(G)===1987&&G.age>=10,log:'<span class="hist">📰 1987 年解嚴了。</span>'},
+ {at:G=>Y(G)===1990&&G.age>=22&&G.flags.has('job'),key:true,choice:{face:'📈',who:'同事',say:'台股衝上一萬兩千點，大家都在瘋股票！',fact:'1990 年 2 月台股漲到 12682 點，之後一路崩跌',
+   l:{t:'借錢跟著買',chance:{p:.15,ok:{log:'借錢買股票，竟然賺到了！',fx:G=>G.wealth+=3},ng:{log:'<span class="sad">借錢買股票，遇上股市崩盤，背了好幾年的債。</span>',fx:G=>{G.wealth-=4;G.healthMul*=1.03}}}},
+   r:{t:'不碰',log:'沒有跟著買股票，躲過了崩盤。'},
+   d:{t:'用存款小買一點',chance:{p:.3,ok:{log:'小買一點股票，賺了一些。',fx:G=>G.wealth+=1},ng:{log:'股市崩盤，存款少了一些。',fx:G=>G.wealth-=1}}}}},
+ {at:G=>Y(G)===1995&&G.age>=5,log:'<span class="hist">📰 全民健保開辦，看病便宜多了。</span>'},
+ {at:G=>Y(G)===1996&&G.age>=20,log:'<span class="hist">📰 第一次總統直選，你也去投了票。</span>'},
+ {at:G=>Y(G)===1999&&G.age>=1,log:G=>MID.includes(G.city)?'<span class="sad">📰 921 大地震，家裡的牆裂了，住了好幾天帳篷。</span>':'<span class="hist">📰 921 大地震，半夜被搖醒，停電了好幾天。</span>'},
+ {at:G=>Y(G)===2003&&G.age>=3,log:G=>G.age<=22?'<span class="hist">📰 SARS 疫情，學校每天都要量體溫。</span>':'<span class="hist">📰 SARS 疫情，出門都戴著口罩。</span>'},
+ {at:G=>Y(G)===2007&&G.age>=6,log:'<span class="hist">📰 高鐵通車了，南北往返快多了。</span>'},
+ {at:G=>Y(G)===2008&&G.age>=18,log:G=>G.flags.has('tech')?'<span class="sad">📰 金融海嘯，公司放無薪假。</span>':'<span class="hist">📰 金融海嘯，股票大跌，大家都在擔心工作。</span>'},
+ {at:G=>Y(G)===2009&&G.age>=5,log:G=>SOUTH.includes(G.city)?'<span class="sad">📰 莫拉克颱風帶來八八水災，家附近淹水了。</span>':'<span class="hist">📰 莫拉克颱風帶來八八水災，新聞畫面讓人難過。</span>'},
+ {at:G=>Y(G)===2020&&G.age>=3,log:'<span class="hist">📰 COVID-19 疫情爆發，出門都要戴口罩。</span>'},
+ {at:G=>Y(G)===2021&&G.age>=6&&G.age<=70,log:G=>G.age<=22?'<span class="hist">📰 疫情三級警戒，改成在家線上上課。</span>':'<span class="hist">📰 疫情三級警戒，改成在家上班。</span>'},
+
+ // ---- 嬰幼兒 ----
+ {at:G=>G.age===1,log:'學會走路了，跌倒了會自己爬起來。'},
+ {at:G=>G.age===2,log:G=>`會說的第一個詞是「${pick(['媽媽','爸爸','阿嬤','ㄋㄟㄋㄟ','不要'])}」。`},
+ {at:G=>G.age>=2&&G.age<=6&&Y(G)>=1998,p:.12,once:'entero',log:'得了腸病毒，在家休息了一個禮拜。'},
+ {at:G=>G.age>=4&&G.age<=6,p:.4,once:'zoo',log:'第一次去動物園，看到大象一直尖叫。'},
+ {at:G=>G.age===3&&G.birthYear>=1970,log:'上幼兒園，第一天哭著不想進教室。'},
+
+ // ---- 國小 ----
+ {at:G=>G.age===6,log:G=>{const f=meet(G,'friend','好朋友');return [`上小學了，背著比你還大的書包。`,`<span class="big">認識了同班的${f.name}，你們變成好朋友。</span>`]}},
+ {at:G=>G.age===7,log:'掉了第一顆牙，下排的牙齒被丟到屋頂上。'},
+ {at:G=>G.age===8,choice:{face:'👩',who:'媽媽',say:G=>G.birthYear<1970?'隔壁小孩在學珠算，你要不要也去學？':'暑假要幫你報才藝班，你想學什麼？',
+   l:{t:G=>G.birthYear<1970?'學珠算':'鋼琴',log:G=>G.birthYear<1970?'開始學珠算，算數變得超快。':'開始學鋼琴，每天被逼練一小時。'},
    r:{t:'游泳',log:'學會了游泳。',fx:G=>G.healthMul*=.98},
-   d:{t:'不要，我要看卡通',log:'整個暑假都在看卡通。'}}},
- {at:G=>G.age>=6&&G.age<=12,p:.25,once:'pet',log:G=>['家裡養了一隻狗，你幫牠取名叫「豆花」。',stat('pets_household_share',v=>`台灣家裡大約養了 ${fmt(v.dogs/10000)} 萬隻狗、${fmt(v.cats/10000)} 萬隻貓。`)],set:'dog'},
+   d:{t:'不要，我要出去玩',log:'整個暑假都在外面玩。'}}},
+ {at:G=>G.age>=6&&G.age<=12,p:.2,once:'pet',log:'家裡養了一隻狗，你幫牠取名叫「豆花」。',set:'dog'},
+ {at:G=>G.age===9,choice:{face:'🎤',who:'老師',say:'學校有朗讀比賽，老師想推薦你去。',
+   l:{t:'好，我去',chance:{p:.4,ok:{log:'參加朗讀比賽，拿到第一名！',set:'speech'},ng:{log:'參加朗讀比賽，緊張到忘詞。'}}},
+   r:{t:'不要，好可怕',log:'拒絕了朗讀比賽。'},
+   d:{t:G=>`推薦${N(G,'friend')}去`,log:G=>`推薦${N(G,'friend')}去比賽，他拿了第二名，一直說要謝謝你。`,fx:G=>G.chars.friend&&(G.chars.friend.bond=(G.chars.friend.bond||0)+1)}}},
+ {at:G=>G.age>=7&&G.age<=12,p:.07,once:'found',choice:{face:'💵',who:'放學路上',say:G=>`你在路邊撿到${Y(G)<1975?'一張 10 元':Y(G)<1995?'一張 100 元':'一張 500 元'}。`,
+   l:{t:'交給警察',log:'把撿到的錢交給警察，被老師在朝會上表揚。',set:'honest'},
+   r:{t:'自己留著',log:'偷偷把撿到的錢拿去買零食。'},
+   d:{t:'交給老師',log:'把撿到的錢交給老師。',set:'honest'}}},
  {at:G=>G.age===10,choice:{face:'👨‍🏫',who:'老師',say:'新學期，誰要當班長？',
    l:{t:'舉手',log:'當上班長，每天幫老師登記秩序。',set:'leader'},
-   r:{t:'推薦隔壁同學',log:'推薦了隔壁同學，他到現在還記得。'},
+   r:{t:G=>`推薦${N(G,'friend')}`,log:G=>`推薦${N(G,'friend')}當班長，他做得很好。`,fx:G=>G.chars.friend&&(G.chars.friend.bond=(G.chars.friend.bond||0)+1)},
    d:{t:'假裝在睡覺',log:'裝睡躲過一劫。'}}},
- {at:G=>G.age===12,log:'上國中了，開始穿制服。'},
- {at:G=>G.age===13,choice:{face:'🏫',who:'補習班主任',say:'離會考不到兩年了！要不要先報名？',
+ {at:G=>G.age===11,choice:{face:'📺',who:'媽媽',say:G=>Y(G)>=2008?'你手機玩太久了！':'你電視看太久了！',
+   l:{t:'乖乖關掉',log:'乖乖關掉，跑去外面玩。'},
+   r:{t:'偷偷繼續',log:'躲起來偷看，近視加深了。',set:'myopia'},
+   d:{t:'約定每天一小時',log:'跟媽媽約好，每天只看一小時。'}}},
+ // 1950 年代出生：九年國教（1968）還沒開始，小學畢業要考初中
+ {at:G=>G.age===12&&Y(G)<1968,key:true,choice:{face:'🏫',who:'國小老師',say:'小學畢業了，要不要去考初中？',fact:'九年國教從 1968 年才開始，之前小學畢業要考初中',
+   l:{t:'去考初中',chance:{p:.6,ok:{log:'考上初中了！',set:'jhs'},ng:{log:'<span class="sad">沒考上初中，去工廠當學徒。</span>',set:['done','worker','early']}}},
+   r:{t:'去工廠當學徒',log:'小學畢業就去工廠當學徒。',set:['done','worker','early']},
+   d:{t:'留在家裡幫忙',log:'小學畢業後留在家裡幫忙。',set:['done','worker','early','family']}}},
+ {at:G=>G.age===12&&Y(G)>=1968,log:G=>Y(G)<1975?'國小畢業，因為九年國教，直接分發上國中。':'國小畢業了，畢業旅行去了遊樂園。'},
+
+ // ---- 國中 ----
+ {at:G=>G.age===13&&!G.flags.has('early'),choice:{face:'😟',who:'同學',say:'班上有同學一直被欺負。',
+   l:{t:'站出來阻止',log:G=>{const a=meet(G,'ally','被你保護過的同學');return `你站出來保護${a.name}，後來你們變成朋友。`},set:'brave'},
+   r:{t:'告訴老師',log:'你偷偷告訴老師，事情處理好了。'},
+   d:{t:'假裝沒看到',log:'你假裝沒看到，心裡一直覺得怪怪的。',set:'bystander'}}},
+ {at:G=>G.age===13&&!G.flags.has('early'),choice:{face:'🏫',who:'補習班主任',say:'要升學，現在就要開始補習！',
    l:{t:'報全科',log:'每天補習到晚上九點。',set:'cram'},
    r:{t:'只補數學',log:'週末去補數學。'},
    d:{t:'自己讀就好',log:'決定不補習，放學去打球。'}}},
+ {at:G=>G.age===14,log:G=>G.sex==='男'?'開始變聲，講話像鴨子。':'臉上冒出第一顆青春痘。'},
+ {at:G=>G.age===14,choice:{face:'💌',who:'心動',say:G=>{const c=meet(G,'crush','初戀',{opposite:true});return `${c.name}在你抽屜放了一張紙條。`},
+   l:{t:'寫信回覆',log:G=>`你和${N(G,'crush')}開始傳紙條，傳了一整個學期。`,set:'firstlove'},
+   r:{t:'約週末看電影',log:G=>`第一次跟${N(G,'crush')}去看電影，緊張到忘記劇情。`,set:'firstlove'},
+   d:{t:'裝沒看到',log:'你假裝沒看到那張紙條。',set:'missedlove'}}},
 
- // ---- 會考與高中職 ----
- {at:G=>G.age===15,choice:{face:'📊',who:'國三導師',say:'會考成績出來了，你想念哪裡？',
-   fact:()=>statLine('senior_high_tracks',t=>`台灣高一新生約 ${pct(t['普通高中']||0)} 讀普通高中、${pct(t['技術型高中(高職)']||0)} 讀高職、${pct(t['五專']||0)} 讀五專`),
+ // ---- 高中入學（依年代：高中聯考 → 基測 → 會考） ----
+ {at:G=>G.age===15&&!G.flags.has('early'),key:true,choice:{face:'📊',who:G=>Y(G)<2001?'高中聯考放榜':Y(G)<2014?'基測成績出來':'會考成績出來',say:'你想念哪裡？',
+   fact:G=>Y(G)<2001?'2001 年以前，國中畢業要考高中聯考':Y(G)<2014?'2001～2013 年是國中基測':statLine('senior_high_tracks',t=>`台灣高一新生約 ${pct(t['普通高中']||0)} 讀普通高中、${pct(t['技術型高中(高職)']||0)} 讀高職`),
    l:{t:'普通高中',log:'考上普通高中。',set:'hs'},
    r:{t:'高職',log:'選了高職，想早點學一技之長。',set:'voc'},
    d:{t:'五專',log:'選了五專，要讀五年。',set:'jc'}}},
- {at:G=>G.age===16&&G.flags.has('hs'),choice:{face:'🧪',who:'高一導師',say:'下學期要選組了。',
+ {at:G=>G.age===15,log:G=>G.flags.has('early')?`你在工廠已經工作三年了，${N(G,'friend')}還在念書。`:'國中畢業典禮，大家在制服上互相簽名。'},
+ {at:G=>G.age===16&&G.chars.friend&&!G.chars.friend.dead,log:G=>`你和${N(G,'friend')}${G.flags.has('early')?'很少見面了，但過年還是會約出來':'念不同學校，約好要常聯絡'}。`},
+
+ // ---- 高中職 ----
+ {at:G=>G.age===16&&G.flags.has('hs'),choice:{face:'🧪',who:'高一導師',say:'要選哪一組？',
    l:{t:'自然組',log:'選了自然組，物理好難。',set:'sci'},
    r:{t:'社會組',log:'選了社會組，開始背歷史。'},
-   d:{t:'跟好朋友選一樣的',log:'跟好朋友選了同一組。'}}},
+   d:{t:G=>`跟${N(G,'friend')}選一樣的`,log:G=>`跟${N(G,'friend')}選了同一組，天天一起讀書。`,fx:G=>G.chars.friend&&(G.chars.friend.bond=(G.chars.friend.bond||0)+1)}}},
  {at:G=>G.age===16&&G.flags.has('voc'),choice:{face:'🔧',who:'實習課老師',say:'你手很巧，要不要去參加技能競賽？',
    l:{t:'參加，每天留下來練',log:'參加技能競賽，拿到全國佳作。',set:'skill'},
-   r:{t:'專心準備統測',log:'專心準備統測。'},
+   r:{t:'專心準備升學',log:'專心準備升學考試。'},
    d:{t:'去建教合作工廠',log:'一邊上課一邊在工廠實習。',set:'skill'}}},
- {at:G=>G.age===17&&G.flags.has('jc'),choice:{face:'🎸',who:'學長',say:'五專比較自由，要不要加入熱音社？',
-   l:{t:'加入',log:'加入熱音社，當鼓手。'},
-   r:{t:'專心念書',log:'專心念專業科目。'},
-   d:{t:'去打工存錢',log:'放學去打工，存了第一筆錢。'}}},
- {at:G=>G.age===18,p:.8,once:'scooter',choice:{face:'🛵',who:'監理站',say:'滿 18 歲，可以考機車駕照了。',
+ {at:G=>G.age===16&&!G.flags.has('early'),choice:{face:'🎭',who:'社團博覽會',say:'要參加什麼社團？',
+   l:{t:G=>Y(G)<1985?'救國團活動':'熱舞社',log:G=>Y(G)<1985?'參加救國團的營隊，認識了一群朋友。':'加入熱舞社，成果發表會跳到腿軟。'},
+   r:{t:'吉他社',log:'加入吉他社，學會彈第一首歌。'},
+   d:{t:'不參加，回家讀書',log:'沒參加社團，放學就回家讀書。'}}},
+ {at:G=>G.age===17&&!G.flags.has('early'),p:.7,choice:{face:'🌙',who:'深夜的你',say:G=>Y(G)>=1995?'凌晨一點了，遊戲還差一場就上分。':'凌晨一點了，漫畫還剩最後一集。',
+   l:{t:'再一下下',log:'弄到凌晨三點，隔天上課一直睡。'},
+   r:{t:'去睡覺',log:'乖乖去睡覺。'},
+   d:{t:'改成讀書',log:'熬夜讀書到天亮。'}}},
+ {at:G=>G.age===(Y(G)-G.age+18>=2023?18:20),log:G=>`${G.age} 歲，成年了。`},
+ {at:G=>G.age===18,p:.75,once:'scooter',choice:{face:'🛵',who:'監理站',say:'滿 18 歲，可以考機車駕照了。',
    l:{t:'考駕照，買二手機車',log:'考到機車駕照，買了一台二手機車。',set:'scooter'},
    r:{t:'繼續搭公車',log:'決定繼續搭公車。'},
    d:{t:'先不考',log:'覺得還不需要，先不考駕照。'}}},
 
- // ---- 18 歲升學分流 ----
- {at:G=>G.age===18&&G.flags.has('hs'),choice:{face:'📝',who:'學測放榜',say:'高三寒假，學測成績出來了。',
-   fact:()=>statLine('higher_education',h=>`台灣同年齡的人約 ${pct(h.university_entry_rate)} 會念大學或四技`),
-   l:{t:'申請國立大學',log:'錄取國立大學。',set:'uni',fx:G=>G.edu='uni'},
-   r:{t:'申請私立大學',log:'錄取私立大學，學費比較貴。',set:'uni',fx:G=>{G.edu='uni';G.wealth-=1}},
+ // ---- 18 歲升學（依年代：大學聯考 → 學測指考 → 學測分科） ----
+ {at:G=>G.age===18&&G.flags.has('hs'),key:true,choice:{face:'📝',who:G=>Y(G)<2002?'大學聯考放榜':'學測成績出來',
+   say:G=>Y(G)<2002?'大學聯考考完了，要怎麼填志願？':'高三寒假，學測成績出來了。',
+   fact:G=>Y(G)<2002?'大學聯考在 2002 年廢除，改成多元入學':statLine('higher_education',h=>`台灣同年齡的人約 ${pct(h.university_entry_rate)} 會念大學或四技`),
+   l:{t:G=>Y(G)<2002?'只填國立大學':'申請國立大學',chance:{p:G=>Y(G)<1980?.35:Y(G)<2002?.5:.8,ok:{log:'錄取國立大學！',set:'uni',fx:G=>G.edu='uni'},ng:{log:'國立大學沒上，改念私立大學。',set:'uni',fx:G=>{G.edu='uni';G.wealth-=1}}}},
+   r:{t:G=>Y(G)<2002?'私立也填，保證有學校念':'申請私立大學',log:'錄取私立大學，學費比較貴。',set:'uni',fx:G=>{G.edu='uni';G.wealth-=1}},
    d:{t:'不念大學，直接工作',log:'沒有念大學，直接開始工作。',set:['done','worker']}}},
- {at:G=>G.age===18&&G.flags.has('voc'),choice:{face:'📝',who:'統測放榜',say:'統測考完了，接下來呢？',fact:'統測是高職生升四技二專的考試，在 4、5 月',
-   l:{t:'念科技大學',log:'錄取科技大學。',set:'uni',fx:G=>G.edu='uni'},
+ {at:G=>G.age===18&&G.flags.has('voc'),key:true,choice:{face:'📝',who:G=>Y(G)<2000?'技職升學考試':'統測放榜',say:'高職畢業了，接下來呢？',fact:G=>Y(G)>=2000?'統測是高職生升四技二專的考試，在 4、5 月':'',
+   l:{t:'念技術學院',log:'考上技術學院，繼續念書。',set:'uni',fx:G=>G.edu='uni'},
    r:{t:'直接進工廠工作',log:'畢業就進工廠上班。',set:['done','worker']},
    d:{t:'跟師傅當學徒',log:'跟著老師傅當學徒，學水電。',set:['done','worker','skill']}}},
- {at:G=>G.age===20&&G.flags.has('jc'),choice:{face:'🎓',who:'五專畢業',say:'讀了五年，五專畢業了。',fact:'五專畢業可以考二技或插大，再讀 2 年拿學士',
+ {at:G=>G.age===20&&G.flags.has('jc'),key:true,choice:{face:'🎓',who:'五專畢業',say:'讀了五年，五專畢業了。',fact:'五專畢業可以插大或考二技，再讀 2 年拿學士',
    l:{t:'考二技',log:'考上二技，繼續念書。',set:'uni',fx:G=>G.edu='uni'},
    r:{t:'直接工作',log:'五專畢業就開始工作。',set:['done','worker']},
-   d:{t:'出國打工度假一年',log:'去澳洲打工度假一年，曬得好黑。',set:['done','worker','abroad']}}},
- {at:G=>G.age>=19&&G.age<=21&&G.flags.has('uni'),p:.35,once:'dorm',log:'室友每天打電動到凌晨三點，你學會戴耳塞睡覺。'},
- {at:G=>G.age>=18&&G.age<=22,p:.3,once:'parttime',log:G=>G.flags.has('uni')?'在手搖飲店打工，學會搖 30 種飲料。':'下班後兼差送外送。'},
- {at:G=>G.age===22&&G.flags.has('uni')&&!G.flags.has('done'),choice:{face:'🎓',who:'畢業典禮',say:'大學畢業了，下一步呢？',
-   fact:()=>statLine('salary',s=>`大學畢業平均起薪約 ${fmt(s.starting_bachelor_monthly)} 元`),
+   d:{t:G=>Y(G)>=2009?'出國打工度假一年':'去台北闖一闖',log:G=>Y(G)>=2009?'去澳洲打工度假一年，曬得好黑。':'一個人到台北找工作。',set:['done','worker','abroad']}}},
+
+ // ---- 大學 ----
+ {at:G=>G.age===19&&G.flags.has('uni'),choice:{face:'⏰',who:'期末考',say:'明天期末考，你還沒開始讀。',
+   l:{t:'通宵抱佛腳',log:'通宵讀書，考完直接睡了一整天。'},
+   r:{t:'借同學筆記',log:'借了學霸的筆記，低空飛過。'},
+   d:{t:'放棄，明年重修',log:'這科被當，隔年重修。'}}},
+ {at:G=>G.age>=19&&G.age<=21&&G.flags.has('uni'),p:.35,once:'dorm',log:'室友每天熬夜到凌晨三點，你學會戴耳塞睡覺。'},
+ {at:G=>G.age>=18&&G.age<=22&&!G.flags.has('early'),p:.3,once:'parttime',log:G=>G.flags.has('uni')?(Y(G)>=2000?'在手搖飲店打工，學會搖 30 種飲料。':'當家教賺生活費。'):'下班後兼差賺外快。'},
+ {at:G=>G.age>=20&&G.age<=21&&G.flags.has('uni')&&Y(G)>=1995,p:.2,once:'exchange',choice:{face:'✈️',who:'國際處',say:'學校有交換學生名額，要不要申請？',
+   l:{t:'去日本交換',log:'去日本交換一學期，學會用日文點餐。',set:'abroad'},
+   r:{t:'去歐洲交換',log:'去歐洲交換一學期，週末到處搭火車旅行。',set:'abroad'},
+   d:{t:'不去，留在台灣',log:'決定留在台灣。'}}},
+ {at:G=>G.age===22&&G.flags.has('uni')&&!G.flags.has('done'),key:true,choice:{face:'🎓',who:'畢業典禮',say:'大學畢業了，下一步呢？',
+   fact:G=>Y(G)>=2009&&Y(G)<=2012?'這幾年大學畢業起薪常被說只有「22K」':statLine('salary',s=>`大學畢業平均起薪約 ${fmt(s.starting_bachelor_monthly)} 元`),
    l:{t:'讀研究所',log:'考上研究所。',set:'master_ing'},
    r:{t:'找工作',log:'開始投履歷找工作。',set:'done'},
    d:{t:'考公務員',chance:{p:.3,ok:{log:'高普考上榜，成為公務員！',set:['done','civil']},ng:{log:'公務員沒考上，改去找工作。',set:'done'}}}}},
- {at:G=>G.age===24&&G.flags.has('master_ing'),choice:{face:'🧑‍🔬',who:'口試委員',say:'恭喜，碩士論文口試通過！',
+ {at:G=>G.age===24&&G.flags.has('master_ing'),key:true,choice:{face:'🧑‍🔬',who:'口試委員',say:'恭喜，碩士論文口試通過！',
    fact:()=>statLine('salary',s=>`研究所畢業平均起薪約 ${fmt(s.starting_master_monthly)} 元`),
-   l:{t:'進科技業',log:'拿到碩士，進科技業當工程師。',set:['done','tech'],fx:G=>G.edu='master'},
+   l:{t:G=>Y(G)>=1985?'進科技業':'進大公司',log:G=>Y(G)>=1985?'拿到碩士，進科技業當工程師。':'拿到碩士，進大公司上班。',set:['done','tech'],fx:G=>G.edu='master'},
    r:{t:'繼續讀博士',log:'決定繼續攻讀博士。',set:'phd_ing',fx:G=>G.edu='master'},
    d:{t:'找其他工作',log:'拿到碩士，進一般公司上班。',set:'done',fx:G=>G.edu='master'}}},
- {at:G=>G.age===29&&G.flags.has('phd_ing'),choice:{face:'🎓',who:'指導教授',say:'讀了五年，你拿到博士了。',
+ {at:G=>G.age===29&&G.flags.has('phd_ing'),key:true,choice:{face:'🎓',who:'指導教授',say:'讀了五年，你拿到博士了。',
    l:{t:'進業界研發',log:'拿到博士，進業界做研發。',set:['done','tech'],fx:G=>G.edu='phd'},
    r:{t:'應徵大學教職',chance:{p:.3,ok:{log:'應徵上大學助理教授！',set:['done','prof']},ng:{log:'投了 30 間學校都沒上，先當博士後。',set:'done'}},fx:G=>G.edu='phd'},
    d:{t:'轉行開咖啡店',log:'拿到博士後，跑去開咖啡店。',set:['done','shop'],fx:G=>G.edu='phd'}}},
 
- // ---- 兵役（在學可以緩徵，畢業後才來） ----
- {at:G=>G.sex==='男'&&G.flags.has('done')&&!G.flags.has('army')&&G.age<=36,choice:{face:'🪖',who:'兵單',say:'兵單寄來了，要入伍服一年義務役。',fact:'94 年次以後出生，義務役 1 年；替代役只剩家庭、宗教因素',
-   l:{t:'乖乖入伍',log:'入伍服一年義務役，學會五分鐘洗好澡。',set:'army'},
+ // ---- 兵役（在學可以緩徵；役期依年代） ----
+ {at:G=>G.sex==='男'&&G.age>=19&&G.flags.has('done')&&!G.flags.has('army')&&G.age<=36,key:true,choice:{face:'🪖',who:'兵單',
+   say:G=>G.birthYear<1960?'兵單來了：陸軍 2 年，海軍、空軍 3 年。':G.birthYear<1983?'兵單來了，要入伍當兵 2 年。':G.birthYear<1994?'兵單來了，要入伍當兵 1 年。':G.birthYear<2005?'兵單來了，要去受 4 個月軍事訓練。':'兵單來了，要入伍服一年義務役。',
+   fact:G=>G.birthYear<1960?'1956 年起義務役是陸軍 2 年、海空軍 3 年':G.birthYear>=1994&&G.birthYear<2005?'83～93 年次的役男是 4 個月軍事訓練':G.birthYear>=2005?'94 年次以後出生，義務役 1 年':'',
+   l:{t:'乖乖入伍',chance:{p:G=>G.birthYear<1960?.7:1,ok:{log:G=>G.birthYear<1960?'抽到陸軍，當了 2 年兵。':G.birthYear<1983?'入伍當了 2 年兵，學會五分鐘洗好澡。':G.birthYear<1994?'入伍當了 1 年兵。':G.birthYear<2005?'去受了 4 個月軍事訓練。':'入伍服一年義務役，學會五分鐘洗好澡。',set:'army'},ng:{log:'抽到海軍，當了 3 年兵。',set:'army'}}},
    r:{t:'改簽志願役（至少 4 年）',log:'簽了志願役，成為職業軍人。',set:['army','soldier','job'],fx:G=>{G.soldierAt=G.age;G.jobAt=G.age}},
-   d:{need:'poor',t:'申請家庭因素替代役',log:'因為家庭因素，改服替代役。',set:'army',
+   d:{need:G=>G.flags.has('poor')&&Y(G)>=2000,t:'申請家庭因素替代役',log:'因為家庭因素，改服替代役。',set:'army',
       alt:{t:'抽籤看分發到哪',chance:{p:.7,ok:{log:'抽到本島，週末可以回家。',set:'army'},ng:{log:'抽到外島，一年只能放幾次假。',set:'army'}}}}}},
  {at:G=>G.flags.has('soldier')&&G.age>=G.soldierAt+4,choice:{face:'📄',who:'人事官',say:'志願役合約要到期了。',
-   l:{t:'續簽，轉服士官',log:'續簽成為士官，打算待到退伍俸。',set:'career_mil'},
+   l:{t:'續簽，轉服士官',log:'續簽成為士官，打算待到領退伍俸。',set:'career_mil'},
    r:{t:'退伍找工作',log:'退伍了，換跑道找工作。',unset:'soldier'},
    d:{t:'去考警察',log:'退伍後考上警察。',unset:'soldier',set:'police'}}},
 
  // ---- 工作 ----
- {at:G=>G.flags.has('done')&&!G.flags.has('job')&&!G.flags.has('soldier')&&!(G.sex==='男'&&!G.flags.has('army')),log:G=>{G.flags.add('job');G.jobAt=G.age;return [`第一份正職上班，年薪大約 ${fmt(salaryFor(G)/10000)} 萬。`,stat('salary',s=>`台灣受僱者全年總薪資中位數約 ${fmt(s.median_annual_total_salary/10000)} 萬。`)]}},
- {at:G=>G.flags.has('job')&&G.age>=22&&G.age<=30&&!G.flags.has('married'),p:.12,once:'wh',choice:{face:'🇯🇵',who:'朋友',say:'我要去日本打工度假一年，要不要一起？',fact:'打工度假年齡限制 18～30 歲',
+ {at:G=>G.age>=15&&G.flags.has('done')&&!G.flags.has('job')&&!G.flags.has('soldier')&&!(G.sex==='男'&&!G.flags.has('army')),log:G=>{G.flags.add('job');G.jobAt=G.age;
+   const c=meet(G,'colleague','同事');
+   const pay=Y(G)>=2009&&Y(G)<=2012&&G.edu==='uni'?'月薪 22K，跟新聞說的一樣。':modern(G)?`年薪大約 ${fmt(salaryFor(G)/10000)} 萬。`:'';
+   const w=G.why.master_ing?why(G,'master_ing'):G.why.worker?why(G,'worker'):'';
+   return [`<span class="big">第一份正職上班。${pay}</span>`,w,`認識了坐隔壁的同事${c.name}。`,modern(G)?stat('salary',s=>`台灣受僱者全年總薪資中位數約 ${fmt(s.median_annual_total_salary/10000)} 萬`):'']}},
+ {at:G=>G.flags.has('job')&&G.age===(G.jobAt??99)+1,log:G=>`第一次領年終獎金，${pick(['1 個月','1.5 個月','2 個月','只有半個月'])}。`},
+ {at:G=>G.flags.has('job')&&G.age>=22&&G.age<=30&&!G.flags.has('married')&&Y(G)>=2009,p:.12,once:'wh',choice:{face:'🇯🇵',who:'朋友',say:'我要去日本打工度假一年，要不要一起？',fact:'打工度假年齡限制 18～30 歲',
    l:{t:'一起去',log:'辭職去日本打工度假一年，在滑雪場工作。',set:'abroad'},
    r:{t:'不去，工作要緊',log:'沒有去，繼續上班。'},
    d:{t:'先存錢，明年再說',log:'說好明年再去，結果一直沒去。'}}},
  {at:G=>G.flags.has('job')&&!G.flags.has('soldier')&&G.age>=24&&G.age<=40,p:.15,once:'ot',choice:{face:'👔',who:'主管',say:'這個案子明天早上要，今晚可以加班吧？',
    l:{t:'好的',log:'連續加班一個月，案子做完了。',fx:G=>{G.healthMul*=1.03;G.wealth+=1}},
    r:{t:'準時下班',log:'堅持準時下班，主管臉很臭。'},
-   d:{t:'找同事一起分工',log:'跟同事分工，提早做完。',set:'teamwork'}}},
- {at:G=>G.flags.has('job')&&!G.flags.has('soldier')&&G.age>=26&&G.age<=40,p:.12,once:'hop',choice:{face:'💼',who:'獵頭',say:'年終只發 1.5 個月，要不要換工作？',
-   l:{t:'跳槽加薪',log:'跳槽成功，薪水多了兩成。',fx:G=>G.payMul*=1.2},
-   r:{need:'uni',t:'去竹科',log:'換到竹科上班，薪水變高，也更累了。',set:'tech',fx:G=>G.healthMul*=1.02,alt:{t:'去工廠輪三班',log:'換到工廠輪三班，薪水變高，也更累了。',fx:G=>{G.payMul*=1.2;G.healthMul*=1.02}}},
-   d:{t:'繼續待著',log:'決定繼續待在原公司。'}}},
- {at:G=>G.flags.has('job')&&G.age>=24&&G.age<=60,p:()=>V('unemployment_rate',.034)*0.6,log:G=>[`<span class="sad">公司裁員，你失業了半年。</span>`,stat('unemployment_rate',v=>`台灣的失業率約 ${pct(v)}。`)],fx:G=>G.wealth-=1},
- {at:G=>G.age>=24&&G.age<=50,p:.08,once:'stock',choice:{face:'📈',who:'同事',say:'我最近買股票賺很多，要不要一起？',
+   d:{t:G=>`找${N(G,'colleague')}一起分工`,log:G=>`跟${N(G,'colleague')}分工，提早做完，你們變成好朋友。`,fx:G=>G.chars.colleague&&(G.chars.colleague.bond=(G.chars.colleague.bond||0)+1)}}},
+ {at:G=>G.flags.has('job')&&!G.flags.has('soldier')&&G.age>=26&&G.age<=40,p:.12,once:'hop',choice:{face:'💼',who:G=>N(G,'colleague'),say:G=>`${N(G,'colleague')}偷偷跟你說：「年終只有 1.5 個月，我們一起跳槽吧？」`,
+   l:{t:'一起跳槽',log:G=>`跟${N(G,'colleague')}一起跳槽，薪水多了兩成。`,fx:G=>G.payMul*=1.2},
+   r:{need:G=>G.edu!=='none'&&Y(G)>=1985,t:'自己去竹科',log:'換到竹科上班，薪水變高，也更累了。',set:'tech',fx:G=>G.healthMul*=1.02,alt:{t:'去工廠輪三班',log:'換到工廠輪三班，薪水變高，也更累了。',fx:G=>{G.payMul*=1.2;G.healthMul*=1.02}}},
+   d:{t:'繼續待著',log:G=>`你留了下來，${N(G,'colleague')}自己走了。`}}},
+ {at:G=>G.flags.has('job')&&G.age>=24&&G.age<=60,p:()=>V('unemployment_rate',.034)*0.6,log:G=>['<span class="sad">公司裁員，你失業了半年。</span>',stat('unemployment_rate',v=>`台灣的失業率約 ${pct(v)}`)],fx:G=>G.wealth-=1},
+ {at:G=>G.age>=24&&G.age<=50&&G.flags.has('job'),p:.08,once:'stock',choice:G=>Y(G)>=2003?{face:'📈',who:'同事',say:'我最近買股票賺很多，要不要一起？',
    l:{t:'定期定額 ETF',log:'開始每月定期定額買 ETF。',fx:G=>G.wealth+=2},
    r:{t:'全部梭哈飆股',chance:{p:.4,ok:{log:'飆股大漲，賺了一筆！',fx:G=>G.wealth+=3},ng:{log:'<span class="sad">飆股崩盤，存款少了一半。</span>',fx:G=>G.wealth-=3}}},
-   d:{t:'不碰，存定存',log:'錢都放定存。'}}},
-
- // ---- 感情與家庭 ----
- {at:G=>G.age>=17&&G.age<=55&&!G.flags.has('partner')&&!G.flags.has('married'),p:G=>meetHazard(G.sex,G.age),choice:{face:'💘',who:'心動',
-   say:G=>pick(G.age<23?['社團裡有個人，每次聊天都聊到忘記時間。','同學介紹了一個朋友給你，你們很聊得來。']:['朋友聚會上認識了一個人，散會後還一直傳訊息。','交友軟體配對到一個人，你們約了第一次見面。','同事約你下班一起吃飯。']),
-   l:{t:'主動告白',chance:{p:.65,ok:{log:'你主動告白，你們在一起了。',set:'partner',fx:G=>G.partnerAt=G.age},ng:{log:'告白失敗，難過了一個月。'}}},
-   r:{t:'慢慢來',chance:{p:.4,ok:{log:'慢慢相處，你們自然而然在一起了。',set:'partner',fx:G=>G.partnerAt=G.age},ng:{log:'聊著聊著就沒下文了。'}}},
-   d:{t:'先專心在自己身上',log:'你決定先專心在自己身上。'}}},
- {at:G=>G.flags.has('partner')&&!G.flags.has('married')&&G.age>=G.partnerAt+1&&G.age>=24,p:.5,choice:{face:'💍',who:'另一半',say:'交往好一陣子了，我們要結婚嗎？',
-   fact:()=>statLine('first_marriage_age',m=>`台灣平均初婚年齡：男 ${m.male} 歲、女 ${m.female} 歲`),
-   l:{t:'結婚',log:G=>`<span class="big">${G.age} 歲，你結婚了。</span>`,set:'married',fx:G=>G.marriedAt=G.age},
-   r:{t:'再等等',log:'你說想再等等。'},
-   d:{t:'分手',log:'<span class="sad">你們分手了。</span>',unset:'partner'}}},
- {at:G=>G.flags.has('partner')&&!G.flags.has('married')&&G.age>=28&&G.age<=40,p:.06,log:'<span class="sad">交往多年，最後還是分手了。</span>',unset:'partner'},
- {at:G=>G.age>=27&&G.age<=40&&!G.flags.has('married'),p:.15,once:'nag',log:'過年圍爐，親戚又問你什麼時候要結婚。'},
- {at:G=>G.flags.has('married')&&G.kids<3&&!G.flags.has('nokid')&&G.age>=25&&G.age<=43&&G.age>=G.lastKidAt+2,p:G=>G.kids===0?.5:.25,choice:{face:'👶',who:'另一半',
-   say:G=>G.kids===0?'我們要生小孩嗎？':'要不要再生一個？',
-   fact:()=>statLine('fertility',f=>`台灣總生育率約 ${f.total_fertility_rate}，媽媽生第一胎平均 ${f.mean_age_first_birth_mother} 歲`),
-   l:{t:'生',log:G=>`<span class="big">${G.kids===0?'你的第一個孩子出生了！':'家裡又多了一個孩子。'}</span>`,fx:G=>{G.kids++;G.lastKidAt=G.age;if(G.kidAt==null)G.kidAt=G.age}},
-   r:{t:'再等等',log:'決定再等一兩年。',fx:G=>G.lastKidAt=G.age},
-   d:{t:'不生了',log:G=>G.kids===0?'你們決定當頂客族。':'你們決定不再生了。',set:'nokid'}}},
- {at:G=>G.flags.has('married')&&G.age<=70,p:()=>{const d=V('divorce',{divorces_per_year:50000,marriages_per_year:125000});return Math.min(.03,(d.divorces_per_year||50000)/6000000)},once:'fight',choice:{face:'💔',who:'另一半',say:'你們最近吵架越來越兇。',
-   fact:()=>statLine('divorce',d=>`台灣一年約 ${fmt(d.marriages_per_year)} 對結婚、${fmt(d.divorces_per_year)} 對離婚`),
-   l:{t:'去做婚姻諮商',chance:{p:.7,ok:{log:'做了婚姻諮商，感情慢慢變好。'},ng:{log:'<span class="sad">諮商沒用，最後還是離婚了。</span>',unset:'married',set:'divorced'}}},
-   r:{t:'離婚',log:'<span class="sad">你們離婚了。</span>',unset:'married',set:'divorced'},
-   d:{t:'忍耐',log:'為了家庭，決定繼續忍耐。'}}},
- {at:G=>G.flags.has('job')&&!G.flags.has('house')&&G.age>=28&&G.age<=50,p:.1,once:'house',choice:{face:'🏢',who:'房仲',
-   say:G=>{const p=housePer(G);return p?`${G.city}這間 30 坪，總價大約 ${fmt(p*30)} 萬。`:`這間 30 坪的房子，要背 30 年房貸。`},
-   fact:()=>statLine('home_ownership_rate',v=>`台灣的自有住宅率約 ${pct(v)}`),
-   l:{t:'貸款買下',log:'你買了房子，開始繳 30 年房貸。',set:'house',fx:G=>G.wealth-=1},
-   r:{t:'繼續租屋',log:'決定繼續租屋。'},
-   d:{t:'搬回老家',log:'搬回老家跟爸媽住，存了不少錢。',set:'house',fx:G=>G.wealth+=1}}},
- {at:G=>G.kids>0&&G.age===G.kidAt+7,choice:{face:'🧑‍🎓',who:'孩子',say:'同學都在補習和上才藝，我也要！',
-   l:{t:'全部報名',log:'孩子每天都有補習或才藝課。',fx:G=>G.wealth-=1},
-   r:{t:'讓他自由長大',log:'讓孩子放學自由玩耍。'},
-   d:{t:'只上他喜歡的',log:'孩子只上他真的喜歡的畫畫課。'}}},
- {at:G=>G.kids>0&&G.age===G.kidAt+22,log:'孩子大學畢業了，你在台下偷偷哭。'},
- {at:G=>G.kids>0&&G.age>=G.kidAt+28&&G.age<=G.kidAt+40,p:.15,once:'grandkid',log:'<span class="big">你當阿公阿嬤了！</span>',set:'grandkid'},
-
- // ---- 健康 ----
- {at:G=>G.age===40,choice:{face:'🩺',who:'國健署',say:'你 40 歲了，可以做免費成人健檢。',fact:'40～64 歲每 3 年一次免費成人健檢',
-   l:{t:'去做，報告有紅字就改',log:'做了健檢，開始每週運動三次。',fx:G=>G.healthMul*=.9},
-   r:{t:'沒空，下次再說',log:'說下次再去，結果一直沒去。',fx:G=>G.healthMul*=1.05},
-   d:{t:'戒掉手搖飲',log:'戒掉每天一杯的手搖飲。',fx:G=>G.healthMul*=.95}}},
- {at:G=>G.age>=30,p:G=>cancerRate(G.age),once:'cancer',choice:{face:'🏥',who:'醫生',say:'檢查結果出來了，是癌症。',
-   fact:()=>statLine('cancer',c=>`台灣每 ${c.minutes_per_new_case} 分鐘就有一人確診癌症`),
-   l:{t:'積極治療',chance:{p:.6,ok:{log:'<span class="sad">確診癌症。</span>治療一年後控制住了。',fx:G=>G.healthMul*=1.3},ng:{log:'<span class="sad">確診癌症，治療效果不好。</span>',fx:G=>G.healthMul*=2.5}}},
-   r:{t:'找第二意見',chance:{p:.55,ok:{log:'<span class="sad">確診癌症。</span>換了醫院治療，病情穩定下來。',fx:G=>G.healthMul*=1.4},ng:{log:'<span class="sad">確診癌症，拖了一陣子才治療。</span>',fx:G=>G.healthMul*=2.8}}},
-   d:{t:'試試偏方',log:'<span class="sad">確診癌症，你先試了偏方，延誤了治療。</span>',fx:G=>G.healthMul*=3.5}},set:'cancer'},
- {at:G=>G.age>=18&&G.age<=70&&G.flags.has('scooter'),p:()=>Math.max(.003,V('traffic_deaths_per_year',3000)/23000000*4),once:'crash',log:'<span class="sad">騎車出了車禍，在醫院躺了兩個禮拜。</span>',fx:G=>G.healthMul*=1.05},
-
- // ---- 中年與退休 ----
- {at:G=>G.age>=48&&G.age<=60&&G.parents.some(p=>!p.dead),p:.25,once:'parents',choice:{face:'👴',who:'爸媽',say:'爸媽年紀大了，需要人照顧。',fact:'撥 1966 可以申請長照服務',
-   l:{t:'打 1966 申請長照',log:'申請了長照服務，有居服員來幫忙。'},
-   r:{t:'請外籍看護',log:'請了外籍看護照顧爸媽。',fx:G=>G.wealth-=1},
-   d:{t:'辭職自己照顧',log:'辭職回家照顧爸媽。',fx:G=>{G.wealth-=2;G.payMul*=.7}}}},
- {at:G=>G.age>=40&&G.age<=55,p:.06,once:'midlife',choice:{face:'🏍️',who:'中年的你',say:'突然好想做點不一樣的事。',
-   l:{t:'開始爬百岳',log:'開始爬百岳，三年爬了 30 座。',fx:G=>G.healthMul*=.93,set:'mountain'},
-   r:{t:'買重機',log:'買了一台重機，週末去山上兜風。'},
-   d:{t:'算了吧',log:'想想還是算了。'}}},
- {at:G=>G.age>=50&&G.age<=85,p:()=>Math.min(.05,V('fraud',{cases_per_year:200000}).cases_per_year/20000000*3),once:'fraud',choice:{face:'📞',who:'陌生來電',say:'「您好，這裡是健保署，您的帳戶涉及洗錢……」',
-   fact:()=>statLine('fraud',f=>`台灣一年約 ${fmt(f.cases_per_year)} 件詐騙案，損失約 ${fmt(f.loss_ntd_per_year/1e8)} 億元`),
-   l:{t:'直接掛斷',log:'接到詐騙電話，直接掛斷。'},
-   r:{t:'照指示轉帳',log:'<span class="sad">被詐騙集團騙走一大筆錢。</span>',fx:G=>G.wealth-=3},
-   d:{t:'打 165 檢舉',log:'接到詐騙電話，打 165 檢舉。'}}},
- {at:G=>G.age===65&&G.flags.has('job'),choice:{face:'🎣',who:'退休',say:'65 歲，退休了。每天要做什麼？',fact:'勞基法：年滿 65 歲，雇主可以強制退休',
-   l:{t:'去公園下棋',log:'退休了，每天去公園下棋。',set:'retired'},
-   r:{t:'環島旅行',log:'退休後，開著車環島一圈。',set:'retired'},
-   d:{t:'學跳廣場舞',log:'退休後學跳廣場舞，交了一群朋友。',set:'retired',fx:G=>G.healthMul*=.97}}},
- {at:G=>G.age>=70,p:.06,once:'dementia',log:G=>['<span class="sad">你開始常常忘記事情，醫生說是失智症初期。</span>',stat('dementia_or_longterm_care',v=>`台灣 65 歲以上約 ${pct(v.dementia_prevalence_65plus)} 有失智症。`)],fx:G=>G.healthMul*=1.3},
-
- // ======== 更多人生事件（v0.4） ========
- // ---- 爸媽：用同一張生命表決定爸媽什麼時候離開 ----
- {at:G=>G.age>0,log:G=>{const out=[];for(const p of G.parents){if(p.dead)continue;const pa=p.age0+G.age;
-   if(rnd()<qx(p.sex,pa)){p.dead=true;out.push(`<span class="sad">${p.name}過世了，享年 ${pa} 歲。</span>`);G.flags.add('lostParent')}}return out}},
- {at:G=>G.age>=40&&G.age<=60&&G.parents.some(p=>!p.dead),p:.06,once:'parentSick',log:G=>{const p=pick(G.parents.filter(x=>!x.dead));return `${p.name}住院開刀，你請假在醫院陪了一週。`}},
-
- // ---- 嬰幼兒 ----
- {at:G=>G.age===1,log:'學會走路了，跌倒了會自己爬起來。'},
- {at:G=>G.age===2,log:G=>`會說的第一個詞是「${pick(['媽媽','爸爸','阿嬤','ㄋㄟㄋㄟ','不要'])}」。`},
- {at:G=>G.age>=2&&G.age<=6,p:.12,once:'entero',log:'得了腸病毒，在家休息了一個禮拜。'},
- {at:G=>G.age>=4&&G.age<=6,p:.5,once:'zoo',log:'第一次去動物園，看到大象一直尖叫。'},
- {at:G=>G.age===7,log:'掉了第一顆牙，下排的牙齒被丟到屋頂上。'},
-
- // ---- 國小 ----
- {at:G=>G.age===9,choice:{face:'🎤',who:'老師',say:'學校有朗讀比賽，老師想推薦你去。',
-   l:{t:'好，我去',chance:{p:.4,ok:{log:'參加朗讀比賽，拿到第一名！',set:'speech'},ng:{log:'參加朗讀比賽，緊張到忘詞。'}}},
-   r:{t:'不要，好可怕',log:'拒絕了朗讀比賽。'},
-   d:{t:'推薦好朋友去',log:'推薦好朋友去比賽，他拿了第二名。'}}},
- {at:G=>G.age>=7&&G.age<=12,p:.07,once:'found',choice:{face:'💵',who:'放學路上',say:'你在路邊撿到一張 500 元。',
-   l:{t:'交給警察',log:'撿到 500 元交給警察，被老師在朝會上表揚。',set:'honest'},
-   r:{t:'自己留著',log:'撿到 500 元，偷偷買了一堆零食。'},
-   d:{t:'交給老師',log:'撿到 500 元交給老師。',set:'honest'}}},
- {at:G=>G.age===11,choice:{face:'📱',who:'媽媽',say:'你手機玩太久了！',
-   l:{t:'乖乖交出來',log:'手機被沒收，只好去外面玩。'},
-   r:{t:'偷偷玩',log:'躲在棉被裡偷玩手機，近視加深了。',set:'myopia'},
-   d:{t:'約定每天一小時',log:'跟媽媽約好，每天只玩一小時。'}}},
- {at:G=>G.age===12,log:'國小畢業了，畢業旅行去了遊樂園。'},
-
- // ---- 國中 ----
- {at:G=>G.age===13,choice:{face:'😟',who:'同學',say:'班上有同學一直被欺負。',
-   l:{t:'站出來阻止',log:'你站出來保護被欺負的同學，後來你們變成好朋友。',set:'brave'},
-   r:{t:'告訴老師',log:'你偷偷告訴老師，事情處理好了。'},
-   d:{t:'假裝沒看到',log:'你假裝沒看到，心裡一直覺得怪怪的。'}}},
- {at:G=>G.age===14,log:G=>G.sex==='男'?'開始變聲，講話像鴨子。':'臉上冒出第一顆青春痘。'},
- {at:G=>G.age===14,choice:{face:'💌',who:'隔壁班同學',say:'有人在你抽屜放了一張紙條。',
-   l:{t:'寫信回覆',log:'你們開始傳紙條，傳了一整個學期。'},
-   r:{t:'約週末看電影',log:'第一次跟喜歡的人去看電影，緊張到忘記劇情。',set:'firstlove'},
-   d:{t:'裝沒看到',log:'你假裝沒看到那張紙條。'}}},
- {at:G=>G.age===15,log:'國中畢業典禮，大家在制服上互相簽名。'},
-
- // ---- 高中職 ----
- {at:G=>G.age===16,choice:{face:'🎭',who:'社團博覽會',say:'要參加什麼社團？',
-   l:{t:'熱舞社',log:'加入熱舞社，成果發表會跳到腿軟。'},
-   r:{t:'吉他社',log:'加入吉他社，學會彈第一首歌。'},
-   d:{t:'不參加，回家讀書',log:'沒參加社團，放學就回家讀書。'}}},
- {at:G=>G.age===17,p:.8,choice:{face:'🎮',who:'深夜的你',say:'凌晨一點了，遊戲還差一場就上分。',
-   l:{t:'再一場',log:'打到凌晨三點，隔天上課一直睡。'},
-   r:{t:'去睡覺',log:'乖乖去睡覺。'},
-   d:{t:'改成讀書',log:'關掉遊戲，熬夜讀書。'}}},
- {at:G=>G.age===18,log:'18 歲，成年了。'},
-
- // ---- 大學 ----
- {at:G=>G.age===19&&G.flags.has('uni'),choice:{face:'⏰',who:'期末考',say:'明天期末考，你還沒開始讀。',
-   l:{t:'通宵抱佛腳',log:'通宵讀書，考完直接睡了一整天。'},
-   r:{t:'借同學筆記',log:'借了學霸的筆記，低空飛過。',set:'friends'},
-   d:{t:'放棄，明年重修',log:'這科被當，隔年重修。'}}},
- {at:G=>G.age>=20&&G.age<=21&&G.flags.has('uni'),p:.25,once:'exchange',choice:{face:'✈️',who:'國際處',say:'學校有交換學生名額，要不要申請？',
-   l:{t:'去日本交換',log:'去日本交換一學期，學會用日文點餐。',set:'abroad'},
-   r:{t:'去歐洲交換',log:'去歐洲交換一學期，週末到處搭火車旅行。',set:'abroad'},
-   d:{t:'不去，留在台灣',log:'決定留在台灣。'}}},
- {at:G=>G.age>=19&&G.age<=30,p:.15,once:'carlicense',choice:{face:'🚗',who:'駕訓班',say:'要不要考汽車駕照？',
-   l:{t:'報名駕訓班',log:'考到汽車駕照，路邊停車考了兩次才過。',set:'car'},
-   r:{t:'等需要再說',log:'覺得還用不到，先不考。'},
-   d:{t:'叫家人教',log:'讓家人在空地教你開車，吵了好幾次架。',set:'car'}}},
-
- // ---- 上班族 ----
- {at:G=>G.flags.has('job')&&G.age===(G.jobAt??99)+1,log:G=>`第一次領年終獎金，${pick(['1 個月','1.5 個月','2 個月','只有半個月'])}。`},
+   d:{t:'不碰，存定存',log:'錢都放定存。'}}:{face:'🤝',who:'鄰居',say:'大家都在跟會，你要不要也跟一會？',
+   l:{t:'跟會',chance:{p:.7,ok:{log:'跟會順利，存到一筆錢。',fx:G=>G.wealth+=2},ng:{log:'<span class="sad">會頭捲款跑路，倒會了。</span>',fx:G=>G.wealth-=3}}},
+   r:{t:'自己當會頭',chance:{p:.6,ok:{log:'當會頭很順利，賺了利息。',fx:G=>G.wealth+=3},ng:{log:'<span class="sad">有人倒會，你得自己賠。</span>',fx:G=>G.wealth-=4}}},
+   d:{t:'不跟，錢放郵局',log:'錢都放在郵局。'}}},
  {at:G=>G.flags.has('job')&&!G.flags.has('soldier')&&G.age>=28&&G.age<=45,p:.12,once:'promote',choice:{face:'📋',who:'主管',say:'我想升你當組長，願意嗎？',
    l:{t:'接受',log:'升上組長，加薪也加班。',fx:G=>{G.payMul*=1.15;G.healthMul*=1.01},set:'manager'},
    r:{t:'要求加薪就好',chance:{p:.5,ok:{log:'沒有升官，但加薪了。',fx:G=>G.payMul*=1.08},ng:{log:'主管不太高興，加薪也沒了。'}}},
    d:{t:'婉拒，想專心做事',log:'婉拒升遷，想專心把技術練好。'}}},
- {at:G=>G.age>=23&&G.age<=45,p:.18,log:G=>`參加${pick(['大學同學','高中同學','同事','國中同學'])}的婚禮，包了 ${pick(['2200','3600','6600'])} 元紅包。`},
- {at:G=>G.age>=24&&G.age<=45,p:.08,once:'skill',choice:{face:'📚',who:'下班後的你',say:'想不想下班後學點新東西？',
+ {at:G=>G.age>=23&&G.age<=45,p:.12,log:G=>`參加${pick(['大學同學','高中同學','同事','國中同學'])}的婚禮，包了紅包。`},
+ {at:G=>G.age>=24&&G.age<=45,p:.08,once:'skill2',choice:{face:'📚',who:'下班後的你',say:'想不想下班後學點新東西？',
    l:{t:'學英文',log:'下班去上英文課，終於敢跟外國人講話。',set:'english'},
-   r:{t:'學寫程式',log:'下班自學寫程式，做出第一個 App。',set:'coder'},
-   d:{t:'去健身房',log:'辦了健身房會員，一週去三次。',fx:G=>G.healthMul*=.92,set:'gym'}}},
+   r:{t:G=>Y(G)>=1995?'學寫程式':'學電腦',log:G=>Y(G)>=1995?'下班自學寫程式，做出第一個 App。':'下班去學電腦打字。',set:'coder'},
+   d:{t:'去運動',log:'開始固定運動，一週三次。',fx:G=>G.healthMul*=.92,set:'gym'}}},
  {at:G=>G.age>=24&&G.age<=60,p:.06,choice:{face:'🧳',who:'連假',say:'連假快到了，要去哪裡？',
-   l:{t:'出國玩',log:G=>`連假出國去${pick(['日本','韓國','泰國','越南','歐洲'])}玩。`},
+   l:{need:G=>Y(G)>=1979,t:'出國玩',log:G=>`連假出國去${pick(['日本','韓國','泰國','越南','歐洲'])}玩。`,alt:{t:'去環島',log:'連假去環島一圈。'}},
    r:{t:'國內旅遊',log:G=>`連假去${pick(['花蓮','台東','墾丁','阿里山','澎湖'])}玩。`},
    d:{t:'在家耍廢',log:'連假在家睡到自然醒。'}}},
- {at:G=>G.age>=25&&G.age<=45,p:.06,once:'cat',choice:{face:'🐱',who:'朋友',say:'我家的貓生了一窩小貓，要不要領養一隻？',
+ {at:G=>G.age>=25&&G.age<=45,p:.05,once:'cat',choice:{face:'🐱',who:'朋友',say:'我家的貓生了一窩小貓，要不要領養一隻？',
    l:{t:'領養',log:'領養了一隻小橘貓，取名叫「米糕」。',set:'cat'},
    r:{t:'不要，沒時間照顧',log:'婉拒了，怕沒時間照顧。'},
    d:{t:'先帶回家試養',log:'先試養一週，結果捨不得還回去。',set:'cat'}}},
- {at:G=>G.flags.has('cat')&&G.age>=40,p:.08,once:'catbye',log:'<span class="sad">陪了你十幾年的貓咪離開了。</span>'},
- {at:G=>G.age>=28&&G.age<=50,p:.08,once:'reunion',log:G=>`國中同學會，${pick(['班長已經是兩個孩子的爸媽','當年最皮的同學當上了老師','暗戀過的人一點都沒變','大家聊的都是房貸和小孩'])}。`},
- {at:G=>G.flags.has('job')&&G.age>=28&&G.age<=50,p:.04,once:'startup',choice:{face:'🏪',who:'自己',say:'上班好累，要不要自己出來創業？',
-   l:{t:'辭職開店',chance:{p:.35,ok:{log:'辭職開了一間小店，生意越來越好！',set:['shop','boss'],fx:G=>G.payMul*=1.3},ng:{log:'<span class="sad">開店兩年，還是收掉了。</span>',fx:G=>G.wealth-=2}}},
-   r:{t:'下班做副業',log:'下班經營網拍，多了一份收入。',fx:G=>G.payMul*=1.05},
-   d:{t:'算了，繼續上班',log:'想想還是繼續上班。'}}},
+ {at:G=>G.flags.has('cat')&&G.age>=40,p:.08,once:'catbye',log:'<span class="sad">陪了你十幾年的貓咪米糕離開了。</span>'},
+ {at:G=>G.age>=28&&G.age<=50,p:.08,once:'reunion',log:G=>`國中同學會，${pick(['班長已經是兩個孩子的爸媽','當年最皮的同學當上了老師','大家聊的都是房貸和小孩'])}。`},
  {at:G=>G.flags.has('job')&&!G.flags.has('car')&&G.age>=28&&G.age<=50,p:.06,once:'buycar',choice:{face:'🚙',who:'業務',say:'要不要買台車？',
    l:{t:'買新車',log:'買了一台新車，週末載家人出去玩。',set:'car'},
    r:{t:'買二手車',log:'買了一台二手車，開了十年。',set:'car'},
    d:{t:'不買，搭大眾運輸',log:'決定繼續搭大眾運輸。'}}},
  {at:G=>G.age>=25&&G.age<=60,p:.04,once:'move',log:G=>`因為${pick(['工作','房租','想換環境'])}，搬到${pick(['台北','新竹','台中','台南','高雄'].filter(c=>!G.city.startsWith(c)))}。`},
 
- // ---- 結婚之後 ----
- {at:G=>G.marriedAt!=null&&G.age===G.marriedAt,choice:{face:'🏝️',who:'另一半',say:'蜜月要去哪裡？',
-   l:{t:'出國蜜月',log:'出國度蜜月，拍了一千張照片。'},
+ // ---- 好朋友的一生 ----
+ {at:G=>G.chars.friend&&!G.chars.friend.dead&&G.age>=25&&G.age<=33,p:.15,once:'friendwed',log:G=>`${N(G,'friend')}結婚了，你當${G.sex==='男'?'伴郎':'伴娘'}，致詞時講了你們小時候的糗事。`},
+ {at:G=>G.chars.friend&&!G.chars.friend.dead&&G.flags.has('job')&&G.age>=32&&G.age<=45,p:.08,once:'friendbiz',key:true,choice:{face:'🤝',who:G=>N(G,'friend'),say:G=>`${N(G,'friend')}說：「我要開公司，你要不要來當合夥人？」`,
+   fact:G=>(G.chars.friend.bond||0)>=2?'你們從小感情就很好，他第一個想到你':'',
+   l:{t:'辭職一起拚',chance:{p:G=>.35+(G.chars.friend.bond||0)*.08,ok:{log:G=>`跟${N(G,'friend')}一起創業，公司越做越大！`,set:['boss','shop'],fx:G=>{G.payMul*=1.4;G.wealth+=2}},ng:{log:G=>`<span class="sad">跟${N(G,'friend')}創業三年，公司收掉了，你們還是好朋友。</span>`,fx:G=>G.wealth-=2}}},
+   r:{t:'投資一點錢就好',chance:{p:.4,ok:{log:G=>`投資了${N(G,'friend')}的公司，賺了一筆。`,fx:G=>G.wealth+=2},ng:{log:G=>`投資${N(G,'friend')}的錢拿不回來了。`,fx:G=>G.wealth-=1}}},
+   d:{t:'婉拒，祝他成功',log:G=>`你婉拒了${N(G,'friend')}，但還是去公司開幕幫忙。`}}},
+ {at:G=>G.chars.ally&&!G.chars.ally.dead&&G.age>=30&&G.age<=45,p:.12,once:'allyback',log:G=>[`國中時被你保護過的${N(G,'ally')}，現在當上了${pick(['律師','醫生','老師','警察'])}，特地請你吃了一頓飯。`,why(G,'brave')]},
+ {at:G=>G.chars.friend&&!G.chars.friend.dead&&G.age>=50&&G.age<=65,p:.05,once:'friendsick',log:G=>`${N(G,'friend')}生病住院，你每週都去看他。`},
+ {at:G=>G.chars.friend&&!G.chars.friend.dead&&G.age>=70&&G.age<=80,p:.15,once:'friendold',log:G=>`你和${N(G,'friend')}每天早上約在公園散步，就像小時候一起上學一樣。`},
+
+ // ---- 感情與家庭 ----
+ // 初戀重逢
+ {at:G=>G.chars.crush&&!G.chars.crush.dead&&!G.flags.has('partner')&&!G.flags.has('married')&&G.age>=28&&G.age<=45,p:.08,once:'crushback',choice:{face:'💫',who:'同學會',say:G=>`在同學會遇到${N(G,'crush')}，聽說也還是單身。`,
+   l:{t:'約出來吃飯',chance:{p:.55,ok:{log:G=>`你和${N(G,'crush')}重新聯絡，最後在一起了。`,set:'partner',fx:G=>{G.chars.partner={...G.chars.crush,role:'partner',rel:'另一半'};G.partnerAt=G.age;G.flags.add('crushpartner')}},ng:{log:G=>`吃了幾次飯，你們還是只適合當朋友。`}}},
+   r:{t:'只當老朋友',log:G=>`你和${N(G,'crush')}聊了一整晚以前的事。`},
+   d:{t:'假裝沒看到',log:'你假裝沒看到，提早離開了。'}}},
+ {at:G=>G.chars.crush&&!G.flags.has('crushpartner')&&G.age>=30&&G.age<=40,p:.06,once:'crushnews',log:G=>`聽說初戀${N(G,'crush')}結婚了。`},
+ {at:G=>G.age>=17&&G.age<=55&&!G.flags.has('partner')&&!G.flags.has('married')&&!G.flags.has('widowed'),p:G=>meetHazard(G),choice:{face:'💘',who:'心動',
+   say:G=>{const s=G.sex==='男'?'女':'男';G._cand=newName(G.birthYear+pick([-2,-1,0,1,2]),s);const n=G._cand;
+     return pick(G.age<23?[`社團裡的${n}，每次聊天都聊到忘記時間。`,`同學介紹了${n}給你，你們很聊得來。`]:Y(G)>=2012?[`朋友聚會上認識了${n}，散會後還一直傳訊息。`,`交友軟體配對到${n}，你們約了第一次見面。`,`同事介紹了${n}給你。`]:[`朋友聚會上認識了${n}，你們越聊越投緣。`,`長輩介紹你去相親，對象是${n}。`,`同事介紹了${n}給你。`])},
+   l:{t:'主動告白',chance:{p:.65,ok:{log:G=>`你主動告白，你和${given(G._cand)}在一起了。`,set:'partner',fx:G=>{G.chars.partner={role:'partner',rel:'另一半',name:G._cand,sex:G.sex==='男'?'女':'男',ageDiff:pick([-2,-1,0,1,2,3]),metAt:G.age};G.partnerAt=G.age}},ng:{log:'告白失敗，難過了一個月。'}}},
+   r:{t:'慢慢來',chance:{p:.4,ok:{log:G=>`慢慢相處，你和${given(G._cand)}自然而然在一起了。`,set:'partner',fx:G=>{G.chars.partner={role:'partner',rel:'另一半',name:G._cand,sex:G.sex==='男'?'女':'男',ageDiff:pick([-2,-1,0,1,2,3]),metAt:G.age};G.partnerAt=G.age}},ng:{log:'聊著聊著就沒下文了。'}}},
+   d:{t:'先專心在自己身上',log:'你決定先專心在自己身上。'}}},
+ // 一直說「再等等」，對方會累：拖兩次之後就提分手
+ {at:G=>G.flags.has('partner')&&!G.flags.has('married')&&(G.waits||0)>=2,log:G=>`<span class="sad">${N(G,'partner')}說等不下去了，你們分手了。</span>`,unset:'partner',fx:G=>{G.waits=0;if(G.chars.partner)G.chars.ex={...G.chars.partner,role:'ex',rel:'前任'};delete G.chars.partner}},
+ {at:G=>G.flags.has('partner')&&!G.flags.has('married')&&G.age>=G.partnerAt+1&&G.age>=(G.birthYear<1970?21:24)&&G.age<=60,p:.5,key:true,choice:{face:'💍',who:G=>N(G,'partner'),say:G=>`${N(G,'partner')}問你：「我們要結婚嗎？」`,
+   fact:G=>modern(G)?statLine('first_marriage_age',m=>`台灣平均初婚年齡：男 ${m.male} 歲、女 ${m.female} 歲`):'',
+   l:{t:'結婚',log:G=>`<span class="big">${G.age} 歲，你和${N(G,'partner')}結婚了。</span>`,set:'married',fx:G=>{G.marriedAt=G.age;G.waits=0}},
+   r:{t:'再等等',log:G=>(G.waits||0)>=1?`你又說想再等等，${N(G,'partner')}臉色不太好。`:'你說想再等等。',fx:G=>G.waits=(G.waits||0)+1},
+   d:{t:'分手',log:G=>`<span class="sad">你和${N(G,'partner')}分手了。</span>`,unset:'partner',fx:G=>{if(G.chars.partner)G.chars.ex={...G.chars.partner,role:'ex',rel:'前任'};delete G.chars.partner}}}},
+ {at:G=>G.flags.has('partner')&&!G.flags.has('married')&&G.age>=28&&G.age<=40,p:.05,log:G=>`<span class="sad">交往多年，你和${N(G,'partner')}最後還是分手了。</span>`,unset:'partner',fx:G=>{delete G.chars.partner}},
+ {at:G=>G.age>=27&&G.age<=40&&!G.flags.has('married'),p:.15,once:'nag',log:'過年圍爐，親戚又問你什麼時候要結婚。'},
+ {at:G=>G.marriedAt!=null&&G.age===G.marriedAt,choice:{face:'🏝️',who:G=>N(G,'partner'),say:'蜜月要去哪裡？',
+   l:{need:G=>Y(G)>=1979,t:'出國蜜月',log:'出國度蜜月，拍了一千張照片。',alt:{t:'去日月潭',log:'去日月潭度蜜月。'}},
    r:{t:'國內小旅行',log:'在國內小旅行，簡單就好。'},
-   d:{t:'存起來當買房基金',log:'把蜜月的錢存起來。',fx:G=>G.wealth+=1}}},
+   d:{t:'存起來買房',log:'把蜜月的錢存起來。',fx:G=>G.wealth+=1}}},
  {at:G=>G.flags.has('married')&&G.age===G.marriedAt+1,choice:{face:'🧧',who:'過年',say:'今年過年要先回哪一邊的家？',
    l:{t:'先回男方家',log:'過年先回男方家吃年夜飯。'},
    r:{t:'先回女方家',log:'過年先回女方家吃年夜飯。'},
    d:{t:'每年輪流',log:'說好每年輪流，大家都滿意。'}}},
- {at:G=>G.kids>0&&G.age===G.kidAt&&!G.once.has('confine'),choice:{face:'🍼',who:'另一半',say:'坐月子要怎麼安排？',
-   l:{t:'去月子中心',log:'住了月子中心，花了不少錢。',fx:G=>G.wealth-=1},
+ {at:G=>G.flags.has('married')&&G.kids<3&&!G.flags.has('nokid')&&G.age>=(G.birthYear<1970?21:25)&&G.age<=43&&G.age>=G.lastKidAt+2,p:G=>G.kids===0?.5:(G.birthYear<1970?.4:.25),key:true,choice:{face:'👶',who:G=>N(G,'partner'),
+   say:G=>G.kids===0?'我們要生小孩嗎？':'要不要再生一個？',
+   fact:G=>modern(G)?statLine('fertility',f=>`台灣總生育率約 ${f.total_fertility_rate}，媽媽生第一胎平均 ${f.mean_age_first_birth_mother} 歲`):(G.birthYear<1960?'1951 年台灣總生育率約 7，一個家庭生好幾個很常見':''),
+   l:{t:'生',log:G=>`<span class="big">${G.kids===0?'你的第一個孩子':'家裡又多了一個孩子'}${G._kidName}出生了！</span>`,fx:G=>{G.kids++;G.lastKidAt=G.age;if(G.kidAt==null)G.kidAt=G.age;G.kidNames.push(G._kidName)}},
+   r:{t:'再等等',log:'決定再等一兩年。',fx:G=>G.lastKidAt=G.age},
+   d:{t:'不生了',log:G=>G.kids===0?'你們決定不生小孩。':'你們決定不再生了。',set:'nokid'}},
+   pre:G=>{G._kidName=given(newName(Y(G),rnd()<.51?'男':'女'))}},
+ {at:G=>G.flags.has('married')&&G.age<=70,p:()=>{const d=V('divorce',{divorces_per_year:50000});return Math.min(.03,(d.divorces_per_year||50000)/6000000)},once:'fight',choice:{face:'💔',who:G=>N(G,'partner'),say:G=>`你和${N(G,'partner')}最近吵架越來越兇。`,
+   fact:G=>modern(G)?statLine('divorce',d=>`台灣一年約 ${fmt(d.marriages_per_year)} 對結婚、${fmt(d.divorces_per_year)} 對離婚`):'',
+   l:{t:'去做婚姻諮商',chance:{p:.7,ok:{log:'做了婚姻諮商，感情慢慢變好。'},ng:{log:'<span class="sad">諮商沒用，最後還是離婚了。</span>',unset:'married',set:'divorced'}}},
+   r:{t:'離婚',log:'<span class="sad">你們離婚了。</span>',unset:'married',set:'divorced'},
+   d:{t:'忍耐',log:'為了家庭，決定繼續忍耐。'}}},
+ {at:G=>G.flags.has('job')&&!G.flags.has('house')&&G.age>=28&&G.age<=50,p:.1,once:'house',key:true,choice:{face:'🏢',who:'房仲',
+   say:G=>{const p=housePer(G);return p&&modern(G)?`${G.city}這間 30 坪，總價大約 ${fmt(p*30)} 萬。`:'這間 30 坪的房子，要背 20 年房貸。'},
+   fact:G=>modern(G)?statLine('home_ownership_rate',v=>`台灣的自有住宅率約 ${pct(v)}`):'',
+   l:{t:'貸款買下',log:'你買了房子，開始繳房貸。',set:'house',fx:G=>G.wealth-=1},
+   r:{t:'繼續租屋',log:'決定繼續租屋。'},
+   d:{t:'搬回老家',log:'搬回老家跟爸媽住，存了不少錢。',set:'house',fx:G=>G.wealth+=1}}},
+ {at:G=>G.kids>0&&G.age===G.kidAt,choice:{face:'🍼',who:G=>N(G,'partner'),say:'坐月子要怎麼安排？',
+   l:{need:G=>Y(G)>=2000,t:'去月子中心',log:'住了月子中心，花了不少錢。',fx:G=>G.wealth-=1,alt:{t:'請月嫂來家裡',log:'請月嫂來家裡幫忙坐月子。'}},
    r:{t:'請長輩來幫忙',log:'請長輩來家裡幫忙坐月子。'},
    d:{t:'自己來',log:'夫妻兩個自己照顧寶寶，累到懷疑人生。'}},once:'confine'},
- {at:G=>G.kids>0&&G.age===G.kidAt+1,log:'孩子半夜一直哭，你已經一年沒睡過整晚了。'},
- {at:G=>G.kids>0&&G.age===G.kidAt+6,log:'孩子上小學了，第一天在校門口哭著不放手。'},
- {at:G=>G.kids>0&&G.age===G.kidAt+14,choice:{face:'😤',who:'孩子',say:'孩子進入叛逆期，一回家就關在房間裡。',
+ {at:G=>G.kids>0&&G.age===G.kidAt+1,log:G=>`${G.kidNames[0]}半夜一直哭，你已經一年沒睡過整晚了。`},
+ {at:G=>G.kids>0&&G.age===G.kidAt+6,log:G=>`${G.kidNames[0]}上小學了，第一天在校門口哭著不放手。`},
+ {at:G=>G.kids>0&&G.age===G.kidAt+7,choice:{face:'🧑‍🎓',who:G=>G.kidNames[0],say:'同學都在補習和上才藝，我也要！',
+   l:{t:'全部報名',log:'孩子每天都有補習或才藝課。',fx:G=>G.wealth-=1},
+   r:{t:'讓他自由長大',log:'讓孩子放學自由玩耍。'},
+   d:{t:'只上他喜歡的',log:'孩子只上他真的喜歡的畫畫課。'}}},
+ {at:G=>G.kids>0&&G.age===G.kidAt+14,choice:{face:'😤',who:G=>G.kidNames[0],say:G=>`${G.kidNames[0]}進入叛逆期，一回家就關在房間裡。`,
    l:{t:'找他好好談',log:'找孩子好好談了一次，關係慢慢變好。',set:'closeKid'},
    r:{t:'給他空間',log:'給孩子空間，等他自己走出來。'},
-   d:{t:'沒收手機',log:'沒收孩子的手機，冷戰了一個月。'}}},
- {at:G=>G.kids>0&&G.age===G.kidAt+18,log:'孩子 18 歲，要搬出去住了。家裡突然好安靜。'},
- {at:G=>G.kids>0&&G.age>=G.kidAt+28&&G.age<=G.kidAt+36,p:.2,once:'kidwed',log:'<span class="big">孩子結婚了，你在婚禮上致詞。</span>'},
+   d:{t:'沒收手機',log:'沒收孩子的手機，冷戰了一個月。',set:'coldKid'}}},
+ {at:G=>G.kids>0&&G.age===G.kidAt+18,log:G=>`${G.kidNames[0]} 18 歲了，要搬出去念書。家裡突然好安靜。`},
+ {at:G=>G.kids>0&&G.age===G.kidAt+22,log:G=>[`${G.kidNames[0]}畢業了，你在台下偷偷哭。`,G.flags.has('closeKid')?`<span class="why">📎 叛逆期那次好好談過，他到現在什麼事都會跟你說</span>`:'']},
+ {at:G=>G.kids>0&&G.age>=G.kidAt+28&&G.age<=G.kidAt+36,p:.2,once:'kidwed',log:G=>`<span class="big">${G.kidNames[0]}結婚了，你在婚禮上致詞。</span>`},
+ {at:G=>G.kids>0&&G.age>=G.kidAt+29&&G.age<=G.kidAt+40,p:.15,once:'grandkid',log:'<span class="big">你當阿公阿嬤了！</span>',set:'grandkid'},
+
+ // ---- 健康 ----
+ {at:G=>G.age===40,choice:{face:'🩺',who:G=>Y(G)>=2000?'國健署':'醫生',say:G=>Y(G)>=2000?'你 40 歲了，可以做免費成人健檢。':'你 40 歲了，要不要做個健康檢查？',fact:G=>Y(G)>=2000?'40～64 歲每 3 年一次免費成人健檢':'',
+   l:{t:'去做，有紅字就改',log:'做了健檢，開始每週運動三次。',fx:G=>G.healthMul*=.9},
+   r:{t:'沒空，下次再說',log:'說下次再去，結果一直沒去。',fx:G=>G.healthMul*=1.05},
+   d:{t:'戒掉飲料零食',log:'戒掉每天的飲料和零食。',fx:G=>G.healthMul*=.95}}},
+ {at:G=>G.age>=30,p:G=>cancerRate(G.age),once:'cancer',key:true,choice:{face:'🏥',who:'醫生',say:'檢查結果出來了，是癌症。',
+   fact:()=>statLine('cancer',c=>`台灣每 ${c.minutes_per_new_case} 分鐘就有一人確診癌症`),
+   l:{t:'積極治療',chance:{p:.6,ok:{log:'<span class="sad">確診癌症。</span>治療一年後控制住了。',fx:G=>G.healthMul*=1.3},ng:{log:'<span class="sad">確診癌症，治療效果不好。</span>',fx:G=>G.healthMul*=2.5}}},
+   r:{t:'找第二意見',chance:{p:.55,ok:{log:'<span class="sad">確診癌症。</span>換了醫院治療，病情穩定下來。',fx:G=>G.healthMul*=1.4},ng:{log:'<span class="sad">確診癌症，拖了一陣子才治療。</span>',fx:G=>G.healthMul*=2.8}}},
+   d:{t:'試試偏方',log:'<span class="sad">確診癌症，你先試了偏方，延誤了治療。</span>',fx:G=>G.healthMul*=3.5}},set:'cancer'},
+ {at:G=>G.age>=18&&G.age<=70&&G.flags.has('scooter'),p:()=>Math.max(.003,V('traffic_deaths_per_year',3000)/23000000*4),once:'crash',log:'<span class="sad">騎車出了車禍，在醫院躺了兩個禮拜。</span>',fx:G=>G.healthMul*=1.05},
 
  // ---- 中年 ----
- {at:G=>G.age===45,log:'看手機要拿得越來越遠，你老花了。'},
- {at:G=>G.age===50,log:G=>pick(['頭上冒出好多白頭髮。','50 歲生日，朋友送了一支按摩槍。','開始覺得自己真的老了。'])},
+ {at:G=>G.age>=40&&G.age<=60&&G.parents.some(p=>!p.dead),p:.06,once:'parentSick',log:G=>{const p=pick(G.parents.filter(x=>!x.dead));return `${p.name}住院開刀，你請假在醫院陪了一週。`}},
+ {at:G=>G.age>=48&&G.age<=60&&G.parents.some(p=>!p.dead),p:.25,once:'parents',choice:{face:'👴',who:'爸媽',say:'爸媽年紀大了，需要人照顧。',fact:G=>Y(G)>=2017?'撥 1966 可以申請長照服務':'',
+   l:{need:G=>Y(G)>=2017,t:'打 1966 申請長照',log:'申請了長照服務，有居服員來幫忙。',alt:{t:'兄弟姊妹輪流照顧',log:'兄弟姊妹排班，輪流照顧爸媽。'}},
+   r:{t:'請外籍看護',log:'請了外籍看護照顧爸媽。',fx:G=>G.wealth-=1},
+   d:{t:'辭職自己照顧',log:'辭職回家照顧爸媽。',fx:G=>{G.wealth-=2;G.payMul*=.7}}}},
+ {at:G=>G.age===45,log:'看東西要拿得越來越遠，你老花了。'},
+ {at:G=>G.age===50,log:G=>pick(['頭上冒出好多白頭髮。','50 歲生日，開始覺得自己真的老了。'])},
+ {at:G=>G.age>=40&&G.age<=55,p:.06,once:'midlife',choice:{face:'🏍️',who:'中年的你',say:'突然好想做點不一樣的事。',
+   l:{t:'開始爬百岳',log:'開始爬百岳，三年爬了 30 座。',fx:G=>G.healthMul*=.93,set:'mountain'},
+   r:{t:'買重機',log:'買了一台重機，週末去山上兜風。'},
+   d:{t:'算了吧',log:'想想還是算了。'}}},
  {at:G=>G.age>=45&&G.age<=60,p:.08,once:'pension',choice:{face:'🐷',who:'理專',say:'該開始準備退休金了吧？',
-   l:{t:'定期定額存退休金',log:'每個月定期定額存退休金。',fx:G=>G.wealth+=2},
+   l:{t:'每月存退休金',log:'每個月固定存退休金。',fx:G=>G.wealth+=2},
    r:{t:'買保險',log:'買了一份年金保險。',fx:G=>G.wealth+=1},
    d:{t:'到時候再說',log:'覺得到時候再說。'}}},
- {at:G=>G.age>=50&&G.age<=75,p:.03,log:'<span class="sad">聽到老同學過世的消息，難過了好幾天。</span>'},
+ {at:G=>G.age>=50&&G.age<=85&&Y(G)>=2000,p:()=>Math.min(.05,V('fraud',{cases_per_year:200000}).cases_per_year/20000000*3),once:'fraud',choice:{face:'📞',who:'陌生來電',say:'「您好，這裡是健保署，您的帳戶涉及洗錢……」',
+   fact:G=>modern(G)?statLine('fraud',f=>`台灣一年約 ${fmt(f.cases_per_year)} 件詐騙案，損失約 ${fmt(f.loss_ntd_per_year/1e8)} 億元`):'接到可疑電話，打 165 反詐騙專線',
+   l:{t:'直接掛斷',log:'接到詐騙電話，直接掛斷。'},
+   r:{t:'照指示轉帳',log:'<span class="sad">被詐騙集團騙走一大筆錢。</span>',fx:G=>G.wealth-=3},
+   d:{t:'打 165 檢舉',log:'接到詐騙電話，打 165 檢舉。'}}},
 
- // ---- 老年 ----
- {at:G=>G.age===65,log:'拿到敬老卡，搭公車更方便了。'},
- {at:G=>G.age>=63&&G.age<=75,p:.15,once:'line',log:'學會在 LINE 群組傳早安長輩圖。'},
+ // ---- 退休與老年 ----
+ {at:G=>G.age===65&&G.flags.has('job'),choice:{face:'🎣',who:'退休',say:'65 歲，退休了。每天要做什麼？',fact:'勞基法：年滿 65 歲，雇主可以強制退休',
+   l:{t:'去公園下棋',log:'退休了，每天去公園下棋。',set:'retired'},
+   r:{t:'環島旅行',log:'退休後，開著車環島一圈。',set:'retired'},
+   d:{t:'學跳廣場舞',log:'退休後學跳廣場舞，交了一群朋友。',set:'retired',fx:G=>G.healthMul*=.97}}},
+ {at:G=>G.age===65&&Y(G)>=2000,log:'拿到敬老卡，搭公車更方便了。'},
+ {at:G=>G.age>=63&&G.age<=78&&Y(G)>=2013,p:.15,once:'line',log:'學會在 LINE 群組傳早安長輩圖。'},
  {at:G=>G.age>=70,p:.05,once:'fall',log:'<span class="sad">在浴室跌倒，休養了好幾個月。</span>',fx:G=>G.healthMul*=1.15},
+ {at:G=>G.age>=70,p:.06,once:'dementia',log:G=>['<span class="sad">你開始常常忘記事情，醫生說是失智症初期。</span>',stat('dementia_or_longterm_care',v=>`台灣 65 歲以上約 ${pct(v.dementia_prevalence_65plus)} 有失智症`)],fx:G=>G.healthMul*=1.3},
  {at:G=>G.age>=66&&G.age<=85,p:.08,once:'oldtrip',choice:{face:'🧓',who:'老同學',say:'我們幾個老同學要去旅行，一起來吧！',
    l:{t:'一起去',log:'跟老同學去旅行，聊了一整晚當年的事。'},
    r:{t:'走不動了，不去',log:'覺得體力不好，婉拒了。'},
    d:{t:'用視訊聊就好',log:'學會用視訊，跟老同學聊天。'}}},
  {at:G=>G.age===75,p:.6,log:'開始整理老照片，把一生的回憶裝進三本相簿。'},
- {at:G=>G.age===80,log:G=>G.kids>0?'80 大壽，孩子們幫你辦了一桌壽宴。':'80 歲生日，朋友來家裡幫你慶生。'},
- {at:G=>G.age>=82,p:.12,once:'care',choice:{face:'🏡',who:'社工',say:'年紀大了，生活越來越需要人幫忙。',fact:'撥 1966 可以申請長照服務',
-   l:{need:'kidOrSpouse',t:'跟家人住',log:'搬去跟家人一起住。',alt:{t:'申請居家服務',log:'申請了居家服務，每週有人來幫忙。'}},
+ {at:G=>G.age===80,log:G=>G.kids>0?`80 大壽，${G.kidNames.join('、')}幫你辦了一桌壽宴。`:'80 歲生日，朋友來家裡幫你慶生。'},
+ {at:G=>G.age>=82,p:.12,once:'care',choice:{face:'🏡',who:'社工',say:'年紀大了，生活越來越需要人幫忙。',
+   l:{need:G=>G.kids>0||G.flags.has('married'),t:'跟家人住',log:'搬去跟家人一起住。',alt:{t:'申請居家服務',log:'申請了居家服務，每週有人來幫忙。'}},
    r:{t:'請看護',log:'請了一位看護照顧你。'},
    d:{t:'住進安養中心',log:'住進安養中心，交了幾個新朋友。'}}},
 
- // ---- 任何年紀都可能 ----
- {at:G=>G.age>=20,p:.02,log:'買樂透中了 2000 元。'},
- {at:G=>G.age>=15&&G.age<=70,p:.02,log:'手機掉進馬桶，心情很差。'},
-
  // ---- 生活小事 ----
- {at:G=>G.age>=6&&G.age<=60,p:.06,log:'颱風來了，放了一天颱風假。'},
- {at:G=>G.age>=20,p:.04,log:'統一發票中了 1000 元。'},
- {at:G=>G.age>=20&&G.age<=70,p:.04,log:'半夜地震，搖得你從床上跳起來。'},
+ {at:G=>G.age>=6&&G.age<=60,p:.05,log:'颱風來了，放了一天颱風假。'},
+ {at:G=>G.age>=20,p:.03,log:'統一發票中了 200 元。'},
+ {at:G=>G.age>=20&&Y(G)>=2002,p:.02,log:'買樂透中了 400 元。'},
+ {at:G=>G.age>=20&&G.age<=70,p:.03,log:'半夜地震，搖得你從床上跳起來。'},
 ];
 
-function cancerRate(age){
-  const c=V('cancer',{new_cases_per_year:130000});
-  const base=(c.new_cases_per_year||130000)/23300000; // 平均每人每年
-  return Math.min(.04,base*(age<40?.25:age<50?.7:age<60?1.4:age<70?2.4:3.2));
-}
-
-// ---- 死因 ----
-// 官方名稱太長，顯示時拿掉括號說明，例如「心臟疾病(高血壓性疾病除外)」→「心臟疾病」、「惡性腫瘤(癌症)」→「癌症」
+/* ======= 模擬核心（真正的遊戲和「平行人生」都用這一套） ======= */
+// 官方死因名稱太長，顯示時拿掉括號說明
 const cleanCause=c=>/惡性腫瘤/.test(c)?'癌症':c.replace(/[（(].*?[)）]/g,'');
 function deathCause(G){
   if(G.flags.has('cancer')&&rnd()<.6) return '癌症';
   if(G.age<35&&rnd()<.6) return '事故傷害';
   const list=V('death_causes',null);
-  if(!list) return pick(['癌症','心臟疾病','肺炎','腦血管疾病','糖尿病']);
+  if(!list) return pick(['心臟疾病','肺炎','腦血管疾病','糖尿病']);
   // 癌症另外用「確診癌症」事件模擬，所以這裡不再抽到癌症
   const ok=list.filter(x=>!/自殺|自傷|惡性腫瘤/.test(x.cause)&&x.cause!=='其他');
   return cleanCause(weighted(ok).cause);
 }
-
-/* ======= 遊戲狀態 ======= */
-let G=null,timer=null,speed=1,paused=false,pendingChoices=[],cur=null,locked=false; // locked：選擇卡飛走動畫中，年齡不能前進
-function stat(key,f){const v=V(key,null);if(v==null)return '';const s=f(v);return s?`<span class="stat">📊 ${s}</span>`:''}
-function statLine(key,f){const v=V(key,null);if(v==null)return '';return '📊 '+f(v)}
-
-function newLife(){
+function newLife(era){
   const c=weighted(cityList());
   const sr=V('sex_ratio_at_birth',107);
   const sex=rnd()<sr/(sr+100)?'男':'女';
   const fam=pick(['富裕','小康','小康','辛苦']);
-  G={age:-1,city:c.city.replace('臺','台'),sex,fam,flags:new Set(),once:new Set(),log:[],big:[],
-     healthMul:1,payMul:1,wealth:fam==='富裕'?2:fam==='辛苦'?-1:0,edu:'none',kids:0,lastKidAt:-9,kidAt:null};
-  // 爸媽生你時的年紀：媽媽約為台灣生第一胎平均年齡（上下幾歲），爸爸大 0～4 歲
-  const momAt=Math.round(V('fertility',{mean_age_first_birth_mother:31.8}).mean_age_first_birth_mother+(rnd()+rnd()+rnd()-1.5)*5);
+  const birthYear=era+Math.floor(rnd()*10);
+  const G={age:-1,birthYear,era,city:c.city.replace(/臺/g,'台'),sex,fam,flags:[],once:[],log:[],choices:[],why:{},chars:{},
+     healthMul:1,payMul:1,wealth:fam==='富裕'?2:fam==='辛苦'?-1:0,edu:'none',kids:0,kidNames:[],lastKidAt:-9,kidAt:null};
+  const momAt=Math.round(V('fertility',{mean_age_first_birth_mother:31.8}).mean_age_first_birth_mother-(era<1980?6:0)+(rnd()+rnd()+rnd()-1.5)*5);
   G.parents=[{name:'媽媽',sex:'女',age0:momAt},{name:'爸爸',sex:'男',age0:momAt+pick([0,1,2,2,3,4])}];
-  if(fam==='辛苦') G.flags.add('poor');
+  return revive(G);
 }
+// structuredClone 之後把陣列換回 Set
+function revive(G){G.flags=new Set(G.flags);G.once=new Set(G.once);if(G.fam==='辛苦')G.flags.add('poor');return G}
+function cloneG(G){const c=structuredClone({...G,flags:[...G.flags],once:[...G.once]});return revive(c)}
 
-function addYear(age,lines){
-  lines=lines.flat().filter(Boolean);
-  if(!lines.length) return;
-  const feed=$('#feed');if(!feed) return;
-  let row=feed.querySelector(`[data-age="${age}"]`);
-  if(!row){row=document.createElement('div');row.className='yr';row.dataset.age=age;row.innerHTML=`<div class="a">${age}</div><div class="t"></div>`;feed.appendChild(row)}
-  const t=row.querySelector('.t');
-  lines.forEach(l=>{const s=document.createElement('span');s.innerHTML=l;if(!/<span/.test(l))s.textContent=l.replace(/<[^>]+>/g,'');t.appendChild(s)});
-  feed.scrollTop=feed.scrollHeight;
-  lines.forEach(l=>{const plain=l.replace(/<[^>]+>/g,'');if(!/^📊/.test(plain))G.log.push({age,t:plain})});
-}
-
-function tick(){
-  if(paused||cur||locked) return;
-  G.age++;
-  paintClock();
-  // 先發生這一年的事件
-  const lines=[];
+// 這一年發生的事：回傳自動事件的文字、要玩家選的抉擇
+function yearEvents(G){
+  const lines=[],choices=[];
   for(const e of EV){
     if(e.once&&G.once.has(e.once)) continue;
     if(!e.at(G)) continue;
     if(e.p!=null&&rnd()>=val(e.p,G)) continue;
     if(e.once) G.once.add(e.once);
-    if(e.choice){if(e.set)arr(e.set).forEach(f=>G.flags.add(f));pendingChoices.push(e.choice);continue}
+    if(e.choice){if(e.set)arr(e.set).forEach(f=>G.flags.add(f));choices.push(e);continue}
     const out=val(e.log,G);
     if(e.set) arr(e.set).forEach(f=>G.flags.add(f));
     if(e.unset) arr(e.unset).forEach(f=>G.flags.delete(f));
     if(e.fx) e.fx(G);
     lines.push(out);
   }
+  return {lines:lines.flat().filter(Boolean),choices};
+}
+function hasNeed(G,n){return typeof n==='function'?n(G):G.flags.has(n)}
+function resolveOpt(G,o){if(!o)return null;if(o.need&&!hasNeed(G,o.need))o=o.alt;return o}
+function choiceOf(G,e){return val(e.choice,G)}
+// 套用選項：回傳寫進紀錄的文字
+function applyOpt(G,o){
+  const p=o.chance?val(o.chance.p,G):1;
+  const r=o.chance?(rnd()<p?o.chance.ok:o.chance.ng):o;
+  const t=strip(val(o.t,G));
+  const before=new Set(G.flags);
+  if(o.chance){arr(o.set).forEach(f=>G.flags.add(f));if(o.fx)o.fx(G)}
+  arr(r.set).forEach(f=>G.flags.add(f));
+  arr(r.unset).forEach(f=>G.flags.delete(f));
+  const line=val(r.log,G);   // 先寫紀錄再套效果，讓「第一個孩子」等文字正確
+  if(r.fx) r.fx(G);
+  for(const f of G.flags) if(!before.has(f)&&!G.why[f]) G.why[f]={age:G.age,t};
+  G.choices.push({age:G.age,t});
+  return line;
+}
+function deadThisYear(G){
+  let q=qx(G.sex,G.age)*G.healthMul;
+  if(G.age<1) q=Math.min(q,0.004);
+  return rnd()<q||G.age>=110;
+}
+// 從某個時間點開始，不經畫面一路模擬到死（平行人生用；之後的抉擇隨機選）
+function simulateRest(G){
+  for(let guard=0;guard<130;guard++){
+    if(deadThisYear(G)){G.cause=deathCause(G);G.deathAge=G.age;return G}
+    G.age++;
+    const {lines,choices}=yearEvents(G);
+    lines.forEach(l=>G.log.push({age:G.age,t:strip(l)}));
+    for(const e of choices){const ch=choiceOf(G,e);if(ch.pre)ch.pre(G);if(e.pre)e.pre(G);val(ch.say,G);const o=resolveOpt(G,ch[pick(['l','r','d'])]);G.log.push({age:G.age,t:strip(applyOpt(G,o))})}
+  }
+  G.cause='衰老';G.deathAge=G.age;return G;
+}
+
+/* ======= 選項影響的小標籤 ======= */
+const FLAG_LABEL={hs:'📘 普通高中',voc:'🔧 高職',jc:'📗 五專',jhs:'📘 念初中',uni:'🎓 上大學',master_ing:'🎓 讀研究所',phd_ing:'🎓 讀博士',done:'💼 開始工作',worker:'💼 提早賺錢',
+  tech:'💻 科技業',civil:'🏛️ 公務員',prof:'🎓 教授',army:'🪖 當兵',soldier:'🎖️ 職業軍人',career_mil:'🎖️ 長期從軍',police:'👮 警察',partner:'💞 交往',married:'💍 結婚',
+  house:'🏠 有房',car:'🚗 有車',abroad:'✈️ 出國經驗',cat:'🐱 養貓',dog:'🐶 養狗',skill:'🔧 一技之長',english:'🗣️ 英文',coder:'💻 寫程式',gym:'💪 運動習慣',scooter:'🛵 機車',
+  nokid:'🚫 不生小孩',divorced:'💔 離婚',manager:'📈 升官',shop:'🏪 開店',boss:'🏢 當老闆',brave:'🦸 勇敢',honest:'😇 誠實',leader:'📣 當幹部',firstlove:'💌 初戀',
+  closeKid:'🤗 親子關係變好',coldKid:'🧊 親子關係變差',mountain:'⛰️ 爬山',speech:'🏅 得獎',early:'🏭 提早出社會',family:'🏡 幫家裡',retired:'🎣 退休生活',myopia:'👓 近視',sci:'🧪 自然組',cram:'📚 補習'};
+const LOSS_LABEL={partner:'💔 分手',married:'💔 婚姻結束',soldier:'🎖️ 退伍'};
+function diffChips(a,b){
+  const out=[];
+  for(const f of b.flags) if(!a.flags.has(f)&&FLAG_LABEL[f]) out.push({t:FLAG_LABEL[f],c:'up'});
+  for(const f of a.flags) if(!b.flags.has(f)&&LOSS_LABEL[f]) out.push({t:LOSS_LABEL[f],c:'down'});
+  const h=b.healthMul/a.healthMul;
+  if(h<.995) out.push({t:'❤️ 健康變好',c:'up'}); else if(h>1.5) out.push({t:'⚠️ 健康大幅變差',c:'down'}); else if(h>1.005) out.push({t:'🩹 健康變差',c:'down'});
+  const p=b.payMul/a.payMul; if(p>1.005) out.push({t:'💵 收入變多',c:'up'}); else if(p<.995) out.push({t:'💵 收入變少',c:'down'});
+  const w=b.wealth-a.wealth; if(w>0) out.push({t:'💰 存款變多',c:'up'}); else if(w<0) out.push({t:'💸 存款變少',c:'down'});
+  if(b.kids>a.kids) out.push({t:'👶 多了一個孩子',c:'up'});
+  if(b.edu!==a.edu&&b.edu!=='none') out.push({t:{uni:'🎓 學士',master:'🎓 碩士',phd:'🎓 博士'}[b.edu],c:'up'});
+  return out;
+}
+// 選之前預覽：碰運氣的選項顯示機率；其他的實際試算一次
+function previewChips(G,o){
+  if(o.chance){const p=val(o.chance.p,G);const pre=arr(o.set).filter(f=>FLAG_LABEL[f]).map(f=>({t:FLAG_LABEL[f],c:'up'}));return [{t:`🎲 ${Math.round(p*100)}% 成功`,c:'luck'},...pre]}
+  const g=cloneG(G);applyOpt(g,o);
+  const d=diffChips(G,g);
+  return d.length?d:[{t:'📝 留下回憶',c:''}];
+}
+
+/* ======= 畫面與節奏 ======= */
+let G=null,pending=[],cur=null,locked=false,paused=false,speed=1,tickTimer=null,keySnaps=[];
+const SPEEDS=[{n:'1x',ms:900},{n:'2x',ms:450},{n:'4x',ms:200}];
+function schedule(ms){clearTimeout(tickTimer);if(paused)return;tickTimer=setTimeout(tick,ms??SPEEDS[speed-1].ms)}
+function stopTicking(){clearTimeout(tickTimer);tickTimer=null}
+
+function addYear(age,lines,cls){
+  lines=arr(lines).flat().filter(Boolean);
+  if(!lines.length) return;
+  const feed=$('#feed');if(!feed) return;
+  let row=feed.querySelector(`[data-age="${age}"]`);
+  if(!row){row=document.createElement('div');row.className='yr';row.dataset.age=age;row.innerHTML=`<div class="a">${age}<small>${G.birthYear+age}</small></div><div class="t"></div>`;feed.appendChild(row)}
+  const t=row.querySelector('.t');
+  lines.forEach(l=>{const s=document.createElement('span');if(/^<span/.test(l))s.innerHTML=l;else{s.textContent=strip(l);if(cls)s.className=cls}t.appendChild(s)});
+  feed.scrollTop=feed.scrollHeight;
+  lines.forEach(l=>{const p=strip(l);if(!/^📊/.test(p)&&!/^📎/.test(p))G.log.push({age,t:p})});
+}
+
+function tick(){
+  if(paused||cur||locked) return;
+  G.age++;
+  paintClock();
+  const {lines,choices}=yearEvents(G);
   addYear(G.age,lines);
-  // 一般性的事件寫完，再處理需要玩家選擇的
-  if(pendingChoices.length){showChoice(pendingChoices.shift());return}
+  if(choices.length){
+    pending=choices;
+    // 先讓玩家看完這一年，再跳出抉擇
+    const feed=$('#feed');const h=document.createElement('div');h.className='ahead';h.id='ahead';h.textContent='⚡ 人生抉擇⋯⋯';feed.appendChild(h);feed.scrollTop=feed.scrollHeight;
+    locked=true;setTimeout(()=>{locked=false;const a=$('#ahead');if(a)a.remove();nextChoice()},1300);
+    return;
+  }
   endOfYear();
 }
 function endOfYear(){
-  // 依生命表決定這一年會不會離開
-  let q=qx(G.sex,G.age)*G.healthMul;
-  if(G.age<1) q=Math.min(q,0.004);
-  if(rnd()<q) return die();
-  if(G.age>=110) return die();
+  if(deadThisYear(G)) return die();
+  schedule();
+}
+function nextChoice(){
+  if(!pending.length){endOfYear();return}
+  const e=pending.shift();
+  const ch=choiceOf(G,e);
+  if(ch.pre)ch.pre(G);if(e.pre)e.pre(G);
+  if(e.key) keySnaps.push({snap:cloneG(G),e,ch,age:G.age});
+  showChoice(e,ch);
 }
 
-function die(){
-  stop();
-  const cause=deathCause(G);
-  G.cause=cause;G.deathAge=G.age;
-  addYear(G.age,[`<span class="sad">${G.age} 歲，你因為${cause}離開了人世。</span>`]);
-  setTimeout(showReview,1600);
-}
-
-/* ======= 選擇卡 ======= */
-function hasNeed(n){return n==='kidOrSpouse'?(G.kids>0||G.flags.has('married')):G.flags.has(n)}
-function resolveOpt(o){if(!o)return null;if(o.need&&!hasNeed(o.need))o=o.alt;return o}
-function showChoice(ch){
-  const old=$('#veil');if(old)old.remove(); // 保險：畫面上永遠只有一張選擇卡
-  cur={ch,opts:{l:resolveOpt(ch.l),r:resolveOpt(ch.r),d:resolveOpt(ch.d)}};
-  const fact=val(ch.fact,G);
-  const lab=(k,a)=>`<div class="opt ${k}" data-k="${k}" tabindex="0"><span class="arr">${a}</span><span>${esc(cur.opts[k].t)}</span></div>`;
-  const v=document.createElement('div');v.className='veil';v.id='veil';
-  v.innerHTML=`<div class="card" id="card">${lab('l','←')}
-    <div class="body"><div class="face">${ch.face}</div><div class="who">${esc(ch.who)}</div><div class="say">${esc(val(ch.say,G))}</div>${fact?`<div class="fact">${esc(fact)}</div>`:''}</div>
+function showChoice(e,ch){
+  const say=val(ch.say,G),who=val(ch.who,G),fact=val(ch.fact,G);
+  const opts={l:resolveOpt(G,ch.l),r:resolveOpt(G,ch.r),d:resolveOpt(G,ch.d)};
+  cur={e,ch,opts};
+  const hint=o=>previewChips(G,o).filter(c=>c.c).slice(0,3).map(c=>c.t).join('　');
+  const lab=(k,a)=>`<div class="opt ${k}" data-k="${k}" tabindex="0"><span class="lab"><span class="arr">${a}</span> ${esc(strip(val(opts[k].t,G)))}</span><span class="hint">${esc(hint(opts[k]))}</span></div>`;
+  $('#clock').hidden=true;
+  const w=$('#sheet');w.hidden=false;
+  w.innerHTML=`<div class="card" id="card">${lab('l','←')}
+    <div class="body"><div class="face">${ch.face}</div><div class="who">${esc(who)}</div><div class="say">${esc(say)}</div>${fact?`<div class="fact">${esc(fact)}</div>`:''}</div>
     ${lab('r','→')}${lab('d','↓')}</div>`;
-  $('#app').appendChild(v);
+  w.classList.remove('sheet-wrap');void w.offsetWidth;w.classList.add('sheet-wrap');
   bindCard($('#card'));
 }
 function bindCard(el){
   let sx=0,sy=0,dragging=false,dir=null;
-  const TH=36,GO=95;
+  const TH=36,GO=90;
   const setPeek=k=>{dir=k;el.classList.toggle('peek',!!k);el.querySelectorAll('.opt').forEach(o=>o.classList.toggle('on',o.dataset.k===k))};
   el.addEventListener('pointerdown',e=>{
     if(e.target.closest('.opt')&&e.pointerType==='mouse') return;
@@ -612,7 +798,7 @@ function bindCard(el){
   el.addEventListener('pointermove',e=>{
     if(!dragging) return;
     const dx=e.clientX-sx,dy=Math.max(0,e.clientY-sy); // 不能往上滑
-    el.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/18}deg)`;
+    el.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/22}deg)`;
     let k=null;
     if(Math.hypot(dx,dy)>TH) k=Math.abs(dx)>=dy?(dx<0?'l':'r'):'d';
     if(k!==dir) setPeek(k);
@@ -632,74 +818,96 @@ function bindCard(el){
     o.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(o.dataset.k)}});
   });
 }
-// 套用選項（模擬測試也用這個）
-function applyOpt(o){
-  const r=o.chance?(rnd()<o.chance.p?o.chance.ok:o.chance.ng):o;
-  if(o.chance){arr(o.set).forEach(f=>G.flags.add(f));if(o.fx)o.fx(G)}
-  arr(r.set).forEach(f=>G.flags.add(f));
-  arr(r.unset).forEach(f=>G.flags.delete(f));
-  const line=val(r.log,G);   // 先寫紀錄再套效果，讓「第一個孩子」等文字正確
-  if(r.fx) r.fx(G);
-  G.choices=(G.choices||[]);G.choices.push({age:G.age,t:o.t});
-  return line;
-}
 function choose(k){
   if(!cur||locked||!cur.opts[k]) return;
   locked=true;
   const o=cur.opts[k];
-  const line=applyOpt(o);
+  const before=cloneG(G);
+  const line=applyOpt(G,o);
+  const chips=diffChips(before,G);
+  const snap=keySnaps.length&&keySnaps[keySnaps.length-1];
+  if(snap&&snap.e===cur.e&&snap.picked==null) snap.picked=k;
   const el=$('#card');
   const v={l:[-1,0],r:[1,0],d:[0,1]}[k];
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   el.style.transition=reduce?'none':'transform .25s ease-in,opacity .25s';
-  el.style.transform=`translate(${v[0]*600}px,${v[1]*700}px) rotate(${v[0]*25}deg)`;el.style.opacity='0';
+  el.style.transform=`translate(${v[0]*600}px,${v[1]*500}px) rotate(${v[0]*20}deg)`;el.style.opacity='0';
+  const picked=strip(val(o.t,G));
   cur=null;
   setTimeout(()=>{
-    locked=false;
-    const veil=$('#veil');if(veil)veil.remove();
-    addYear(G.age,[line]);
-    if(pendingChoices.length){showChoice(pendingChoices.shift());return}
-    endOfYear();
+    addYear(G.age,[`<span class="pick">${esc(strip(line))}</span>`]);
+    showResult(picked,line,chips);
   },reduce?0:260);
 }
+function showResult(picked,line,chips){
+  const w=$('#sheet');
+  w.innerHTML=`<div class="result" role="dialog" aria-label="選擇結果">
+    <div class="k">${G.age} 歲・你選了</div>
+    <div class="picked">「${esc(picked)}」</div>
+    <div class="out">${esc(strip(line))}</div>
+    <div class="chips">${(chips.length?chips:[{t:'📝 留下一段回憶',c:''}]).map(c=>`<span class="chip ${c.c}">${esc(c.t)}</span>`).join('')}</div>
+    <div class="later">這個選擇會影響之後遇到的事、回顧裡的人生，也會出現在「平行人生」裡。</div>
+    <button class="big" id="cont">繼續 ▶</button></div>`;
+  w.classList.remove('sheet-wrap');void w.offsetWidth;w.classList.add('sheet-wrap');
+  const go=()=>{w.hidden=true;w.innerHTML='';$('#clock').hidden=false;locked=false;
+    if(pending.length){setTimeout(nextChoice,350)}else endOfYear()};
+  $('#cont').onclick=go;$('#cont').focus();
+}
 
-/* ======= 畫面 ======= */
+function die(){
+  stopTicking();
+  G.cause=deathCause(G);G.deathAge=G.age;
+  addYear(G.age,[`<span class="sad">${G.age} 歲，你因為${G.cause}離開了人世。</span>`]);
+  setTimeout(showReview,1800);
+}
+
 function paintClock(){
-  $('#age').innerHTML=`${Math.max(0,G.age)}<small>歲</small>`;
+  $('#age').innerHTML=`${Math.max(0,G.age)}<small>歲</small><i>${G.birthYear+Math.max(0,G.age)} 年</i>`;
   $('#bar').style.width=Math.min(100,Math.max(0,G.age))+'%';
 }
-const SPEEDS=[{n:'1x',ms:900},{n:'2x',ms:450},{n:'4x',ms:200}];
-function start(){stop();timer=setInterval(tick,SPEEDS[speed-1].ms)}
-function stop(){if(timer)clearInterval(timer);timer=null}
 
+let chosenEra=null;
 function showIntro(){
-  stop();newLife();
-  $('#app').innerHTML=`<div class="screen"><div class="sheet">
-    <div class="kicker">出生證明</div>
-    <h1>你即將出生在台灣</h1>
-    <dl class="idcard"><dt>出生地</dt><dd>${esc(G.city)}</dd><dt>性別</dt><dd>${G.sex}</dd><dt>家境</dt><dd>${G.fam}</dd></dl>
-    <p class="small">出生地和性別是照台灣真實的人口比例抽出來的。按下開始後，年齡會一年一年往前走，人生事件會依真實統計的機率發生。遇到重要決定時會跳出卡片，往左、往右或往下拖曳來選擇。</p>
-    <div class="btns"><button class="big" id="go">開始人生</button></div>
+  stopTicking();
+  $('#app').innerHTML=`<div class="screen"><div class="panel">
+    <div class="kicker">台灣人生模擬器</div>
+    <h1>你想出生在哪個年代？</h1>
+    <p class="small">年代會改變你遇到的升學考試、兵役年限和歷史事件。出生地和性別照台灣真實的人口比例抽，壽命照官方生命表。</p>
+    <div class="eras">${ERAS.map(e=>`<button class="era" data-y="${e.y}"><b>${e.y} 年代</b><span>${esc(e.blurb)}</span></button>`).join('')}</div>
+    <div class="btns"><button class="big" id="rand">隨機投胎</button></div>
     <div class="btns"><button class="big ghost" id="srcb">資料來源</button></div>
   </div></div>`;
-  $('#go').onclick=startPlay;
+  document.querySelectorAll('.era').forEach(b=>b.onclick=()=>showBirth(+b.dataset.y));
+  $('#rand').onclick=()=>showBirth(pick(ERAS).y);
   $('#srcb').onclick=()=>showSources(showIntro);
+}
+function showBirth(era){
+  chosenEra=era;G=newLife(era);CUR=G;keySnaps=[];
+  $('#app').innerHTML=`<div class="screen"><div class="panel">
+    <div class="kicker">出生證明</div>
+    <h1>你即將出生</h1>
+    <dl class="idcard"><dt>出生年</dt><dd>${G.birthYear} 年（民國 ${G.birthYear-1911} 年）</dd><dt>出生地</dt><dd>${esc(G.city)}</dd><dt>性別</dt><dd>${G.sex}</dd><dt>家境</dt><dd>${G.fam}</dd><dt>爸媽</dt><dd>媽媽 ${G.parents[0].age0} 歲、爸爸 ${G.parents[1].age0} 歲</dd></dl>
+    <p class="small">年齡會一年一年往前走。遇到重要決定時，年齡會停下，選擇卡從下方滑上來，每個選項底下有可能的影響。往左、往右或往下拖曳來選擇，選完會告訴你結果。</p>
+    <div class="btns"><button class="big" id="go">開始人生</button></div>
+    <div class="btns"><button class="big ghost" id="back">換個年代</button></div>
+  </div></div>`;
+  $('#go').onclick=startPlay;$('#back').onclick=showIntro;
 }
 
 function startPlay(){
   const marks=[[6,'國小'],[18,'成年'],[65,'退休']];
   $('#app').innerHTML=`
-    <div class="who-am-i"><b>${esc(G.city)}・${G.sex}・家境${G.fam}</b><span>平均壽命 ${lifeExp(G.sex)} 歲</span></div>
+    <div class="who-am-i"><b>${G.birthYear} 年・${esc(G.city)}・${G.sex}・家境${G.fam}</b><span>平均壽命 ${lifeExp(G.sex)} 歲</span></div>
     <div class="feed" id="feed" aria-live="polite"></div>
-    <div class="clock">
+    <div id="sheet" hidden></div>
+    <div class="clock" id="clock">
       <div class="age" id="age">0<small>歲</small></div>
       <div class="track"><b id="bar" style="width:0"></b>${marks.map(([a,n])=>`<i style="left:${a}%"></i><em style="left:${a}%">${n}</em>`).join('')}</div>
       <div class="ctrl"><button id="pp" aria-label="暫停">⏸</button><button id="sp">1x</button></div>
     </div>`;
-  paused=false;speed=1;pendingChoices=[];cur=null;locked=false;
-  $('#pp').onclick=()=>{paused=!paused;$('#pp').textContent=paused?'▶':'⏸';$('#pp').classList.toggle('on',paused)};
-  $('#sp').onclick=()=>{speed=speed%3+1;$('#sp').textContent=SPEEDS[speed-1].n;start()};
-  start();
+  paused=false;speed=1;pending=[];cur=null;locked=false;
+  $('#pp').onclick=()=>{paused=!paused;$('#pp').textContent=paused?'▶':'⏸';$('#pp').classList.toggle('on',paused);if(!paused&&!cur&&!locked)schedule(100);else stopTicking()};
+  $('#sp').onclick=()=>{speed=speed%3+1;$('#sp').textContent=SPEEDS[speed-1].n};
   tick();
 }
 
@@ -709,46 +917,97 @@ function lifeTitle(G){
   if(F.has('career_mil')) return '保家衛國的軍人';
   if(F.has('prof')) return '教授人生';
   if(F.has('police')) return '人民保母';
+  if(F.has('boss')) return '白手起家的老闆';
   if(F.has('civil')) return '安穩的公務員人生';
-  if(F.has('shop')) return '博士咖啡店老闆';
+  if(F.has('early')&&F.has('house')) return '從學徒拚出一個家';
   if(F.has('tech')&&G.kids>=2) return '竹科工程師爸媽';
   if(F.has('tech')) return '科技業打拚的一生';
   if(F.has('abroad')&&!F.has('married')) return '說走就走的旅人';
   if(F.has('skill')) return '靠手藝吃飯的職人';
   if(G.kids>=3) return '熱鬧的大家庭';
+  if(F.has('widowed')) return '思念另一半的晚年';
   if(F.has('married')&&G.kids>0) return '平凡而完整的一生';
   if(F.has('divorced')) return '跌倒又站起來的人生';
   if(!F.has('married')) return '自在的單身人生';
   return '台灣人的一生';
 }
+function eduName(g){const F=g.flags;if(g.edu!=='none')return {uni:'大學畢業',master:'碩士',phd:'博士'}[g.edu];if(F.has('early'))return F.has('jhs')?'初中畢業':'小學畢業就出社會';return F.has('jc')?'五專畢業':F.has('voc')?'高職畢業':'高中畢業'}
+function summary(g){
+  const edu=eduName(g);
+  const bits=[edu];
+  if(g.flags.has('boss'))bits.push('當了老闆');else if(g.flags.has('tech'))bits.push('科技業');else if(g.flags.has('civil'))bits.push('公務員');else if(g.flags.has('career_mil'))bits.push('職業軍人');
+  if(g.marriedAt!=null)bits.push(`${g.marriedAt} 歲結婚`);else bits.push('沒有結婚');
+  bits.push(g.kids?`${g.kids} 個孩子`:'沒有孩子');
+  bits.push(g.flags.has('house')?'有房':'租屋');
+  return `${bits.join('、')}，享年 ${g.deathAge} 歲（${g.cause}）`;
+}
+// 平行人生：挑 3 個關鍵抉擇，換另一個選項重新活一次
+function parallelLives(){
+  const done=keySnaps.filter(s=>s.picked);
+  if(!done.length) return [];
+  // 盡量挑不同人生階段：早、中、晚各一個
+  const pickIdx=done.length<=3?done.map((_,i)=>i):[0,Math.floor(done.length/2),done.length-1];
+  return [...new Set(pickIdx)].map(i=>{
+    const s=done[i];
+    const others=['l','r','d'].filter(k=>k!==s.picked);
+    const g0=cloneG(s.snap);
+    // 找一個「結果跟你選的最不一樣」的選項
+    let alt=others[0],best=-1;
+    for(const k of others){const o=resolveOpt(g0,s.ch[k]);const n=previewChips(g0,o).length;if(n>best){best=n;alt=k}}
+    const g=cloneG(s.snap);const o=resolveOpt(g,s.ch[alt]);
+    const first=strip(applyOpt(g,o));
+    g.log=[];simulateRest(g);
+    const mine=strip(val(resolveOpt(s.snap,s.ch[s.picked]).t,s.snap));
+    const big=g.log.filter(l=>/結婚|出生了|錄取|考上|博士|碩士|科技業|老闆|創業|買了房|癌症|離婚|分手|阿公|打工度假|公務員|失業|崩盤|倒會/.test(l.t)).slice(0,4);
+    return {age:s.age,mine,alt:strip(val(o.t,g)),first,sum:summary(g),big};
+  });
+}
 function showReview(){
-  stop();
+  stopTicking();
   const F=G.flags,sex=G.sex,age=G.deathAge;
   const e=lifeExp(sex);
-  const longer=1-survival(sex,age+1); // 同性別在你之前離開的比例
-  const eduTxt={none:'高中職畢業',uni:'大學畢業',master:'碩士',phd:'博士'}[G.edu];
-  const years=G.flags.has('job')?Math.max(0,Math.min(age,65)-(G.jobAt||25)):0;
-  const income=salaryFor(G)*G.payMul*years;
+  const longer=1-survival(sex,age+1);
+  const eduTxt=eduName(G);
+  const years=F.has('job')?Math.max(0,Math.min(age,65)-(G.jobAt??25)):0;
   const items=[];
-  items.push(['享年',`${age} 歲`,`台灣${sex}性平均壽命 ${e} 歲；你比約 ${pct(longer)} 的台灣${sex}性活得久。`]);
-  items.push(['死因',G.cause,statLine('death_causes',l=>{const x=l.find(c=>cleanCause(c.cause)===G.cause);return x?`這個死因占台灣死亡人數約 ${pct(x.share)}`:''}).replace('📊 ','')]);
-  items.push(['學歷',eduTxt,statLine('higher_education',h=>`台灣約 ${pct(h.university_entry_rate)} 的人會念大學或四技`).replace('📊 ','')]);
-  if(years>0) items.push(['工作',`工作約 ${years} 年，一生薪水約 ${fmt(income/10000)} 萬`,'用台灣全年總薪資中位數、依學歷與行業粗估。']);
-  if(G.marriedAt!=null) items.push(['婚姻',`${G.marriedAt} 歲結婚${F.has('divorced')?'，後來離婚':''}`,statLine('first_marriage_age',m=>`台灣平均初婚年齡：男 ${m.male}、女 ${m.female} 歲`).replace('📊 ','')]);
-  else items.push(['婚姻',F.has('divorced')?'離過婚':'一輩子沒有結婚',(()=>{const nm=neverMarried(sex,50);return nm!=null?`台灣 50 歲出頭的${sex}性約 ${pct(nm)} 從未結婚。`:''})()]);
-  items.push(['子女',G.kids?`${G.kids} 個孩子`:'沒有孩子',statLine('fertility',f=>`台灣總生育率約 ${f.total_fertility_rate}`).replace('📊 ','')]);
-  items.push(['住房',F.has('house')?'有自己的家':'一輩子租屋',statLine('home_ownership_rate',v=>`台灣自有住宅率約 ${pct(v)}`).replace('📊 ','')]);
-  const highlights=G.log.filter(l=>/結婚|出生|孩子|錄取|考上|畢業|入伍|志願役|工作|買了房|癌症|退休|阿公|失智|離婚|分手|在一起|打工度假|車禍|詐騙/.test(l.t));
-  $('#app').innerHTML=`<div class="screen"><div class="sheet">
-    <div class="kicker">人生回顧・${esc(G.city)}出生・${G.sex}・家境${G.fam}</div>
+  items.push(['享年',`${age} 歲（${G.birthYear}～${G.birthYear+age}）`,`台灣${sex}性平均壽命 ${e} 歲；你比約 ${pct(longer)} 的台灣${sex}性活得久。`]);
+  items.push(['死因',G.cause,statLine('death_causes',l=>{const x=l.find(c=>cleanCause(c.cause)===G.cause);return x?`這個死因占台灣死亡人數約 ${pct(x.share)}`:''}).replace(/^📊 /,'')]);
+  items.push(['學歷',eduTxt,statLine('higher_education',h=>`今日台灣約 ${pct(h.university_entry_rate)} 的人會念大學或四技`).replace(/^📊 /,'')]);
+  if(years>0) items.push(['工作',`工作約 ${years} 年${F.has('boss')?'，後來當了老闆':F.has('tech')?'，在科技業':''}`,'']);
+  if(G.marriedAt!=null) items.push(['婚姻',`${G.marriedAt} 歲和${N(G,'partner')}結婚${F.has('divorced')?'，後來離婚':F.has('widowed')?'，另一半先走了':''}`,statLine('first_marriage_age',m=>`今日台灣平均初婚年齡：男 ${m.male}、女 ${m.female} 歲`).replace(/^📊 /,'')]);
+  else items.push(['婚姻',F.has('divorced')?'離過婚':'一輩子沒有結婚',(()=>{const nm=neverMarried(sex,50);return nm!=null?`今日台灣 50 歲出頭的${sex}性約 ${pct(nm)} 從未結婚。`:''})()]);
+  items.push(['子女',G.kids?`${G.kids} 個孩子：${G.kidNames.join('、')}`:'沒有孩子',statLine('fertility',f=>`今日台灣總生育率約 ${f.total_fertility_rate}`).replace(/^📊 /,'')]);
+  items.push(['住房',F.has('house')?'有自己的家':'一輩子租屋',statLine('home_ownership_rate',v=>`今日台灣自有住宅率約 ${pct(v)}`).replace(/^📊 /,'')]);
+  // 重要的人
+  const people=[];
+  G.parents.forEach(p=>people.push({ic:p.sex==='女'?'👩':'👨',n:p.name,s:p.dead?`在你 ${p.deadAt} 歲時過世，享年 ${p.age0+p.deadAt} 歲`:'比你長壽'}));
+  const C=G.chars,icon={friend:'🧒',crush:'💌',partner:'💍',ally:'🦸',colleague:'💼',ex:'💔'};
+  for(const c of Object.values(C)){
+    if(!c)continue;
+    let s=c.rel+`，${c.metAt} 歲認識`;
+    if(c.role==='friend')s=`從小學就認識的好朋友${(c.bond||0)>=2?'，你們感情一直很好':''}`;
+    if(c.role==='crush')s=G.flags.has('crushpartner')?'初戀，後來成了你的另一半':'14 歲時的初戀';
+    if(c.role==='partner')s=G.flags.has('divorced')?`前任配偶，${c.metAt} 歲認識`:G.flags.has('married')||G.flags.has('widowed')?`你的另一半，${c.metAt} 歲認識`:`交往的對象，${c.metAt} 歲認識`;
+    if(c.role==='ally')s='國中時被你保護過的同學';
+    if(c.dead)s+=`；在你 ${c.deadAt} 歲時過世`;
+    people.push({ic:icon[c.role]||'🙂',n:c.name,s});
+  }
+  G.kidNames.forEach(n=>people.push({ic:'👶',n,s:'你的孩子'}));
+  const alts=parallelLives();
+  const highlights=G.log.filter(l=>/結婚|出生了|孩子|錄取|考上|畢業|入伍|志願役|正職|買了房|癌症|退休|阿公|失智|離婚|分手|在一起|打工度假|車禍|詐騙|過世|📰|創業|老闆/.test(l.t));
+  $('#app').innerHTML=`<div class="screen"><div class="panel">
+    <div class="kicker">人生回顧・${G.birthYear} 年生・${esc(G.city)}・${G.sex}・家境${G.fam}</div>
     <h1>${age} 歲的一生</h1>
     <span class="title-badge">${lifeTitle(G)}</span>
     <ul class="cmp">${items.map(([k,v,s])=>`<li><b>${k}</b><span>${esc(v)}${s?`<small>${esc(s)}</small>`:''}</span></li>`).join('')}</ul>
     <div class="btns"><button class="big" id="again">再活一次</button></div>
     <div class="btns"><button class="big ghost" id="srcb">資料來源</button></div>
   </div>
-  <div class="sheet"><h2>人生大事</h2><ol class="timeline">${highlights.map(l=>`<li><span class="y">${l.age}</span><span>${esc(l.t)}</span></li>`).join('')}</ol></div>
-  <div class="sheet"><h2>你做過的選擇</h2><ol class="timeline">${(G.choices||[]).map(l=>`<li><span class="y">${l.age}</span><span>${esc(l.t)}</span></li>`).join('')}</ol></div>
+  ${alts.length?`<div class="panel"><h2>平行人生</h2><p class="small">如果在關鍵時刻選了另一條路，另一個你會怎麼過？（之後的選擇隨機，每次看都可能不一樣）</p>
+    ${alts.map(a=>`<div class="alt"><div class="q">${a.age} 歲，你選了「${esc(a.mine)}」。如果選了 <b>「${esc(a.alt)}」</b>⋯⋯</div><div class="sum">${esc(a.sum)}</div>${a.big.length?`<ul>${a.big.map(b=>`<li>${b.age} 歲：${esc(b.t)}</li>`).join('')}</ul>`:''}</div>`).join('')}</div>`:''}
+  <div class="panel"><h2>這一生重要的人</h2><ul class="people">${people.map(p=>`<li><span class="ic">${p.ic}</span><span><b>${esc(p.n)}</b><small>${esc(p.s)}</small></span></li>`).join('')}</ul></div>
+  <div class="panel"><h2>人生大事</h2><ol class="timeline">${highlights.map(l=>`<li><span class="y">${l.age}</span><span>${esc(l.t)}</span></li>`).join('')}</ol></div>
+  <div class="panel"><h2>你做過的選擇</h2><ol class="timeline">${G.choices.map(l=>`<li><span class="y">${l.age}</span><span>${esc(l.t)}</span></li>`).join('')}</ol></div>
   </div>`;
   const html=$('#app').innerHTML;
   const bind=()=>{$('#again').onclick=showIntro;$('#srcb').onclick=()=>showSources(()=>{$('#app').innerHTML=html;bind()})};
@@ -756,20 +1015,36 @@ function showReview(){
 }
 
 const EXTRA_SOURCES=[
- {t:'民法成年年齡 18 歲（2023 年 1 月 1 日起）',s:'中央社',u:'https://www.cna.com.tw/news/firstnews/202008130111.aspx'},
- {t:'義務役 1 年（94 年次以後出生）；替代役只保留家庭、宗教因素',s:'公視新聞',u:'https://news.pts.org.tw/article/616470'},
+ {t:'義務役：1956 年起陸軍 2 年、海空軍 3 年；83～93 年次 4 個月軍事訓練；94 年次以後 1 年',s:'公視新聞、高雄市政府兵役資料',u:'https://news.pts.org.tw/article/616470'},
+ {t:'九年國民義務教育在 1968 年實施，之前小學畢業要考初中',s:'維基百科：九年國民義務教育',u:'https://zh.wikipedia.org/wiki/九年國民義務教育'},
+ {t:'大學聯考在 2002 年廢除，改成多元入學',s:'維基百科：大學聯考',u:'https://zh.wikipedia.org/wiki/大學聯考'},
+ {t:'國中基測（2001～2013）、國中教育會考（2014 起）',s:'維基百科：國民中學學生基本學力測驗、國中教育會考',u:'https://zh.wikipedia.org/wiki/國中教育會考'},
  {t:'學測在高三寒假（1 月）、統測 4 月底～5 月初',s:'大學問',u:'https://www.unews.com.tw/News/Info/10307'},
+ {t:'總生育率：1951 年約 7.04，2010 年 0.895（歷史低點）',s:'中央社',u:'https://www.cna.com.tw/project/20210114-birth-rate/'},
+ {t:'1971 年聯合國大會第 2758 號決議',s:'維基百科',u:'https://zh.wikipedia.org/wiki/聯合國大會第2758號決議'},
+ {t:'1973 年石油危機',s:'維基百科',u:'https://zh.wikipedia.org/wiki/1973年石油危機'},
+ {t:'十大建設（1970 年代），中山高速公路',s:'維基百科',u:'https://zh.wikipedia.org/wiki/中山高速公路'},
+ {t:'1949 年戒嚴令、1987 年解嚴',s:'維基百科：臺灣省戒嚴令',u:'https://zh.wikipedia.org/wiki/臺灣省戒嚴令'},
+ {t:'1996 年第一次總統直選（3 月 23 日）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/1996年中華民國總統選舉'},
+ {t:'921 大地震（1999 年 9 月 21 日，震央南投集集）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/九二一大地震'},
+ {t:'2003 年 SARS',s:'維基百科',u:'https://zh.wikipedia.org/wiki/嚴重急性呼吸道症候群'},
+ {t:'台灣高鐵（2007 年通車）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/台灣高速鐵路'},
+ {t:'2008 年金融海嘯',s:'維基百科',u:'https://zh.wikipedia.org/wiki/2008年環球金融危機'},
+ {t:'2009 年莫拉克颱風（八八水災）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/莫拉克颱風'},
+ {t:'22K（大學畢業起薪）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/22K'},
+ {t:'COVID-19 台灣疫情（2020～）',s:'維基百科',u:'https://zh.wikipedia.org/wiki/2019冠狀病毒病臺灣疫情'},
  {t:'打工度假年齡 18～30 歲',s:'104 職場力（整理外交部規定）',u:'https://blog.104.com.tw/work-and-travel-japan/'},
+ {t:'民法成年年齡 18 歲（2023 年 1 月 1 日起，之前是 20 歲）',s:'中央社',u:'https://www.cna.com.tw/news/firstnews/202008130111.aspx'},
  {t:'免費成人健檢：40～64 歲每 3 年一次',s:'TVBS 健康 2.0（國健署）',u:'https://health.tvbs.com.tw/medical/353395'},
  {t:'撥 1966 申請長照服務',s:'聯合報',u:'https://udn.com/news/story/7243/9468536'},
  {t:'年滿 65 歲雇主可以強制退休',s:'勞動基準法第 54 條',u:''},
 ];
-const LABEL={population_by_city:'各縣市人口比例（決定出生地）',sex_ratio_at_birth:'出生性別比（決定性別）',life_table:'簡易生命表：每個年齡的死亡機率',life_expectancy:'平均壽命',death_causes:'十大死因',senior_high_tracks:'高一新生就讀類型比例',higher_education:'大學升學率',first_marriage_age:'平均初婚年齡',never_married_by_age:'各年齡層未婚比例（決定遇到另一半的機率）',divorce:'結婚與離婚對數',fertility:'生育率與生第一胎年齡',salary:'薪資（中位數、起薪、基本工資）',unemployment_rate:'失業率',home_ownership_rate:'自有住宅率',house_price_per_ping_by_city:'各縣市每坪房價',fraud:'詐騙案件數與損失',traffic_deaths_per_year:'交通事故死亡人數',cancer:'癌症新發人數（癌症時鐘）',pets_household_share:'家庭養寵物比例',dementia_or_longterm_care:'失智症盛行率'};
+const LABEL={population_by_city:'各縣市人口比例（決定出生地）',sex_ratio_at_birth:'出生性別比（決定性別）',life_table:'簡易生命表：每個年齡的死亡機率（所有年代都用最新一年）',life_expectancy:'平均壽命',death_causes:'十大死因',senior_high_tracks:'高一新生就讀類型比例',higher_education:'大學升學率',first_marriage_age:'平均初婚年齡',never_married_by_age:'各年齡層未婚比例（決定遇到另一半的機率）',divorce:'結婚與離婚對數',fertility:'生育率與生第一胎年齡（決定爸媽生你的年紀）',salary:'薪資（中位數、起薪、基本工資）',unemployment_rate:'失業率',home_ownership_rate:'自有住宅率',house_price_per_ping_by_city:'各縣市每坪房價',fraud:'詐騙案件數與損失',traffic_deaths_per_year:'交通事故死亡人數',cancer:'癌症新發人數（癌症時鐘）',pets_household_share:'家庭養寵物數量',dementia_or_longterm_care:'失智症盛行率'};
 function showSources(back){
   const rows=Object.keys(LABEL).filter(k=>DATA[k]).map(k=>{const s=srcOf(k);return `<li>${esc(LABEL[k])}（${esc(s.year||'')}）${s.estimate?'・<b>估計值</b>':''}<br><span class="small">${esc(s.source||'')}${s.note?'：'+esc(s.note):''}</span>${s.url?`<br><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a>`:''}</li>`});
-  $('#app').innerHTML=`<div class="screen"><div class="sheet">
+  $('#app').innerHTML=`<div class="screen"><div class="panel">
     <h2>資料來源</h2>
-    <p class="small">事件發生的機率、壽命、回顧裡的比較，都是用下面的官方統計算出來的。劇情文字和選項結果是遊戲設計。</p>
+    <p class="small">事件發生的機率、壽命、回顧裡的比較，是用下面的官方統計算出來的；年代、考試制度、兵役和歷史事件依下面的資料。劇情文字、人物和選項結果是遊戲設計。舊年代也套用今日的生命表與死因，屬於簡化。</p>
     <ol class="src">${rows.join('')}${EXTRA_SOURCES.map(s=>`<li>${esc(s.t)}<br><span class="small">${esc(s.s)}</span>${s.u?`<br><a href="${s.u}" target="_blank" rel="noopener">${esc(s.u)}</a>`:''}</li>`).join('')}</ol>
     ${MISSING.size?`<p class="small">缺少的資料（暫用粗估值）：${[...MISSING].map(k=>LABEL[k]||k).join('、')}</p>`:''}
     <div class="btns"><button class="big" id="back">返回</button></div>
@@ -778,9 +1053,8 @@ function showSources(back){
 }
 
 addEventListener('keydown',e=>{
-  if(!cur) return;
-  const k={ArrowLeft:'l',ArrowRight:'r',ArrowDown:'d'}[e.key];
-  if(k){e.preventDefault();choose(k)}
+  if(cur){const k={ArrowLeft:'l',ArrowRight:'r',ArrowDown:'d'}[e.key];if(k){e.preventDefault();choose(k)}return}
+  if((e.key==='Enter'||e.key===' ')&&$('#cont')){e.preventDefault();$('#cont').click()}
 });
 
 showIntro();
