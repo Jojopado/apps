@@ -51,6 +51,10 @@ body{background:var(--desk);color:var(--ink);font-family:var(--font-b);overflow:
 .meter strong.ok{color:var(--good)}
 .stage{flex:1;position:relative;min-height:0;border-radius:14px;overflow:hidden;background:var(--mat)}
 #mat{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.zoom{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.zoom button{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(14,30,24,.72);color:#F2EFE4;font:600 18px var(--font-b);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.zoom button:active{background:rgba(14,30,24,.9)}
+.zoom button span{font-size:11px;font-weight:500}
 .coach{position:absolute;left:12px;right:12px;top:10px;color:#F2EFE4;font-size:13px;line-height:1.5;
   background:rgba(14,30,24,.6);padding:8px 10px;border-radius:8px;pointer-events:none}
 .hud{position:absolute;left:10px;right:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
@@ -157,6 +161,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <div class="coach" id="coach" hidden></div>
     <div class="step" id="stepCard" hidden></div>
     <div class="hud" id="hud" hidden></div>
+    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button></div>
     <div class="readout" id="readout">150 × 150 mm 標準紙</div>
     <div class="toast" id="toast" hidden></div>
   </div>
@@ -714,7 +719,7 @@ const R=R2;
 /* 步驟資料：s 拖到 t；type 谷摺/山摺/摺痕/外翻/內翻；scope all 全部層、flap 只摺手指下那一片；flip 翻面；rot 逆時針轉 90°；free = 沒有精確對齊點
    基本功與小狗/天鵝/企鵝的步驟由模擬產生（照下面標的教學網站摺法），座標精確到吸附點 */
 const PRO={"l1":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"谷摺：把上面的角拖到下面的角。摺線在手指和目標的正中間，翻過去的那半疊在上面。"},{"s":[1.414213562373,0],"t":[0,-1.414213562373],"type":"mountain","scope":"all","text":"山摺：切成「山摺」，把右邊的角摺到紙的背後，對齊下面的角。"}],"l2":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"摺了再打開：切成「摺痕」，左角對右角摺一下再打開，留下一條直的中線。"},{"s":[-1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"邊對摺痕：把左下的邊摺到中線上。拖左邊的角，會吸到中線上剛好的位置。"},{"s":[1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"右邊也一樣。這就是「風箏基本型」，天鵝和很多動物都從這裡開始。"}],"l3":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"先摺成三角形，現在下面的角有兩層。"},{"s":[0,-1.414213562373],"t":[0,0],"type":"valley","scope":"flap","text":"只摺一片：切成「這一片」，把最上面那層的角摺到上緣中點，下面那層不動，所以會露出兩種顏色。"}],"l4":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"摺成三角形。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"valley","scope":"all","text":"左角對右角對摺，前後兩半疊在一起。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"outside","scope":"all","text":"外翻摺：切成「外翻摺」，把下面的尖角往上翻。前後兩半各自往外包住身體，翻上來的尖角看得到，露出紙的內側顏色。鳥頭、企鵝頭常用。"}],"l5":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"摺成三角形。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"valley","scope":"all","text":"左角對右角對摺。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"inside","scope":"all","text":"內翻摺：切成「內翻摺」，同一條線，這次尖角往前後兩半的中間塞進去，從外面看尖角消失了。尾巴、腳、鳥嘴常用。"}],"dog":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"上角摺到下角，摺成三角形（長邊在上）。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"左角對右角輕輕摺一下再打開，這條中線是耳朵的對齊線。"},{"s":[-1.414213562373,0],"t":[-0.989949493661,-0.848528137424],"type":"valley","scope":"all","text":"左耳：把左上角往下摺，摺線從離中線約 1/4 的地方開始，讓耳朵垂到臉外面。"},{"s":[1.414213562373,0],"t":[0.989949493661,-0.848528137424],"type":"valley","scope":"all","text":"右耳：照左耳對稱地摺下來。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"valley","scope":"flap","text":"口鼻：只把最上面那層的下角往上摺，露出白色的口鼻。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"mountain","scope":"all","text":"下巴：剩下的下角往後摺進去，下巴就平了。"}],"swan":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"白色面朝上擺成菱形，左右對摺再打開，留下直的中線。"},{"s":[-1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"左下的邊摺到中線。"},{"s":[1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"右下的邊也摺到中線，完成風箏基本型。"},{"flip":true,"text":"整張翻面。"},{"s":[-0.828427124746,0.585786437627],"t":[0,0.750570838212],"type":"valley","scope":"all","text":"下面的左邊再摺到中線一次（壓住下層，別讓它滑開）。"},{"s":[0.828427124746,0.585786437627],"t":[0,0.750570838212],"type":"valley","scope":"all","text":"右邊也再摺到中線，變成細長的尖角。"},{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"下面的尖角往上摺到上面的角，這是脖子。"},{"rot":true,"text":"逆時針轉 90°。"},{"s":[-1.414213562373,0],"t":[-1.0,0],"type":"valley","scope":"flap","text":"頭：只把最上面那片（脖子）的尖角往右摺一小段。"},{"s":[-0.944947291833,0.46926627054],"t":[-0.944947291833,-0.46926627054],"type":"mountain","scope":"all","text":"上半往後摺，整隻對摺。"},{"s":[-1.414213562373,0],"t":[-0.338136511972,1.120407228335],"type":"outside","scope":"flap","text":"把脖子往上拉出來壓平（外翻摺，只動脖子那一片）。"}],"penguin":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"彩色面朝上擺成菱形，左右對摺再打開。"},{"flip":true,"text":"翻面，白色朝上。"},{"s":[-1.414213562373,0],"t":[-0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"左上的邊往中線摺，但不要摺到中線，留一點空隙（位置可以自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"右上的邊也一樣，跟左邊留一樣寬的空隙。","free":true},{"flip":true,"text":"再翻面。"},{"s":[-0.92554138225,-0.488672180123],"t":[-0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"左邊的角往內摺。"},{"s":[0.92554138225,-0.488672180123],"t":[0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"右邊的角往內摺。"},{"s":[0,-1.414213562373],"t":[0.0,-0.491793990436],"type":"valley","scope":"all","text":"下面的角往上摺，對齊兩邊摺片的下緣。"},{"s":[0.614946381291,-0.799267181082],"t":[-0.614946381291,-0.799267181082],"type":"mountain","scope":"all","text":"沿著第 1 步的中線往後對摺。"},{"s":[-0.0,1.414213562373],"t":[0.434074746199,0.840141261516],"type":"outside","scope":"all","text":"頭：把上面的尖角用外翻摺往前彎下來。"}]};
-PRO.pumpkin=[{"s":[-1,0],"t":[1,0],"type":"crease","scope":"all","text":"〔原第 1 步〕白色面朝上，左右對摺再打開，留下中線。"},{"s":[-1,1],"t":[0,0],"type":"valley","scope":"all","text":"〔原第 2 步〕左上角摺到正中央，上緣的左半邊會貼齊中線。"},{"s":[1,1],"t":[0,0],"type":"valley","scope":"all","text":"〔原第 2 步〕右上角也摺到正中央。"},{"s":[-1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"〔原第 3 步〕左邊的斜邊再摺到中線一次（拖左邊的角，會吸到中線上剛好的位置）。"},{"s":[1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"〔原第 3 步〕右邊的斜邊也摺到中線。"},{"s":[-0.707106781187,-1.12132034356],"t":[-0.707106781187,-0.87867965644],"type":"valley","scope":"all","text":"〔原第 4 步〕底下凸出來的兩個小角往上摺（同一條線，一次摺兩個）。"},{"s":[0,-1],"t":[-0.171572875254,-0.585786437627],"type":"valley","scope":"all","text":"〔原第 5 步〕右半邊的下緣往上摺，疊到左邊橘色和白色的交界線上（轉軸是白色三角形的左下角）。"},{"s":[0.242640687119,-0.656854249492],"t":[-0.242640687119,-0.656854249492],"type":"crease","scope":"flap","text":"〔原第 6 步〕只在剛摺上來的那片壓一條直的摺痕：切成「摺痕」和「這一片」，沿中線對摺再打開。"},{"s":[-0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap","text":"〔原第 7 步〕把第 5 步打開：切成「這一片」，把那片拖回原位。"},{"s":[0,-1],"t":[0.171572875254,-0.585786437627],"type":"valley","scope":"all","text":"〔原第 8 步〕左邊重複第 5 步：左半邊的下緣往上摺，疊到右邊的交界線上。"},{"s":[-0.242640687119,-0.656854249492],"t":[0.242640687119,-0.656854249492],"type":"crease","scope":"flap","text":"〔原第 9 步〕重複第 6 步：在左邊這片也壓一條中線摺痕。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,225,270],"layerFrom":"ref","s":[0.828427124746,-1],"t":[0.414213562373,0],"text":"〔原第 10 步〕把下面那片輕輕打開，沿第 5 步的摺痕把右下角往上摺。中間有一部分會跟著轉到左邊。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,270,315],"layerFrom":"cur","s":[-0.171572875254,-0.585786437627],"t":[0.171572875254,-0.585786437627],"text":"〔原第 11 步〕剛剛轉到左邊的那一小片，沿現有的摺痕翻到右邊。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,202.5,225,315,337.5],"layerFrom":"ref","s":[0,-0.414213562373],"t":[0.242640687119,-0.514718625761],"text":"〔原第 12 步〕左邊也做一樣的動作，然後把中間那片擠壓摺壓平：沿著摺痕對準中線，兩邊的白色牙齒就會露出來。"},{"s":[0.414213562373,0],"t":[0.097056274848,-0.365685424949],"type":"valley","scope":"flap","text":"〔原第 13 步〕右眼：把右邊那片上面的角往左下摺，角的白色會露出來。"},{"s":[-0.414213562373,0],"t":[-0.097056274848,-0.365685424949],"type":"valley","scope":"flap","text":"〔原第 14 步〕左眼：左邊也一樣。"},{"flip":true,"text":"〔原第 15 步〕整個翻面。"},{"s":[0,1],"t":[0,-1],"type":"valley","scope":"all","text":"〔原第 16 步〕上面的尖角往下摺，摺線在正中間那條水平線，尖角會凸出下緣。這一摺決定南瓜的形狀。"},{"s":[0,-1],"t":[0,0.313708498985],"type":"valley","scope":"flap","text":"〔原第 17 步〕把凸出來的尖角往上摺，讓它凸出上緣，這是蒂頭。"},{"s":[-0.414213562373,0],"t":[-0.300828459816,-0.082120755709],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：左上的角往內摺一點（位置自己決定）。","free":true},{"s":[0.414213562373,0],"t":[0.300828459816,-0.082120755709],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：右上的角往內摺一點（位置自己決定）。","free":true},{"s":[-0.62132034356,-0.5],"t":[-0.488054471146,-0.457102363122],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：左邊的角往內摺一點（位置自己決定）。","free":true},{"s":[0.62132034356,-0.5],"t":[0.488054471146,-0.457102363122],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：右邊的角往內摺一點（位置自己決定）。","free":true},{"s":[0,-0.757359312881],"t":[0,-0.617359312881],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：下面的角往內摺一點（位置自己決定）。","free":true},{"flip":true,"text":"〔原第 19 步〕翻回正面，南瓜燈完成！（原教學第 20、21 步是捏細、彎曲蒂頭的立體塑形，平面模擬省略。）"}];
+PRO.pumpkin=[{"s":[-1,0],"t":[1,0],"type":"crease","scope":"all","text":"〔原第 1 步〕白色面朝上，左右對摺再打開，留下中線。"},{"s":[-1,1],"t":[0,0],"type":"valley","scope":"all","text":"〔原第 2 步〕左上角摺到正中央，上緣的左半邊會貼齊中線。"},{"s":[1,1],"t":[0,0],"type":"valley","scope":"all","text":"〔原第 2 步〕右上角也摺到正中央。"},{"s":[-1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"〔原第 3 步〕左邊的斜邊再摺到中線一次（拖左邊的角，會吸到中線上剛好的位置）。"},{"s":[1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"〔原第 3 步〕右邊的斜邊也摺到中線。"},{"s":[-0.707106781187,-1.12132034356],"t":[-0.707106781187,-0.87867965644],"type":"valley","scope":"all","text":"〔原第 4 步〕底下凸出來的兩個小角往上摺（同一條線，一次摺兩個）。"},{"s":[0,-1],"t":[-0.171572875254,-0.585786437627],"type":"valley","scope":"all","text":"〔原第 5 步〕右半邊的下緣往上摺，疊到左邊橘色和白色的交界線上（轉軸是白色三角形的左下角）。"},{"s":[0.242640687119,-0.656854249492],"t":[-0.242640687119,-0.656854249492],"type":"crease","scope":"flap","text":"〔原第 6 步〕只在剛摺上來的那片壓一條直的摺痕：切成「摺痕」和「這一片」，沿中線對摺再打開。"},{"s":[-0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap","text":"〔原第 7 步〕把第 5 步打開：剛剛摺上來的那片要翻回下面。按住那片的尖角（交界線上那一點），往下拖回它原本的位置（下緣正中央），放開就打開了。切成「這一片」，只動那一片。"},{"s":[0,-1],"t":[0.171572875254,-0.585786437627],"type":"valley","scope":"all","text":"〔原第 8 步〕左邊重複第 5 步：左半邊的下緣往上摺，疊到右邊的交界線上。"},{"s":[-0.242640687119,-0.656854249492],"t":[0.242640687119,-0.656854249492],"type":"crease","scope":"flap","text":"〔原第 9 步〕重複第 6 步：在左邊這片也壓一條中線摺痕。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,225,270],"layerFrom":"ref","s":[0.828427124746,-1],"t":[0.414213562373,0],"text":"〔原第 10 步〕把下面那片輕輕打開，沿第 5 步的摺痕把右下角往上摺。中間有一部分會跟著轉到左邊。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,270,315],"layerFrom":"cur","s":[-0.171572875254,-0.585786437627],"t":[0.171572875254,-0.585786437627],"text":"〔原第 11 步〕剛剛轉到左邊的那一小片，沿現有的摺痕翻到右邊。"},{"vertex":true,"prep":[{"s":[0.171572875254,-0.585786437627],"t":[0,-1],"type":"valley","scope":"flap"}],"X":[0,-0.757359312881],"rays":[22.5,157.5,202.5,225,315,337.5],"layerFrom":"ref","s":[0,-0.414213562373],"t":[0.242640687119,-0.514718625761],"text":"〔原第 12 步〕左邊也做一樣的動作，然後把中間那片擠壓摺壓平：沿著摺痕對準中線，兩邊的白色牙齒就會露出來。"},{"s":[0.414213562373,0],"t":[0.097056274848,-0.365685424949],"type":"valley","scope":"flap","text":"〔原第 13 步〕右眼：把右邊那片上面的角往左下摺，角的白色會露出來。"},{"s":[-0.414213562373,0],"t":[-0.097056274848,-0.365685424949],"type":"valley","scope":"flap","text":"〔原第 14 步〕左眼：左邊也一樣。"},{"flip":true,"text":"〔原第 15 步〕整個翻面。"},{"s":[0,1],"t":[0,-1],"type":"valley","scope":"all","text":"〔原第 16 步〕上面的尖角往下摺，摺線在正中間那條水平線，尖角會凸出下緣。這一摺決定南瓜的形狀。"},{"s":[0,-1],"t":[0,0.313708498985],"type":"valley","scope":"flap","text":"〔原第 17 步〕把凸出來的尖角往上摺，讓它凸出上緣，這是蒂頭。"},{"s":[-0.414213562373,0],"t":[-0.300828459816,-0.082120755709],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：左上的角往內摺一點（位置自己決定）。","free":true},{"s":[0.414213562373,0],"t":[0.300828459816,-0.082120755709],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：右上的角往內摺一點（位置自己決定）。","free":true},{"s":[-0.62132034356,-0.5],"t":[-0.488054471146,-0.457102363122],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：左邊的角往內摺一點（位置自己決定）。","free":true},{"s":[0.62132034356,-0.5],"t":[0.488054471146,-0.457102363122],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：右邊的角往內摺一點（位置自己決定）。","free":true},{"s":[0,-0.757359312881],"t":[0,-0.617359312881],"type":"valley","scope":"all","text":"〔原第 18 步〕修圓角：下面的角往內摺一點（位置自己決定）。","free":true},{"flip":true,"text":"〔原第 19 步〕翻回正面，南瓜燈完成！（原教學第 20、21 步是捏細、彎曲蒂頭的立體塑形，平面模擬省略。）"}];
 const LESSONS=[
   {id:'l1', name:'谷摺與山摺', start:'diamond', color:'#F4C93A', sym:'valley', steps:PRO.l1,
     learn:'谷摺：紙往你這邊摺，摺痕凹下去像山谷，圖上畫虛線。山摺：往背後摺，摺痕凸起來像山，圖上畫點虛線。'},
@@ -823,13 +828,19 @@ function resize(){
 new ResizeObserver(resize).observe(cv);
 
 function baseScale(){ return Math.min(W, H)/3.2; }
+let userZoom=false;
 function fitView(snap){
   if(!W) return;
+  if(userZoom && !snap) return;
   const b=bbox(paper), pad=48, w=Math.max(b.x1-b.x0,.2), h=Math.max(b.y1-b.y0,.2);
   const s=Math.min((W-pad*2)/w, (H-pad*2)/h, baseScale()*2.2);
   viewT={s, cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2};
   if(snap) view={...viewT};
   kick();
+}
+function zoomAt(factor,X,Y){
+  const w=toWorld(X,Y), s2=Math.max(baseScale()*.5, Math.min(baseScale()*16, view.s*factor));
+  view={s:s2, cx:w[0]-(X-W/2)/s2, cy:w[1]+(Y-H/2)/s2}; viewT={...view}; userZoom=true; draw();
 }
 const toScreen=(q,V=view)=>[W/2+(q[0]-V.cx)*V.s, H/2-(q[1]-V.cy)*V.s];
 const toWorld=(X,Y,V=view)=>[(X-W/2)/V.s+V.cx, -(Y-H/2)/V.s+V.cy];
@@ -971,6 +982,8 @@ function drawOverlays(c,V){
   if(h && h.vertex && !anim && !alive && !(drag&&drag.compound)) drawArrow(c,h.s,h.t,V,HINT);
   if(drag && drag.compound) drawArrow(c,drag.s,drag.t,V,GUIDE);
   if(h && h.s && !h.vertex && hintOn && !anim && !alive){
+    if(!h.ghost) h.ghost=foldByPoints(paper,h.s,h.t,{type:h.type,scope:h.scope,preview:true})||{res:{facets:[]}};
+    for(const f of h.ghost.res.facets) if(f.moved){ pathPoly(c,f.pts,V); c.save(); c.fillStyle='rgba(143,219,255,.16)'; c.fill(); c.setLineDash([6,5]); c.lineWidth=1.6; c.strokeStyle='rgba(143,219,255,.95)'; c.stroke(); c.restore(); }
     const fl=foldLine(h.s,h.t); drawLineAcross(c,fl.P,fl.n,V,HINT,TYPES[h.type].dash); drawArrow(c,h.s,h.t,V,HINT);
     if(h.type==='crease') drawArrow(c,h.t,h.s,V,'rgba(143,219,255,.55)');
   }
@@ -1020,24 +1033,45 @@ function drawPet(canvas,facets,color,face){
 
 /* ---- 摺紙操作 ---- */
 function evPos(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+const ptrs=new Map(); let pinch=null;
+function pinchInfo(){ const [a,b]=[...ptrs.values()]; return {d:Math.hypot(a[0]-b[0],a[1]-b[1])||1, m:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; }
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const [X,Y]=evPos(e); zoomAt(e.deltaY<0?1.15:1/1.15,X,Y); },{passive:false});
+cv.addEventListener('pointerdown',e=>{ ptrs.set(e.pointerId,evPos(e));
+  if(ptrs.size===2){ drag=null; $('hud').hidden=true; const pi=pinchInfo(); pinch={d0:pi.d, s0:view.s, w:toWorld(pi.m[0],pi.m[1])}; try{ try{ cv.setPointerCapture(e.pointerId); }catch(_){} }catch(_){} draw(); return; }
+  if(ptrs.size>2) return;
+},true);
+cv.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,evPos(e));
+  if(pinch && ptrs.size>=2){ e.stopImmediatePropagation(); const pi=pinchInfo(), s2=Math.max(baseScale()*.5, Math.min(baseScale()*16, pinch.s0*pi.d/pinch.d0));
+    view={s:s2, cx:pinch.w[0]-(pi.m[0]-W/2)/s2, cy:pinch.w[1]+(pi.m[1]-H/2)/s2}; viewT={...view}; userZoom=true; draw(); }
+},true);
+const endPtr=e=>{ ptrs.delete(e.pointerId); if(pinch){ e.stopImmediatePropagation(); if(ptrs.size<2) pinch=null; } };
+cv.addEventListener('pointerup',endPtr,true); cv.addEventListener('pointercancel',endPtr,true);
+$('zIn').onclick=()=>zoomAt(1.6,W/2,H/2);
+$('zOut').onclick=()=>zoomAt(1/1.6,W/2,H/2);
+$('zFit').onclick=()=>{ userZoom=false; fitView(false); };
 cv.addEventListener('pointerdown',e=>{
-  if(anim || !paper) return;
+  if(anim || !paper || pinch || ptrs.size>1) return;
   const [X,Y]=evPos(e), f=toWorld(X,Y);
   if(stickerMode){ placeSticker(f); return; }
   const h=hintCache;
   if(h && h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
     const out=vertexFold(paper, lv.steps[h.i]);
-    if(out){ cv.setPointerCapture(e.pointerId); drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1};
+    if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1};
       $('coach').hidden=true; hideToast(); draw(); return; }
   }
   const points=snapPoints(paper);
-  let s=null, bd=30/view.s;
-  for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
+  let follow=null;
+  if(h && h.s && !h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<40){
+    follow=h;
+    if(h.type!==foldType || h.scope!==scope){ setType(h.type); setScope(h.scope); showToast(`照提示：已切成「${TYPES[h.type].name}・${h.scope==='flap'?'這一片':'全部層'}」`); }
+  }
+  let s=follow?follow.s:null, bd=30/view.s;
+  if(!follow) for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
   if(!s){ if(topAt(paper,f[0],f[1])) s=f; else return; }
-  cv.setPointerCapture(e.pointerId);
+  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
-  drag={s, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free'};
+  drag={s, follow, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free'};
   $('coach').hidden=true; hideToast();
   updateDrag(X,Y);
 });
@@ -1064,7 +1098,8 @@ function updateDrag(X,Y){
   const f=toWorld(X,Y), s=view.s/Math.max(drag.gain,.35); drag.f=f;   // 微調時吸附範圍跟著變小
   let t=null, kind='free', bd=Infinity, major=false;
   const dist=q=>Math.hypot(q[0]-f[0], q[1]-f[1]);
-  for(const sp of drag.points){ const d=dist(sp.p)-(sp.major?5/s:0); if(d<24/s && d<bd){ bd=d; t=sp.p; kind='pt'; major=sp.major; } }
+  if(drag.follow && dist(drag.follow.t)*view.s<40){ t=drag.follow.t; kind='pt'; major=true; bd=-1; }
+  if(bd>=0) for(const sp of drag.points){ const d=dist(sp.p)-(sp.major?5/s:0); if(d<24/s && d<bd){ bd=d; t=sp.p; kind='pt'; major=sp.major; } }
   if(!t) for(const q of drag.lines){ const d=dist(q); if(d<15/s && d<bd){ bd=d; t=q; kind='line'; } }
   if(!t) for(const [a,b] of drag.edges){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy; if(L2<1e-12) continue;
     const u=Math.max(0,Math.min(1,((f[0]-a[0])*dx+(f[1]-a[1])*dy)/L2)), q=[a[0]+dx*u, a[1]+dy*u], d=dist(q);
@@ -1181,7 +1216,7 @@ function renderStepCard(){
       if(h.free) chips+=`<span class="chip">位置自己決定</span>`;
     }
     chips+=`<button class="x" type="button" id="stepX">${stepCollapsed?'展開':'收起'}</button>`;
-    el.innerHTML=`<div class="chips">${chips}</div>`+(stepCollapsed?'':`<div>${st.text}</div>`);
+    el.innerHTML=`<div class="chips">${chips}</div>`+(stepCollapsed?'':`<div>${st.text}</div>`+(hintOn&&!h.flip&&!h.rot&&!h.vertex?`<div style="font-size:12px;color:#5C6563">藍色圓圈按住 → 拖到箭頭尖端放開；藍色虛線框是摺好後那片的位置。</div>`:''));
   }
   el.hidden=false;
   el.querySelectorAll('[data-set-type]').forEach(b=>b.onclick=()=>setType(b.dataset.setType));
@@ -1198,7 +1233,7 @@ $('hint').onclick=()=>{
   if(h.vertex){ showToast(`第 ${h.i+1} 步是複合摺：好幾條摺痕一起動。從圓圈沿箭頭拖到終點就會摺好`); return; }
   hintOn=!hintOn;
   if(hintOn) showToast(`第 ${h.i+1} 步：從圓圈拖到箭頭（${TYPES[h.type].name}・${h.scope==='flap'?'只摺這一片':'全部層'}）`);
-  draw();
+  renderStepCard(); draw();
 };
 
 /* ---- 工具列 ---- */
@@ -1354,7 +1389,7 @@ function loadAnimal(a,color){
   if(!a.free) drawPet($('thumb'), target.facets, color, null);
   $('hintLbl').textContent=a.free?'完成':'提示';
   $('hint').classList.toggle('go',!!a.free);
-  setType('valley'); setScope('all'); hideToast(); exitStickers(); stepCollapsed=false;
+  userZoom=false; setType('valley'); setScope('all'); hideToast(); exitStickers(); stepCollapsed=false;
   if(a.free){ $('coach').textContent=a.tip; $('coach').hidden=false; }
   fitView(true); updateUndo(); updateReadout(); computeHint(); computeScore(); renderStepCard(); draw();
 }
