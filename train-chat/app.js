@@ -16,10 +16,11 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 const BOARD = 60;            // 車進站後可以上車的秒數（起站：開車前 60 秒）
 const STALE = 50000;         // 多久沒心跳算離線（毫秒）
-const BYE = 60;              // 到站前幾秒提醒說再見
+const BYE = 60;
+const TICKET_MAX = 2 * 3600;   // 一張票最多坐 2 小時，長途要轉車              // 到站前幾秒提醒說再見
 const COLORS = ['#e8453c', '#f39c12', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#ec6fa8', '#8d6e63', '#34495e'];
 const HAIRS = ['#2b1d14', '#5a3a22', '#a0522d', '#151515', '#d9b56a', '#8a8a8a'];
 const CLS = {
@@ -188,9 +189,11 @@ const Net = {
       if (old && S.ride && old.cp === S.ride.cp) logChat('', `${old.n || '旅伴'} 下車了`);
       delete this.peers[k]; return;
     }
+    if ((S.blocked || {})[k]) { this.peers[k] = v; return; }
     const mine = S.ride && v.cp === S.ride.cp && S.ride.cp != null;
+    if (old && S.ride && S.ride.cp != null && old.cp === S.ride.cp && v.cp !== S.ride.cp) logChat('', `${v.n || '旅伴'} 換到別的包廂了`);
     if (mine && (!old || old.cp !== v.cp)) logChat('', `${v.n || '旅伴'} 進到包廂了`);
-    if (mine && v.m && v.mt && (!old || old.mt !== v.mt) && Date.now() - v.mt < 20000) { logChat(v.n, v.m); Sfx.play('pop'); }
+    if (mine && v.m && v.mt && (!old || old.mt !== v.mt) && Date.now() - v.mt < 20000) { logChat(v.n, cleanText(v.m)); Sfx.play('pop'); }
     this.peers[k] = v;
   },
   push() {
@@ -199,7 +202,9 @@ const Net = {
     const me = { n: S.name || '旅人', c: S.color, h: S.hair, x: Math.round(S.x), y: Math.round(S.y), t: Date.now(), ...myProf() };
     if (S.ride) {
       const tr = TR[S.ride.key];
-      Object.assign(me, { cp: S.ride.cp, cs: S.ride.cs, st: S.ride.seat, jt: S.ride.jt || 0 });
+      Object.assign(me, { cp: S.ride.cp, cs: S.ride.cs, st: S.ride.seat, jt: S.ride.jt || 0, cd: S.ride.cd || [] });
+      if (S.ride.rps) me.rps = S.ride.rps;
+      if (S.ride.ttt) me.ttt = S.ride.ttt;
       if (tr) { me.dt = tr.stops[S.ride.dest].a; me.ds = stName(tr.stops[S.ride.dest].c); }
       if (myMsg.mt) { me.m = myMsg.m; me.mt = myMsg.mt; }
     }
@@ -228,11 +233,11 @@ function assign(size) {
   let best = null, bs = -1;
   for (const [cp, c] of Object.entries(all)) {
     const occ = Object.values(c.seats);
-    if (c.size !== size || occ.length >= size) continue;
+    if (c.size !== size || occ.length >= size || +cp === S.ride.excl || occ.some(p => (S.blocked || {})[p.id])) continue;
     const sc = 3 + occ.reduce((n, p) => n + compat(myProf(), p), 0) / occ.length;
     if (sc > bs) { bs = sc; best = +cp; }
   }
-  const cp = best != null ? best : Math.max(0, ...Object.keys(all).map(Number)) + 1;
+  const cp = best != null ? best : Math.max(0, S.ride.excl || 0, ...Object.keys(all).map(Number)) + 1;
   const taken = all[cp] ? all[cp].seats : {};
   let seat = 0; while (taken[seat]) seat++;
   Object.assign(S.ride, { cp, cs: size, seat, jt: S.ride.jt || Date.now() });
@@ -255,7 +260,7 @@ function fixConflicts() {
 }
 function mates(t) {
   if (!S.ride || S.ride.cp == null) return [];
-  return seatedPeers(t).filter(([, v]) => v.cp === S.ride.cp).map(([id, v]) => ({ id, ...v, sleep: Date.now() - (v.t || 0) >= STALE }));
+  return seatedPeers(t).filter(([id, v]) => v.cp === S.ride.cp && !(S.blocked || {})[id]).map(([id, v]) => ({ id, ...v, sleep: Date.now() - (v.t || 0) >= STALE }));
 }
 const allMates = t => [...mates(t), ...(S.ride && S.ride.npcs || [])];
 
@@ -367,16 +372,19 @@ function renderLog() {
   el.innerHTML = chat.length ? chat.map(c => c.n ? `<div><b>${esc(c.n)}</b>：${esc(c.m)}</div>` : `<div class="sys">（${esc(c.m)}）</div>`).join('') : '<div style="color:#888">還沒有人說話。</div>';
   el.scrollTop = el.scrollHeight;
 }
-$('chatBar').addEventListener('submit', e => {
-  e.preventDefault();
+function sendChat(m) {
   if (!S.ride || S.ride.cp == null) return;
-  const m = $('chatIn').value.trim().slice(0, 40);
+  m = cleanText(String(m).trim().slice(0, 40));
   if (!m) return;
-  $('chatIn').value = '';
   myMsg = { m, mt: Date.now() }; lastTalk = Date.now();
   logChat(S.name || '我', m);
   Net.push();
-  if (!mates(now()).some(x => !x.sleep)) npcReply(m);
+  if (!/^[🃏🍱✊]/u.test(m)) { mission('chat'); if (!mates(now()).some(x => !x.sleep)) npcReply(m); }
+}
+$('chatBar').addEventListener('submit', e => {
+  e.preventDefault();
+  const m = $('chatIn').value; $('chatIn').value = '';
+  sendChat(m);
 });
 $('btnLog').onclick = () => { const el = $('chatLog'); el.hidden = !el.hidden; renderLog(); };
 
@@ -479,12 +487,13 @@ function drawStationScene(t) {
 let sceneTrain = null;
 
 function terrain(tr, i) { return ['field', 'city', 'sea', 'mountain', 'field', 'mountain'][hash(tr.no + '-' + i) % 6]; }
-const inTunnel = (tr, pos) => pos.kind === 'move' && terrain(tr, pos.i) === 'mountain' && pos.f > 0.35 && pos.f < 0.55;
+const inTunnel = (tr, pos) => pos.kind === 'move' && terrain(tr, pos.i) === 'mountain' && pos.f > 0.35 && pos.f < 0.55 && !scenicAt(tr, now());
 function drawRideScene(t, tr, pos) {
   const g = sg, W = SW, H = SH, h = hourOf(t);
   sky(g, W, H, h);
   const moving = pos.kind === 'move';
-  const ter = moving ? terrain(tr, pos.i) : 'station';
+  const sc = moving && scenicAt(tr, t);
+  const ter = moving ? (sc ? 'sea' : terrain(tr, pos.i)) : 'station';
   const dist = moving ? (t - tr.stops[pos.i].d) * 26 : 0;
   const night = h < 5 || h >= 19.5;
   const tunnel = inTunnel(tr, pos);
@@ -498,6 +507,11 @@ function drawRideScene(t, tr, pos) {
     if (ter === 'sea') {
       g.fillStyle = night ? '#132a4a' : '#2f7fc4'; g.fillRect(0, H * 0.52, W, H);
       g.fillStyle = 'rgba(255,255,255,.6)'; for (let k = 0; k < 14; k++) g.fillRect(((k * 23 - dist * 0.2) % W + W) % W, H * 0.56 + (k % 4) * 5, 5, 1);
+      if (sc && sc.island) {   // 龜山島
+        const ix = W * 0.62 - ((dist * 0.03) % (W * 0.4));
+        g.fillStyle = night ? '#1c2a1c' : '#3f6e4a';
+        for (let x = -18; x < 22; x++) g.fillRect(Math.round(ix + x), H * 0.52 - Math.max(0, 9 - Math.abs(x + 8) * 0.9, 4 - Math.abs(x - 10) * 0.35), 1, 12);
+      }
       g.fillStyle = night ? '#3a3326' : '#e6d6a8'; g.fillRect(0, H * 0.8, W, H);
     } else if (ter === 'city') {
       g.fillStyle = ground; g.fillRect(0, H * 0.7, W, H);
@@ -653,7 +667,7 @@ function drawBubbles(ordered) {
     const by = (o.y - 16) * k;
     if (p.sleep) { html.push(`<div class="bubble npc${top ? ' down' : ''}" style="left:${x}px;top:${top ? (o.y + 14) * k : by}px">💤</div>`); continue; }
     if (p.m && p.mt && Date.now() - p.mt < 9000)
-      html.push(`<div class="bubble${top ? ' down' : ''}" style="left:${clamp(x, 50, yard.clientWidth - 50)}px;top:${top ? (o.y + 14) * k : by}px">${esc(p.m)}</div>`);
+      html.push(`<div class="bubble${top ? ' down' : ''}" style="left:${clamp(x, 50, yard.clientWidth - 50)}px;top:${top ? (o.y + 14) * k : by}px">${esc(cleanText(p.m))}</div>`);
   }
   const s = html.join('');
   if (s !== drawBubbles.last) { $('bubbles').innerHTML = s; drawBubbles.last = s; }
@@ -667,7 +681,7 @@ yard.addEventListener('pointerdown', e => {
     if (S.area === 'hall') {   // 大廳裡可以點的東西
       if (y < 14) { goPlatform(); return; }
       if (x > HALL.stamp[0] && x < HALL.stamp[0] + HALL.stamp[2] && y > HALL.stamp[1] && y < HALL.stamp[1] + HALL.stamp[3]) { openBook(); return; }
-      if (x > HALL.shop[0] && x < HALL.shop[0] + HALL.shop[2] && y > HALL.shop[1] && y < HALL.shop[1] + HALL.shop[3]) { toast('🏪 便利商店：之後可以買便當、飲料帶上車'); return; }
+      if (x > HALL.shop[0] && x < HALL.shop[0] + HALL.shop[2] && y > HALL.shop[1] && y < HALL.shop[1] + HALL.shop[3]) { openShop(); return; }
     }
     S.x = clamp(x, 6, YW - 6); S.y = clamp(y + 4, S.area === 'hall' ? 22 : 18, YH - 2);
   }
@@ -736,8 +750,11 @@ scene.addEventListener('click', () => { if (!S.ride && selInfo(now())?.open) boa
 
 function arrive(i) {
   const tr = TR[S.ride.key], code = tr.stops[i].c, t = now();
+  const met = allMates(t).map(m => m.n), newStamp = !S.stamps[code];
+  recordTrip(tr, met);
+  mission('ride'); if (newStamp) mission('stamp'); if (['宜蘭', '花蓮', '臺東'].includes(stName(code))) mission('east');
+  tttOpen = null; $('scenic').hidden = true;
   const st = S.stamps[code] || { d: dateStr(t), n: 0 }; st.n++; S.stamps[code] = st;
-  const met = allMates(t).map(m => m.n);
   S.station = code; S.ride = null; S.area = 'hall'; npcQ.length = 0; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
   myMsg = { m: '', mt: 0 }; $('chatLog').hidden = true;
   save(); Net.join(roomName()); dirty = true; listSig = ''; Sfx.play('chime'); setTimeout(() => Sfx.play('stamp'), 700);
@@ -745,7 +762,7 @@ function arrive(i) {
     <p style="margin:0 0 4px;font-size:14px">${esc(stName(code))} 站到了，包廂的聊天到這裡結束。${met.length ? `<br>這趟遇到：<b>${met.map(esc).join('、')}</b>` : ''}</p>
     ${stampSVG(code, st.d, 'bigstamp')}
     <p style="text-align:center;margin:8px 0 0">${st.n > 1 ? `第 ${st.n} 次來這站` : '蓋到新印章了！'}　印章簿 ${Object.keys(S.stamps).length} 站</p>
-    <div class="btns"><button class="btn ghost" onclick="closeModal()">好</button><button class="btn" onclick="openBook()">看印章簿</button></div>`);
+    <div class="btns"><button class="btn ghost" onclick="closeModal()">好</button><button class="btn" onclick="openBook('diary')">看旅行日記</button></div>`);
 }
 
 // ---------- 印章 ----------
@@ -780,15 +797,7 @@ function openModal(html, lock) { modalLock = !!lock; $('modalBox').classList.rem
 function closeModal(force) { if (modalLock && force !== true) return; modalLock = false; $('modal').hidden = true; $('modalBox').classList.remove('mapModal'); MV.el = null; }
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 
-function openBook() {
-  const ent = Object.entries(S.stamps).sort((a, b) => a[1].d < b[1].d ? -1 : 1);
-  const total = MAP ? Object.keys(MAP.count).length : Object.keys(ST).filter(c => !stName(c).includes('-')).length;
-  openModal(`<h2>📮 印章簿　${ent.length} / ${total} 站</h2>
-    ${ent.length ? `<div class="stamps">${ent.map(([c, v]) => `<div class="cell">${stampSVG(c, v.d)}${v.n > 1 ? '×' + v.n : ''}</div>`).join('')}</div>`
-      : '<div class="empty">還沒有印章。<br>在時刻表買一張車票（選班次＋下車站），<br>準時上車、坐到站就能蓋第一個！</div>'}
-    <div class="btns"><button class="btn" onclick="closeModal()">關閉</button></div>`);
-}
-$('btnBook').onclick = openBook;
+$('btnBook').onclick = () => openBook();
 $('btnStation').onclick = () => openStations();
 
 // 個人資料：名字＋顏色＋MBTI（不知道可以做 4 題）＋聊天步調＋興趣
@@ -892,8 +901,8 @@ function renderList(t) {
       ? `<div class="expand"><p>🎫 <b>你的車票</b>：${esc(stName(S.station))} → <b>${esc(stName(d.tr.stops[S.sel.dest].c))}</b>（${hm(d.tr.stops[S.sel.dest].a)} 到）<br>車進站後 60 秒內按「上車！」，錯過車票就作廢。</p>
          <div class="btns"><button class="btn ghost" data-cancel="1">取消車票</button></div></div>`
       : locked ? `<div class="expand"><p>你已經有別班的車票了，要換這班請先取消原本的車票。</p></div>`
-      : `<div class="expand"><p>要坐到哪一站？點一下就買好這張票：</p>
-      <div class="chips">${rest.map((s, j) => `<div class="chip${S.stamps[s.c] ? ' has' : ''}" data-k="${d.tr.key}" data-i="${d.i}" data-dest="${d.i + 1 + j}">${esc(stName(s.c))}<b>${hm(s.a)}</b></div>`).join('')}</div></div>`;
+      : `<div class="expand"><p>要坐到哪一站？點一下就買好這張票（一張票最多坐 2 小時，更遠的請到中途站轉車）：</p>
+      <div class="chips">${rest.map((s, j) => { const far = j > 0 && s.a - d.d > TICKET_MAX; return `<div class="chip${S.stamps[s.c] ? ' has' : ''}${far ? ' off' : ''}" data-k="${d.tr.key}" data-i="${d.i}" data-dest="${d.i + 1 + j}"${far ? ' data-far="1"' : ''}>${esc(stName(s.c))}<b>${far ? '超過2時' : hm(s.a)}</b></div>`; }).join('')}</div></div>`;
     return h;
   }).join('');
   updateCountdowns(t);
@@ -920,7 +929,7 @@ function updateCountdowns(t) {
   });
 }
 $('list').addEventListener('click', e => {
-  if (S.ride) return;
+  if (S.ride) { rideClick(e); return; }
   if (e.target.closest('[data-cancel]')) { S.sel = null; save(); listSig = ''; toast('車票取消了'); return; }
   if (e.target.closest('[data-skip]')) {
     const t = now(), tg = waitTarget(t); if (!tg) return;
@@ -936,6 +945,7 @@ $('list').addEventListener('click', e => {
   if (chip) {
     const k = chip.dataset.k, tr = TR[k];
     if (S.sel) { toast('你已經有車票了，要換請先取消'); return; }
+    if (chip.dataset.far) { toast('一張票最多坐 2 小時，請先坐到中途站再轉車'); return; }
     if (tr && now() > tr.stops[+chip.dataset.i].d) { toast('這班已經開走了'); return; }
     S.sel = { key: k, dest: +chip.dataset.dest, destC: tr.stops[+chip.dataset.dest].c }; save(); listSig = '';
     Sfx.play('ticket');
@@ -949,7 +959,7 @@ $('list').addEventListener('click', e => {
 function renderRide(t) {
   const tr = TR[S.ride.key]; if (!tr) return;
   const pos = trainPos(tr, t), ms = allMates(t);
-  const sig = 'tr|' + tr.key + '|' + pos.kind + pos.i + '|' + S.ride.cp + '|' + S.ride.seat + '|' + ms.map(m => m.id + m.sleep + m.st).join(',') + '|' + !!S.ride.npcAt;
+  const sig = 'tr|' + tr.key + '|' + pos.kind + pos.i + '|' + S.ride.cp + '|' + S.ride.seat + '|' + ms.map(m => m.id + m.sleep + m.st).join(',') + '|' + !!S.ride.npcAt + '|' + S.bag + '|' + Object.keys(S.friends || {}).length + '|' + S.ride.swapAt;
   if (sig === listSig) return;
   if (!listSig.startsWith('tr|' + tr.key)) $('list').scrollTop = 0;
   listSig = sig;
@@ -957,12 +967,14 @@ function renderRide(t) {
   $('listHead').innerHTML = `🚆 ${tr.no} 次 ${badge(tr.cls)} → ${esc(stName(dst.c))} <span class="sp"></span><small>${hm(dst.a)} 下車</small>`;
   let html = '';
   if (S.ride.cp != null) {
-    html += `<div class="mates"><div class="matesH">🛋 ${S.ride.cs} 人包廂 #${S.ride.cp}　${ms.length ? `旅伴 ${ms.length} 位` : '等旅伴上車中…'}</div>`;
+    const canSwap = pos.kind === 'stop' && pos.i > S.ride.from && S.ride.swapAt !== pos.i && pos.i < S.ride.dest;
+    html += `<div class="mates"><div class="matesH">🛋 ${S.ride.cs} 人包廂 #${S.ride.cp}　${ms.length ? `旅伴 ${ms.length} 位` : '等旅伴上車中…'}</div>
+      <div class="acts"><button data-act="topic">🃏 話題卡</button><button data-act="rps">✊ 猜拳</button><button data-act="ttt">⭕ 井字棋</button>${S.bag ? `<button data-act="bento">🍱 分享${esc(S.bag.split(' ')[1] || '')}</button>` : ''}${canSwap ? '<button data-act="swap" class="hot">🔄 換包廂</button>' : ''}</div>`;
     for (const m of ms) {
       const sc = compat(myProf(), m), mt = tagArr(m.tg), my = tagArr(S.prof.tg);
       html += `<div class="mate"><i style="background:${esc(m.c || '#888')}"></i><div class="mI"><b>${esc(m.n || '旅人')}</b> <span class="mbti">${esc(m.mb || '?')}</span>${m.npc ? ' <span class="npcTag">NPC</span>' : ''} ${m.sleep ? '💤' : ''}
         <div class="mT">${mt.map(x => `<span class="${my.includes(x) ? 'same' : ''}">${esc(x)}</span>`).join('')}</div>
-        <div class="mD">${m.pc ? (m.pc === 'talk' ? '話多' : '慢熱') : ''}${m.ds ? '・在 ' + esc(m.ds) + ' 下車' : m.npc ? '・在 ' + esc(stName(tr.stops[m.dest].c)) + ' 下車' : ''}</div></div><div class="mS" title="契合度">${stars(sc)}</div></div>`;
+        <div class="mD">${m.pc ? (m.pc === 'talk' ? '話多' : '慢熱') : ''}${m.ds ? '・在 ' + esc(m.ds) + ' 下車' : m.npc ? '・在 ' + esc(stName(tr.stops[m.dest].c)) + ' 下車' : ''}</div></div><div class="mS" title="契合度">${stars(sc)}${(S.friends || {})[m.id] ? '<br><small>📇 旅伴</small>' : ''}</div><button class="more" data-mate="${esc(m.id)}">⋯</button></div>`;
     }
     if (!ms.length) html += `<div class="mate empty1">${S.ride.npcAt ? '旅客正在找位子…' : '之後在其他站上車、跟你合得來的旅客會被排進這間包廂。'}</div>`;
     html += '</div>';
@@ -1027,6 +1039,7 @@ function renderBars(t) {
     const hint = S.area === 'platform' ? '在月台等車，車進站就按「上車！」' : si && t < si.o - PLATFORM_EARLY ? `車進站前 10 分鐘可以進月台（還要 ${dur(si.o - PLATFORM_EARLY - t)}）` : '可以進月台了！';
     h = `🎫 ${tr.no} 次 ${esc(stName(S.station))} → ${esc(stName(tr.stops[S.sel.dest].c))}<small>${hint}</small>`;
   } else h = `🎫 還沒有車票<small>大廳不能聊天，買票上車、進包廂才能聊</small>`;
+  if (S.bag && !S.ride) h = h.replace('</small>', `　🎒 ${esc(S.bag)}</small>`);
   if ($('ticketBar').innerHTML !== h) $('ticketBar').innerHTML = h;
 }
 
@@ -1106,6 +1119,7 @@ function logic(t) {
   if (!S.ride && S.area === 'platform' && !S.sel) { goHall(); toast('沒有車票，回到大廳'); }
   if (S.ride) npcTick(t);
   soundEvents(t);
+  featTick(t);
   const si = !S.ride && S.area === 'platform' && selInfo(t);
   const cp = !S.ride && S.area === 'hall' && canPlatform(t);
   $('btnPlatform').hidden = !cp;

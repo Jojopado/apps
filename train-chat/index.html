@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Train Chat">
 <meta name="theme-color" content="#1b2433">
 <title>Train Chat 趕火車交朋友</title>
-<link rel="stylesheet" href="style.css?v=0.6.0">
+<link rel="stylesheet" href="style.css?v=0.7.0">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
   <header id="top">
     <button id="btnStation" class="hbtn"><span id="stName">臺北</span> ▾</button>
     <div id="clock">--:--:--</div>
-    <button id="btnBook" class="hbtn" title="印章簿">📮 <span id="stampCount">0</span></button>
+    <button id="btnBook" class="hbtn" title="旅行手冊">📖 <span id="stampCount">0</span></button>
     <button id="btnSound" class="hbtn" title="聲音">🔊</button>
     <button id="btnSet" class="hbtn" title="設定">⚙</button>
   </header>
@@ -35,6 +35,7 @@
     <canvas id="scene"></canvas>
     <div id="sceneLabel"></div>
     <div id="hallBoard" hidden></div>
+    <div id="scenic" hidden></div>
   </section>
 
   <!-- ② 月台／車廂（草圖的黃色區塊） -->
@@ -65,9 +66,10 @@
 <div id="modal" hidden><div id="modalBox"></div></div>
 <div id="toast" hidden></div>
 
-<script src="config.js?v=0.6.0"></script>
-<script src="audio.js?v=0.6.0"></script>
-<script src="app.js?v=0.6.0"></script>
-<script src="map.js?v=0.6.0"></script>
+<script src="config.js?v=0.7.0"></script>
+<script src="audio.js?v=0.7.0"></script>
+<script src="app.js?v=0.7.0"></script>
+<script src="features.js?v=0.7.0"></script>
+<script src="map.js?v=0.7.0"></script>
 </body>
 </html>
