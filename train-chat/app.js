@@ -516,8 +516,8 @@ function stampSVG(code, d, cls) {
 
 // ---------- 介面 ----------
 function toast(s, ms) { const el = $('toast'); el.textContent = s; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, ms || 2600); }
-function openModal(html) { $('modalBox').innerHTML = html; $('modal').hidden = false; }
-function closeModal() { $('modal').hidden = true; }
+function openModal(html) { $('modalBox').classList.remove('mapModal'); $('modalBox').innerHTML = html; $('modal').hidden = false; }
+function closeModal() { $('modal').hidden = true; $('modalBox').classList.remove('mapModal'); MV.el = null; }
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal' && S.name) closeModal(); });
 
 function openBook() {
@@ -530,23 +530,7 @@ function openBook() {
 }
 $('btnBook').onclick = openBook;
 
-function openStations() {
-  if (S.ride) { toast('在車上不能換站，先坐到站下車吧'); return; }
-  const codes = Object.keys(ST).filter(c => !stName(c).includes('-'));
-  openModal(`<h2>🚉 換車站</h2><input type="search" id="stQ" placeholder="搜尋站名（例：花蓮、Taichung）">
-    <div class="stlist" id="stL"></div><div class="btns"><button class="btn ghost" onclick="closeModal()">取消</button></div>`);
-  const draw = () => {
-    const q = $('stQ').value.trim().toLowerCase();
-    $('stL').innerHTML = codes.filter(c => !q || stName(c).includes(q) || stEn(c).toLowerCase().includes(q)).slice(0, 80)
-      .map(c => `<div data-c="${c}">${S.stamps[c] ? '✅ ' : ''}${esc(stName(c))}<small>${esc(stEn(c))}</small></div>`).join('') || '<div class="empty">找不到</div>';
-  };
-  $('stQ').oninput = draw; draw();
-  $('stL').onclick = e => {
-    const c = e.target.closest('[data-c]'); if (!c) return;
-    S.station = +c.dataset.c; S.sel = null; openRow = null; save(); Net.join(roomName()); dirty = true; closeModal();
-  };
-}
-$('btnStation').onclick = openStations;
+$('btnStation').onclick = () => openStations();
 
 function openSettings(first) {
   let col = S.color;
@@ -712,6 +696,7 @@ function logic(t) {
   if (S.ride) { const tr = TR[S.ride.key]; if (tr) { const p = trainPos(tr, t); label = p.kind === 'stop' ? `🚉 ${stName(tr.stops[p.i].c)} ${stEn(tr.stops[p.i].c)}` : p.kind === 'move' ? `→ ${stName(tr.stops[p.i + 1].c)}` : ''; } }
   else label = sceneTrain ? `${sceneTrain.tr.no} 次 ${sceneTrain.tr.cls} 往${destName(sceneTrain.tr)}` : `🚉 ${stName(S.station)} ${stEn(S.station)}`;
   if ($('sceneLabel').textContent !== label) $('sceneLabel').textContent = label;
+  if (S.ride && MV.el && MV.el.isConnected && Date.now() - (logic.mapAt || 0) > 1000) { logic.mapAt = Date.now(); drawMap(); }
   if (Date.now() - Net.hb > 20000) Net.push();
   dirty = false;
 }

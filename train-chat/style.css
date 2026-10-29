@@ -109,3 +109,25 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
 #toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px;
   border-radius: 12px; font-weight: 700; z-index: 60; max-width: 88%; text-align: center; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+
+/* 地圖選站 */
+#modalBox.mapModal { padding: 0; height: 92dvh; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.mapHead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f4f1ea; border-bottom: 2px solid #ddd6c8; }
+.mapHead b { white-space: nowrap; font-size: 16px; }
+.mapHead input { flex: 1; min-width: 0; padding: 7px 10px !important; }
+.mapX { background: #ddd6c8; border: 0; border-radius: 50%; width: 32px; height: 32px; font-weight: 900; cursor: pointer; flex: none; color: #333; }
+.mapRes { position: absolute; left: 12px; right: 12px; top: 56px; z-index: 5; background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.25); margin: 0 !important; }
+#mapBox { position: relative; flex: 1; min-height: 0; }
+#mapSvg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.mapZoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.mapZoom button { width: 38px; height: 38px; border-radius: 10px; border: 0; background: #fff; font-size: 18px; font-weight: 900; box-shadow: 0 2px 6px rgba(0,0,0,.25); cursor: pointer; color: #333; }
+.mapLegend { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 8px; font-size: 11px; background: rgba(255,255,255,.85); padding: 4px 8px; border-radius: 8px; color: #444; }
+.mapLegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #2b3446; margin-right: 3px; vertical-align: -1px; }
+#mapCard { background: #f4f1ea; border-top: 2px solid #ddd6c8; padding: 10px 14px 14px; }
+.mcHint { font-size: 13px; color: #777; text-align: center; padding: 6px 0; }
+.mcTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mcName { font-size: 24px; font-weight: 900; } .mcEn { font-size: 12px; color: #888; font-weight: 700; letter-spacing: 1px; }
+.mcStamp { width: 64px; flex: none; } .mcStamp svg { width: 100%; height: auto; display: block; }
+.mcNo { font-size: 12px; color: #999; border: 2px dashed #ccc; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; text-align: center; flex: none; }
+.mcInfo { font-size: 13px; color: #555; margin: 6px 0 10px; line-height: 1.7; }
+#mapCard .btn { width: 100%; }
