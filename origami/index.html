@@ -425,6 +425,22 @@ function solveLayers(p, hard, hints){
       const a=aff(f.T,f.sh[e]), b=aff(f.T,f.sh[(e+1)%f.sh.length]);
       for(const x of ov[i]){ if(x===j || !ov[j].has(x)) continue;
         if(segCrossesInterior(W[x],a,b)) addEq(varOf(f.id,F[x].id), varOf(nbId,F[x].id)); } } }
+  // 兩條攤平的摺痕疊在同一處：兩張紙在這裡各自是平的，左右兩半的上下關係必須一樣（否則會穿過去）
+  { const flats=[];
+    for(let i=0;i<n;i++){ const f=F[i];
+      for(let e=0;e<f.sh.length;e++){ const nbId=f.nb[e]; if(nbId<0 || nbId<f.id) continue; const j=iOf.get(nbId); if(j===undefined) continue;
+        if(Math.sign(det(f.T))!==Math.sign(det(F[j].T))) continue;
+        flats.push({i, j, a:aff(f.T,f.sh[e]), b:aff(f.T,f.sh[(e+1)%f.sh.length])}); } }
+    for(let x=0;x<flats.length;x++) for(let y=x+1;y<flats.length;y++){ const A=flats[x], B=flats[y];
+      const dx=A.b[0]-A.a[0], dy=A.b[1]-A.a[1], L=Math.hypot(dx,dy); if(L<1e-9) continue;
+      const nrm=[-dy/L,dx/L]; if(Math.abs(sd(B.a,A.a,nrm))>1e-7 || Math.abs(sd(B.b,A.a,nrm))>1e-7) continue;
+      const u=q=>((q[0]-A.a[0])*dx+(q[1]-A.a[1])*dy)/L, lo=Math.max(0,Math.min(u(B.a),u(B.b))), hi=Math.min(L,Math.max(u(B.a),u(B.b)));
+      if(hi-lo<1e-6) continue;
+      const side=k=>{ const w=W[k], c=w.reduce((s,q)=>[s[0]+q[0]/w.length,s[1]+q[1]/w.length],[0,0]); return Math.sign(sd(c,A.a,nrm)); };
+      const A1=side(A.i)>0?A.i:A.j, A2=A1===A.i?A.j:A.i, B1=side(B.i)>0?B.i:B.j, B2=B1===B.i?B.j:B.i;
+      if(!ov[A1].has(B1) || !ov[A2].has(B2)) continue;
+      addEq(varOf(F[A1].id,F[B1].id), varOf(F[A2].id,F[B2].id));
+    } }
   // 三片共同重疊：遞移
   const tris=[];
   for(const [a,b] of pairs){ const ia=iOf.get(a), ib=iOf.get(b); const ab=clipPoly(W[ia],W[ib]); if(ab.length<3) continue;
@@ -544,6 +560,7 @@ function applyMove(before, groups, type, info={}){
       if(info.depth && ga && gb){ const da=info.depth.get(a.id)||0, db=info.depth.get(b.id)||0; if(da!==db) w = (da>db?1:-1)*want; }
       hints.set(pkey(a.id,b.id), a.id<b.id?w:-w); }
   }
+  if(info.extraHard) for(const [k,v] of info.extraHard) hard.set(k,v);
   if(info.preview){ // 拖曳預覽：不求解，直接用提示
     for(const [k,v] of hints) if(!hard.has(k)) hard.set(k,v);
     p.order=hard; assignZ(p);
@@ -596,17 +613,18 @@ function pipInc(poly,q){ // 含邊界
    rules：[{P,n, fold:true|false, keep?(f,g)}]：目前畫面上落在這條直線上的摺痕，要摺起來（true）或攤平（false）
    其他摺痕維持現狀。從 root 那片（不動）開始，沿相鄰關係一路推算每片的變換；推出矛盾（紙會撕破）就回傳 null。 */
 // cur：要移動的那張紙（預設 = paper）。規則一律用 paper（例如攤平時）的位置判斷，算出目標位置後再從 cur 移過去；兩張紙的片 id 要相同。
-function creaseMove(paper, rules, rootPt, type='valley', cur=null){
+function creaseMove(paper, rules, rootPt, type='valley', cur=null, opts={}){
   const byId=new Map(paper.facets.map(f=>[f.id,f]));
   const root=pickTop(paper.facets, rootPt, [rootPt[0]+1e-3, rootPt[1]+1e-3]) || paper.facets.find(f=>pip(f.pts,rootPt[0],rootPt[1]));
   if(!root) return null;
-  const Tn=new Map([[root.id, root.T]]), q=[root], par=new Map(), depth=new Map([[root.id,0]]); creaseMove.par=par; creaseMove.root=root.id;
+  const Tn=new Map([[root.id, root.T]]), q=[root], par=new Map(), depth=new Map([[root.id,0]]), hinges=[]; creaseMove.par=par; creaseMove.root=root.id;
   const close=(A,B)=>A.every((v,i)=>Math.abs(v-B[i])<1e-6);
   while(q.length){ const f=q.shift(), Tf=Tn.get(f.id);
     for(let i=0;i<f.sh.length;i++){ const g=byId.get(f.nb[i]); if(!g) continue;
-      const a=f.sh[i], b=f.sh[(i+1)%f.sh.length], wa=aff(f.T,a), wb=aff(f.T,b);
-      let folded = Math.sign(det(f.T))!==Math.sign(det(g.T));
-      for(const r of rules) if(Math.abs(sd(wa,r.P,r.n))<1e-6 && Math.abs(sd(wb,r.P,r.n))<1e-6 && (!r.keep || r.keep(f,g,wa,wb))) folded=r.fold;
+      const a=f.sh[i], b=f.sh[(i+1)%f.sh.length], wa=opts.sheet?a:aff(f.T,a), wb=opts.sheet?b:aff(f.T,b);   // sheet 模式：規則用原始紙座標判斷
+      let folded = Math.sign(det(f.T))!==Math.sign(det(g.T)), mv=null;
+      for(const r of rules) if(Math.abs(sd(wa,r.P,r.n))<1e-6 && Math.abs(sd(wb,r.P,r.n))<1e-6 && (!r.keep || r.keep(f,g,wa,wb))){ folded=r.fold; mv=r.fold?(r.mv||null):null; }
+      if(mv) hinges.push([f.id,g.id,mv]);
       const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy), Rs=reflM(a,[-dy/L,dx/L]);
       const Tg = folded ? mul(Tf,Rs) : Tf;
       if(Tn.has(g.id)){ if(!close(Tn.get(g.id),Tg)){ creaseMove.conflict={f:f.id,g:g.id,folded,at:[(wa[0]+wb[0])/2,(wa[1]+wb[1])/2]}; return null; } }
@@ -621,7 +639,10 @@ function creaseMove(paper, rules, rootPt, type='valley', cur=null){
     const M=mul(T2,inv(f.T)), k=M.map(v=>v.toFixed(5)).join(',');
     if(!groups.has(k)) groups.set(k,{ids:new Set(), M}); groups.get(k).ids.add(f.id); }
   if(!groups.size) return null;
-  return applyMove(copyPaper(src), [...groups.values()], type, {orig:src, depth});
+  // 山谷摺 → 鉸鏈兩片誰在上：谷摺（從紙原本朝上那面看）時，若 f 朝上那面對著我們，g 就疊在 f 上面
+  const extra=new Map();
+  for(const [a,b,mv] of hinges){ const fUp=det(Tn.get(a))>0, gAbove=(mv==='V')===fUp; extra.set(pkey(a,b), (a<b)===gAbove ? -1 : 1); }
+  return applyMove(copyPaper(src), [...groups.values()], type, {orig:src, depth, extraHard:extra});
 }
 
 /* ---- 單點複合摺（例：南瓜燈第 10～12 步） ----
@@ -930,9 +951,19 @@ function drawScene(c,V,t){
   if(alive && at>=0 && at<700) hop=Math.abs(Math.sin(at/700*Math.PI*2))*14*(1-at/700);
   c.save(); c.translate(0,-hop);
   sorted(paper.facets).forEach(f=>drawFacet(c,f,V));
+  if(!stickerMode && !alive) drawSnapDots(c,V);
   const map=q=>toScreen(q,V);
   if(alive) drawFace(c,alive.face,map,V.s,{t:at-150});
   if(stickerMode) drawFace(c,stickers,map,V.s);
+  c.restore();
+}
+// 平常就在紙上顯示主要吸附點（角、邊中點、摺痕交點），方便對準
+const dotCache=new WeakMap();
+function drawSnapDots(c,V){
+  let pts=dotCache.get(paper); if(!pts){ pts=snapPoints(paper).filter(e=>e.major).map(e=>e.p); dotCache.set(paper,pts); }
+  const r=Math.max(1.6, Math.min(2.6, V.s/150));
+  c.save();
+  for(const q of pts){ const [X,Y]=toScreen(q,V); c.beginPath(); c.arc(X,Y,r+1,0,Math.PI*2); c.fillStyle='rgba(20,30,26,.45)'; c.fill(); c.beginPath(); c.arc(X,Y,r,0,Math.PI*2); c.fillStyle='rgba(255,255,255,.9)'; c.fill(); }
   c.restore();
 }
 function drawLineAcross(c,P,n,V,color,dash){
