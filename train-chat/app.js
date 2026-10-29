@@ -693,7 +693,7 @@ function selInfo(t) {
 function board() {
   const t = now(), si = selInfo(t);
   if (!si || !si.open) return;
-  S.ride = { key: si.tr.key, from: si.i, dest: S.sel.dest, cp: null, cs: 0, seat: 0, jt: Date.now() };
+  S.ride = { key: si.tr.key, from: si.i, dest: S.sel.dest, fromC: si.tr.stops[si.i].c, destC: si.tr.stops[S.sel.dest].c, cp: null, cs: 0, seat: 0, jt: Date.now() };
   S.sel = null; save();
   myMsg = { m: '', mt: 0 };
   Net.join(roomName());
@@ -926,7 +926,7 @@ $('list').addEventListener('click', e => {
     const k = chip.dataset.k, tr = TR[k];
     if (S.sel) { toast('你已經有車票了，要換請先取消'); return; }
     if (tr && now() > tr.stops[+chip.dataset.i].d) { toast('這班已經開走了'); return; }
-    S.sel = { key: k, dest: +chip.dataset.dest }; save(); listSig = '';
+    S.sel = { key: k, dest: +chip.dataset.dest, destC: tr.stops[+chip.dataset.dest].c }; save(); listSig = '';
     toast(`🎫 買好了：${tr.no} 次 → ${stName(tr.stops[S.sel.dest].c)}，準時上車喔`);
     return;
   }
@@ -1018,13 +1018,40 @@ function renderBars(t) {
   if ($('ticketBar').innerHTML !== h) $('ticketBar').innerHTML = h;
 }
 
+// ---------- 車票檢查：用站代碼找回索引（舊版存的是「第幾站」，改版後停靠站變少會對不上） ----------
+function fixTicket(tk, isRide) {
+  const tr = TR[tk.key]; if (!tr) return true;           // 資料還沒載入，先不動
+  const at = (code, i, fallbackIdx) => {
+    if (code != null) { const j = tr.stops.findIndex(x => x.c === code); if (j >= 0) return j; }
+    // 舊存檔：索引是完整停靠站的 → 換成之後第一個開放的站
+    const f = tr.full && tr.full[fallbackIdx];
+    if (f) { const j = tr.stops.findIndex(x => x.a >= f.a); return j; }
+    return i < tr.stops.length ? i : -1;
+  };
+  const dest = at(tk.destC, tk.dest, tk.dest);
+  if (dest < 0) return false;
+  tk.dest = dest; tk.destC = tr.stops[dest].c;
+  if (isRide) {
+    let from = at(tk.fromC, tk.from, tk.from);
+    if (from < 0 || from >= dest) from = Math.max(0, dest - 1);
+    tk.from = from; tk.fromC = tr.stops[from].c;
+  }
+  return true;
+}
 // ---------- 主迴圈 ----------
 let lastLogic = 0;
 function logic(t) {
   ensureDays();
+  if (S.ride && TR[S.ride.key] && !fixTicket(S.ride, true)) {
+    // 換算不出下車站：就在目前位置（或最近開放的站）下車，不要卡在車上
+    const tr = TR[S.ride.key], p = trainPos(tr, t);
+    S.ride.dest = clamp(p.kind === 'move' ? p.i + 1 : p.i, 1, tr.stops.length - 1); S.ride.destC = tr.stops[S.ride.dest].c;
+    toast('遊戲改版，車票換到 ' + stName(S.ride.destC) + ' 下車', 4000);
+  }
+  if (S.sel && TR[S.sel.key] && !fixTicket(S.sel, false)) { S.sel = null; toast('遊戲改版，原本的車票取消了', 4000); }
   if (S.ride) {
     const tr = TR[S.ride.key];
-    if (!tr) { if (DAY[S.ride.key.slice(0, 8)]) { S.ride = null; save(); Net.join(roomName()); } else loadDay(S.ride.key.slice(0, 8)); }
+    if (!tr) { if (DAY[S.ride.key.slice(0, 8)]) { S.ride = null; S.area = 'hall'; save(); Net.join(roomName()); toast('這班車已經不在時刻表上了，回到大廳', 4000); } else loadDay(S.ride.key.slice(0, 8)); }
     else if (t >= tr.stops[S.ride.dest].a) { closeModal(true); arrive(S.ride.dest); }
     else { fixConflicts(); if (S.ride.cp == null && $('modal').hidden) chooseCompartment(); }
   } else if (S.sel) {
