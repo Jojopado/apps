@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="description" content="在手機上一步一步摺真正的摺紙：基本功、小狗、南瓜燈、天鵝、企鵝。">
-<meta name="theme-color" content="#2D5A4A">
+<meta name="description" content="指尖摺紙：用手指在手機上一步一步摺出可愛的摺紙作品。">
+<meta name="theme-color" content="#FFF3DE">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="摺紙動物園">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232D5A4A'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232D5A4A'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-title" content="指尖摺紙">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FFB86B'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FFB86B'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 body{margin:0;font-size:14px;font-family:system-ui,sans-serif}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<title>摺紙動物園</title>
+<title>指尖摺紙</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
 <style>
 /* layout: one-screen app — animal picker (圖鑑) over a workbench: header strip, cutting mat, tool tray */
 :root{
@@ -164,10 +164,94 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
 .field input{width:100%;min-width:0;box-sizing:border-box;font:500 16px var(--font-b);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
 @media (max-width:380px){.title b{font-size:18px}.tool{font-size:10.5px}.tool svg{width:18px;height:18px}.pick-top canvas{width:110px;height:110px}.done-top canvas{width:120px;height:120px}}
 @media (prefers-reduced-motion: reduce){.cry{animation:none;opacity:0}}
+/* ================= 兒童版主題 ================= */
+:root,:root[data-theme="light"]{
+  --desk:#FFF3DE; --tray:#FFFBF3; --ink:#4A372C; --ink-2:#8D7665; --line:#F1D9BC;
+  --chip:#FFFFFF; --press:#FFE7C2; --good:#3DB37A; --mat:#CBEAF6; --gold:#FFB400; --pink:#FF8FAB; --sky:#6CC6F0;
+  --font-d:"Zen Maru Gothic","Noto Sans TC",system-ui,sans-serif;
+  --font-b:"Zen Maru Gothic","Noto Sans TC",system-ui,-apple-system,sans-serif; color-scheme:light }
+body{background:radial-gradient(circle at 12% 8%,#FFE3EC 0,transparent 30%),radial-gradient(circle at 92% 90%,#DDF3FF 0,transparent 32%),var(--desk);background-attachment:fixed}
+.app{gap:8px}
+.stage{border-radius:26px;box-shadow:inset 0 0 0 4px #fff,0 6px 0 var(--line)}
+.back,.tool,.btn,.zoom button{font-family:var(--font-b);font-weight:700}
+.back{height:46px;width:46px;border-radius:16px;border:0;background:#fff;box-shadow:0 4px 0 var(--line);justify-content:center;padding:0;font-size:0}
+.back svg{width:22px;height:22px}
+.title b{font-weight:900;font-size:22px}
+.title span{font-size:13px}
+.target canvas{border-radius:16px;box-shadow:0 3px 0 var(--line)}
+.meter small{display:none}
+.meter strong{font-size:20px;font-weight:900}
+.tray{display:flex;gap:8px}
+.tool{flex:1;border:0;border-radius:20px;background:#fff;box-shadow:0 5px 0 var(--line);padding:9px 2px 8px;font-size:14px;gap:4px;transition:transform .08s}
+.tool svg{width:26px;height:26px}
+.tool:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+.tool.on{background:var(--sky);color:#fff;box-shadow:0 5px 0 #3E9CC8}
+.tool.go{background:var(--good);color:#fff;box-shadow:0 5px 0 #2A8A5C}
+.tool.pulse{animation:pulse 1s ease-in-out infinite;background:#FFE08A;box-shadow:0 5px 0 #E8B53A}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.kid .tool.adv{display:none}
+.kid.showall .tool.adv{display:flex}
+.zoom button{border-radius:14px;border:0;background:rgba(255,255,255,.92);color:var(--ink);box-shadow:0 3px 0 rgba(74,55,44,.18)}
+.zoom button.on{background:var(--sky);color:#fff}
+.hud span,.layers .ttl,.layers button,.tip{background:rgba(74,55,44,.82)}
+.toast{background:rgba(74,55,44,.92);border-radius:16px;font-size:15px;font-weight:700;padding:10px 16px}
+/* 說話框 */
+.step{background:#fff;border-radius:22px;padding:8px 10px 8px 8px;box-shadow:0 5px 0 rgba(74,55,44,.15);font-size:14px;color:var(--ink)}
+.bubble{display:flex;align-items:center;gap:10px}
+.bubble .mz{width:54px;height:54px;flex:none}
+.bubble .say{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.bubble .say b{font-size:19px;font-weight:900;line-height:1.25}
+.bubble .dots{display:flex;gap:4px;flex-wrap:wrap}
+.bubble .dots i{width:9px;height:9px;border-radius:50%;background:#F1E3CF}
+.bubble .dots i.on{background:var(--pink)}
+.bubble .dots i.now{background:var(--sky);transform:scale(1.35)}
+.bubble .q{width:34px;height:34px;border-radius:50%;border:0;background:#FFF3DE;color:var(--ink-2);font:900 17px var(--font-b);cursor:pointer;flex:none}
+.step .more{font-size:13px;line-height:1.6;color:var(--ink-2);padding:6px 4px 2px 64px}
+/* 首頁 */
+.home{background:radial-gradient(circle at 12% 8%,#FFE3EC 0,transparent 30%),radial-gradient(circle at 92% 90%,#DDF3FF 0,transparent 32%),var(--desk)}
+.kid .readout{display:none}
+.home-in>*{min-width:0;max-width:100%}
+.lessons{max-width:100%;box-sizing:border-box}
+.home-in{gap:16px}
+.hero{display:flex;align-items:center;gap:14px}
+.hero .mz{width:92px;height:92px;flex:none;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-6px) rotate(4deg)}}
+.home h1{font-weight:900;font-size:38px;letter-spacing:.04em;color:var(--ink)}
+.home h1 em{font-style:normal;color:var(--pink)}
+.home .lead{font-size:16px;font-weight:700}
+.secthead h2{font-size:20px;font-weight:900}
+.secthead span{font-size:14px;font-weight:700}
+.card{border:0;border-radius:26px;padding:10px 10px 12px;box-shadow:0 6px 0 var(--line);transition:transform .1s}
+.card:active{transform:translateY(4px);box-shadow:0 2px 0 var(--line)}
+.card canvas{border-radius:20px}
+.card .nm b{font-size:20px;font-weight:900}
+.card .meta{font-size:13px;font-weight:700}
+.card .tag{border-radius:999px;font-size:12px;font-weight:700;background:rgba(255,255,255,.92);color:var(--ink);top:16px;left:16px}
+.card .tag.got{background:var(--gold);color:#4A2E00}
+.stars{font-size:16px}
+.lessons{grid-template-columns:repeat(5,minmax(120px,1fr))}
+/* 選紙、完成 */
+.panel{border-radius:30px 30px 0 0}
+.panel h2{font-weight:900;font-size:28px}
+.btn{border:0;border-radius:20px;font-size:18px;padding:14px;box-shadow:0 5px 0 var(--line);background:#fff}
+.btn.primary{background:var(--pink);color:#fff;box-shadow:0 5px 0 #E06686}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+.sw{width:46px;height:46px;border:4px solid #fff;box-shadow:0 3px 0 var(--line)}
+.sw.on{box-shadow:0 0 0 4px var(--pink)}
+.big{font-size:46px;color:var(--gold)}
+#done .stars{font-size:40px;letter-spacing:4px}
+#donePct{display:none}
+.done-top .mz{width:70px;height:70px}
+/* 彩紙 */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
+.confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (prefers-reduced-motion: reduce){.confetti{display:none}.hero .mz{animation:none}.tool.pulse{animation:none}}
 </style>
+<script>document.documentElement.setAttribute('data-theme','light');</script>
 </head>
 <body>
-<div class="app">
+<div class="app kid" id="app">
   <div class="top">
     <button class="back" id="homeBtn" type="button" aria-label="回到圖鑑"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>圖鑑</button>
     <div class="title"><b id="lvName">小狗</b><span id="lvSub">範例 4 摺 · 普通</span></div>
@@ -182,7 +266,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <div class="coach" id="coach" hidden></div>
     <div class="step" id="stepCard" hidden></div>
     <div class="hud" id="hud" hidden></div>
-    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button><button id="zMode" type="button" aria-label="切換 2D／3D" title="切換 2D（正上方、平面）／3D（可以轉著看）"><span>3D</span></button><button id="zMore" type="button" aria-label="更多工具" title="更多：視角、按住、重做、摺痕圖、塑形"><span>⋯</span></button><div class="more" id="moreBox" hidden><button id="zView" type="button" aria-label="換視角" title="3D 視角：斜看 → 低角度 → 側面 → 俯視"><span>視角</span></button><button id="pinBtn" type="button" aria-label="按住（另一隻手）" title="按住：點紙上一點當作另一隻手按住（電腦也可以按住空白鍵或滑鼠右鍵）">📌</button><button id="redo" type="button" aria-label="重做" title="重做"><span>重做</span></button><button id="cpBtn" type="button" aria-label="摺痕圖" title="攤開看山線谷線"><span>摺痕</span></button><button id="v3Btn" type="button" aria-label="塑形" title="塑形：用物理把紙拉開、調摺痕角度（例如把翅膀打開）"><span>塑形</span></button></div></div>
+    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button><button id="zMode" type="button" aria-label="切換 2D／3D" title="切換 2D（正上方、平面）／3D（可以轉著看）"><span>3D</span></button><button id="zMore" type="button" aria-label="更多工具" title="更多：視角、按住、重做、摺痕圖、塑形"><span>⋯</span></button><div class="more" id="moreBox" hidden><button id="zView" type="button" aria-label="換視角" title="3D 視角：斜看 → 低角度 → 側面 → 俯視"><span>視角</span></button><button id="pinBtn" type="button" aria-label="按住（另一隻手）" title="按住：點紙上一點當作另一隻手按住（電腦也可以按住空白鍵或滑鼠右鍵）">📌</button><button id="redo" type="button" aria-label="重做" title="重做"><span>重做</span></button><button id="cpBtn" type="button" aria-label="摺痕圖" title="攤開看山線谷線"><span>摺痕</span></button><button id="sndBtn" type="button" aria-label="音效開關" title="音效開關"><span>🔊</span></button><button id="v3Btn" type="button" aria-label="塑形" title="塑形：用物理把紙拉開、調摺痕角度（例如把翅膀打開）"><span>塑形</span></button></div></div>
     <div class="v3p" id="v3p" hidden>
       <div class="r"><span>摺疊程度</span><input type="range" id="v3fold" min="0" max="100" value="100"><b id="v3foldV">100%</b></div>
       <div class="r" id="v3crow" hidden><span>這條摺痕</span><input type="range" id="v3ang" min="0" max="180" value="180"><b id="v3angV">180°</b></div>
@@ -196,23 +280,23 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
   </div>
 
   <div class="tray" id="foldTray">
-    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>復原</button>
-    <button class="tool" id="typeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path id="typeIcon" d="M2 12h20" stroke-dasharray="4 3"/><path d="M7 7l5-4 5 4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="typeLbl">谷摺</span></button>
-    <button class="tool" id="scopeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 9h16v10H4z" opacity=".4"/><path d="M4 5h16v10H4z"/></svg><span id="scopeLbl">全部層</span></button>
+    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>回去</button>
+    <button class="tool adv" id="typeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path id="typeIcon" d="M2 12h20" stroke-dasharray="4 3"/><path d="M7 7l5-4 5 4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="typeLbl">谷摺</span></button>
+    <button class="tool adv" id="scopeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 9h16v10H4z" opacity=".4"/><path d="M4 5h16v10H4z"/></svg><span id="scopeLbl">全部層</span></button>
     <button class="tool" id="flip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5"/><path d="m16 7 5 5-5 5"/></svg>翻面</button>
-    <button class="tool" id="rot" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>旋轉</button>
-    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><span id="hintLbl">提示</span></button>
+    <button class="tool adv" id="rot" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>旋轉</button>
+    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><span id="hintLbl">教我</span></button>
+    <button class="tool" id="advBtn" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></svg>更多</button>
   </div>
   <div class="tray" id="stickerTray" hidden></div>
 </div>
 
 <div class="home" id="home">
   <div class="home-in">
-    <h1>今天摺什麼？</h1>
-    <p class="lead">先學基本功，再照真正的摺紙教學一步一步摺。摺好的作品會收進你的圖鑑。</p>
-    <div class="secthead"><h2>基本功</h2><span id="lessonCount">0 / 5 學會</span></div>
+    <div class="hero"><span class="mz" id="heroMz"></span><div><h1>指尖<em>摺紙</em></h1><p class="lead">用手指，摺出可愛的作品！</p></div></div>
+    <div class="secthead"><h2>🖐 練習</h2><span id="lessonCount">0 / 5 學會</span></div>
     <div class="lessons" id="lessonGrid"></div>
-    <div class="secthead"><h2>作品</h2><span>圖鑑 <b id="dexCount">0 / 1</b></span></div>
+    <div class="secthead"><h2>⭐ 作品</h2><span>收集 <b id="dexCount">0 / 1</b></span></div>
     <div class="grid" id="animalGrid"></div>
     <h2 id="mineTitle" hidden>我自己創作的</h2>
     <div class="mine" id="mineList" hidden></div>
@@ -231,11 +315,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     </div>
     <p id="pickTip"></p>
     <p class="src" id="pickSrc" hidden></p>
-    <div class="label">選紙的顏色（正面）</div>
+    <div class="label">🎨 選顏色</div>
     <div class="swatches" id="swatches"></div>
     <div class="row">
-      <button class="btn" id="pickCancel" type="button">再看看</button>
-      <button class="btn primary" id="pickGo" type="button">開始摺</button>
+      <button class="btn" id="pickCancel" type="button">回去</button>
+      <button class="btn primary" id="pickGo" type="button">開始摺！</button>
     </div>
   </div>
 </div>
@@ -245,6 +329,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <div class="done-top">
       <canvas id="doneCanvas" width="300" height="300"></canvas>
       <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <span class="mz" id="doneMz"></span>
         <h2 id="doneTitle">小狗摺好了</h2>
         <div class="big" id="donePct">96%</div>
         <span class="stars" id="doneStars"></span>
@@ -252,7 +337,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
       </div>
     </div>
     <div class="row">
-      <button class="btn" id="keep" type="button">繼續修</button>
+      <button class="btn" id="keep" type="button">再看看</button>
       <button class="btn primary" id="collect" type="button">收進圖鑑</button>
     </div>
   </div>
@@ -1073,12 +1158,12 @@ PRO.crane=[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scop
 PRO.plane=[{"s":[-1,1],"t":[1,1],"type":"crease","scope":"all","text":"彩色面朝上。左右對摺再打開，壓出中線。"},{"flip":true,"text":"翻面，白色朝上。"},{"s":[-1,1],"t":[0,0],"type":"valley","scope":"all","text":"左上角往下摺，讓上緣對齊中線。"},{"s":[1,1],"t":[0,0],"type":"valley","scope":"all","text":"右上角也一樣，上面變成尖尖的屋頂。"},{"s":[-1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"左邊的斜邊再往中線摺一次，機頭更尖。"},{"s":[1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"右邊的斜邊也摺到中線。"},{"s":[0.707106781187,-1.12132034356],"t":[-0.707106781187,-1.12132034356],"type":"mountain","scope":"all","text":"沿中線往後對摺（山摺），變成側面的樣子。"},{"s":[-0.707106781187,-1.12132034356],"t":[0.360860535391,-1.206757728886],"type":"valley","scope":"flap","text":"機翼：最上面那層沿「機頭到下緣、離摺邊一小段」的線往外摺下來（位置自己決定）。","free":true},{"flip":true,"text":"翻面。"},{"s":[-0.360860535391,-1.206757728886],"t":[0.707106781187,-1.12132034356],"type":"valley","scope":"flap","text":"另一邊的機翼也摺下來，兩邊一樣寬。完成！把機翼打平就可以射出去。","free":true}];
 PRO.cup=[{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成三角形。"},{"s":[-1.414213562373,0],"t":[0.585786437627,0.828427124746],"type":"valley","scope":"all","text":"左角摺到右邊的斜邊上，摺過去那片的上緣要跟底邊平行。","free":true},{"s":[1.414213562373,0],"t":[-0.585786437627,0.828427124746],"type":"valley","scope":"all","text":"右角也摺到左邊的斜邊上。","free":true},{"s":[0,1.414213562373],"t":[0,0.242640687119],"type":"valley","scope":"flap","text":"最上面那層的尖角往下摺，塞進前面的口袋裡（這裡直接摺下來）。"},{"flip":true,"text":"翻面。"},{"s":[0,1.414213562373],"t":[0,0.242640687119],"type":"valley","scope":"flap","text":"另一層尖角也往下摺。完成！打開杯口就可以裝東西。"}];
 PRO.dog=[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，上角往下摺到下角，變成三角形（摺邊在上面）。"},{"s":[-1.414213562373,0],"t":[-0.527106781187,-1.057106781187],"type":"valley","scope":"all","text":"左角往下摺成垂下來的耳朵（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.527106781187,-1.057106781187],"type":"valley","scope":"all","text":"右角也往下摺成耳朵，左右對稱。","free":true},{"s":[0,-1.414213562373],"t":[0,-0.994213562373],"type":"valley","scope":"flap","text":"最上面那層的下角往上摺一點，做出嘴巴（位置自己決定）。","free":true},{"s":[0,-0.994213562373],"t":[0,-0.794213562373],"type":"valley","scope":"flap","text":"再往上摺一小段，變成鼻子。完成！貼上眼睛和鼻子。","free":true}];
-PRO.cat=[{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成尖角朝上的三角形。"},{"s":[-1.414213562373,0],"t":[-0.8,1.08],"type":"valley","scope":"all","text":"左邊的角沿著「從底邊靠中間往左上」的線翻上去，變成耳朵（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.8,1.08],"type":"valley","scope":"all","text":"右邊的角也翻上去，左右對稱。","free":true},{"s":[0,1.414213562373],"t":[0,0.36],"type":"mountain","scope":"layers","n":2,"text":"頂角往後摺到兩耳中間的高度（山摺），做出額頭（位置自己決定）。完成！貼上眼睛、鼻子和鬍鬚。","free":true}];
+PRO.cat=[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"白色朝上擺成菱形，左右對摺再打開，壓出直的中線（耳朵要左右對稱）。"},{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成尖角朝上的三角形。"},{"s":[-1.414213562373,0],"t":[-0.8,1.08],"type":"valley","scope":"all","text":"左邊的角沿著「從底邊靠中間往左上」的線翻上去，變成耳朵（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.8,1.08],"type":"valley","scope":"all","text":"右邊的角也翻上去，左右對稱。","free":true},{"s":[0,1.414213562373],"t":[0,0.36],"type":"mountain","scope":"layers","n":2,"text":"頂角往後摺到兩耳中間的高度（山摺），做出額頭（位置自己決定）。完成！貼上眼睛、鼻子和鬍鬚。","free":true}];
 PRO.kabuto=[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，上角往下摺到下角，變成三角形（摺邊在上面）。"},{"s":[-1.414213562373,0],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"左角摺到下角。"},{"s":[1.414213562373,0],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"右角也摺到下角，變成一個菱形。"},{"s":[0,-1.414213562373],"t":[0,0],"type":"valley","scope":"flap","text":"最上面那片的下角往上摺到頂點。"},{"s":[0,-1.414213562373],"t":[0,0],"type":"valley","scope":"flap","text":"另一片的下角也往上摺到頂點。"},{"s":[0,0],"t":[-0.44,-0.2],"type":"valley","scope":"flap","text":"把上面的尖角往外斜摺，做出左邊的角（位置自己決定）。","free":true},{"s":[0,0],"t":[0.44,-0.2],"type":"valley","scope":"flap","text":"右邊的角也往外摺，左右對稱。","free":true},{"s":[0,-1.414213562373],"t":[0,-0.6],"type":"valley","scope":"flap","text":"最下面前面那層的下角往上摺，尖端超過中間一點（位置自己決定）。","free":true},{"s":[0,-1.007106781187],"t":[0,-0.407106781187],"type":"valley","scope":"layers","n":2,"text":"沿著頭盔的下緣（左右兩角的連線）再往上摺一次，做出帽簷。","free":true},{"s":[0,-1.414213562373],"t":[0,0],"type":"mountain","scope":"layers","n":1,"text":"剩下後面那層的下角往後摺上去。完成！","free":true}];
 PRO.teller=[{"s":[-1,1],"t":[1,-1],"type":"crease","scope":"all","text":"彩色面朝上。沿對角線對摺再打開。"},{"s":[1,1],"t":[-1,-1],"type":"crease","scope":"all","text":"另一條對角線也壓出摺痕。"},{"flip":true,"text":"翻面，白色朝上。"},{"s":[-1,1],"t":[0,0],"type":"valley","scope":"all","text":"左上角摺到中心點。"},{"s":[1,1],"t":[0,0],"type":"valley","scope":"all","text":"右上角摺到中心點。"},{"s":[1,-1],"t":[0,0],"type":"valley","scope":"all","text":"右下角摺到中心點。"},{"s":[-1,-1],"t":[0,0],"type":"valley","scope":"all","text":"左下角摺到中心點。"},{"flip":true,"text":"翻面。"},{"s":[0,1],"t":[0,0],"type":"valley","scope":"all","text":"上角也摺到中心點。"},{"s":[1,0],"t":[0,0],"type":"valley","scope":"all","text":"右角也摺到中心點。"},{"s":[0,-1],"t":[0,0],"type":"valley","scope":"all","text":"下角也摺到中心點。"},{"s":[-1,0],"t":[0,0],"type":"valley","scope":"all","text":"左角也摺到中心點。"},{"s":[-0.5,0.5],"t":[0.5,-0.5],"type":"crease","scope":"all","text":"對摺再打開，讓四個口袋好打開。完成！翻過來把手指伸進四個口袋就能玩「東南西北」。"}];
 PRO.flap=[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"彩色面朝上擺成菱形，左右對摺再打開，壓出直的對角線。"},{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"crease","scope":"all","text":"上下對摺再打開，壓出橫的對角線。"},{"flip":true,"text":"翻面，白色朝上。"},{"s":[-0.707106781187,0.707106781187],"t":[0.707106781187,-0.707106781187],"type":"crease","scope":"all","text":"左上邊對右下邊對摺再打開。"},{"s":[0.707106781187,0.707106781187],"t":[-0.707106781187,-0.707106781187],"type":"crease","scope":"all","text":"右上邊對左下邊對摺再打開。"},{"flip":true,"text":"翻回彩色面。"},{"segs":[[[0.707106781187,-0.707106781187],[-0.707106781187,0.707106781187],true,"M"],[[0,-1.414213562373],[0,1.414213562373],false,null],[[0,-1.414213562373],[0.414213562373,-0.414213562373],false,null],[[0,-1.414213562373],[-0.414213562373,-0.414213562373],false,null],[[-0.414213562373,-0.414213562373],[0.414213562373,-0.414213562373],false,null],[[0.707106781187,0.707106781187],[-0.707106781187,-0.707106781187],true,"M"],[[1.414213562373,0],[-1.414213562373,0],true,"V"],[[1.414213562373,0],[0.414213562373,0.414213562373],false,null],[[1.414213562373,0],[0.414213562373,-0.414213562373],false,null],[[0.414213562373,-0.414213562373],[0.414213562373,0.414213562373],false,null],[[0,1.414213562373],[-0.414213562373,0.414213562373],false,null],[[0,1.414213562373],[0.414213562373,0.414213562373],false,null],[[0.414213562373,0.414213562373],[-0.414213562373,0.414213562373],false,null],[[-1.414213562373,0],[-0.414213562373,-0.414213562373],false,null],[[-1.414213562373,0],[-0.414213562373,0.414213562373],false,null],[[-0.414213562373,0.414213562373],[-0.414213562373,-0.414213562373],false,null]],"root":[0.05,-0.25],"s":[0,1.414213562373],"t":[0,-1.414213562373],"text":"沿著摺痕收合成「正方基本型」：左右兩個角往下收到最下面的角，四個角疊在一起。（複合摺：沿箭頭拖）"},{"s":[-0.707106781187,-0.707106781187],"t":[0,-0.414213562373],"type":"crease","scope":"flap","text":"最上面那層的左下邊摺到中線，壓出摺痕再打開（切成「摺痕」，風箏摺）。"},{"s":[0.707106781187,-0.707106781187],"t":[0,-0.414213562373],"type":"crease","scope":"flap","text":"右下邊也一樣摺到中線壓出摺痕。"},{"s":[0,0],"t":[0,-0.828427124746],"type":"crease","scope":"flap","text":"上面的三角形往下摺，摺線連起剛剛兩條摺痕的上端，壓出橫摺痕再打開。"},{"segs":[[[0.414213562373,-0.414213562373],[-0.707106781187,0.707106781187],true,"M"],[[0.414213562373,-0.414213562373],[0.707106781187,-0.707106781187],false,null],[[0,-1.414213562373],[0,1.414213562373],false,null],[[0,-1.414213562373],[0.414213562373,-0.414213562373],true,"M"],[[0,-1.414213562373],[-0.414213562373,-0.414213562373],true,"M"],[[-0.414213562373,-0.414213562373],[0.414213562373,-0.414213562373],true,"V"],[[0.707106781187,0.707106781187],[-0.414213562373,-0.414213562373],true,"M"],[[1.414213562373,0],[-1.414213562373,0],true,"V"],[[1.414213562373,0],[0.414213562373,0.414213562373],false,null],[[1.414213562373,0],[0.414213562373,-0.414213562373],true,"M"],[[0.414213562373,-0.414213562373],[0.414213562373,0.414213562373],false,null],[[0,1.414213562373],[-0.414213562373,0.414213562373],false,null],[[0,1.414213562373],[0.414213562373,0.414213562373],false,null],[[0.414213562373,0.414213562373],[-0.414213562373,0.414213562373],false,null],[[-0.414213562373,-0.414213562373],[-0.707106781187,-0.707106781187],false,null],[[-1.414213562373,0],[-0.414213562373,-0.414213562373],true,"M"],[[-1.414213562373,0],[-0.414213562373,0.414213562373],false,null],[[-0.414213562373,0.414213562373],[-0.414213562373,-0.414213562373],false,null]],"root":[0.05,-0.25],"s":[0,-1.414213562373],"t":[0,0.585786437627],"text":"花瓣摺：只抓最上面那層，把下面的角沿橫摺痕往上掀，兩側沿風箏摺痕往中間收，壓平。（複合摺：沿箭頭拖）"},{"flip":true,"text":"翻面。"},{"s":[-0.707106781187,-0.707106781187],"t":[0,-0.414213562373],"type":"crease","scope":"flap","text":"最上面那層的左下邊摺到中線，壓出摺痕再打開（切成「摺痕」，風箏摺）。"},{"s":[0.707106781187,-0.707106781187],"t":[0,-0.414213562373],"type":"crease","scope":"flap","text":"右下邊也一樣摺到中線壓出摺痕。"},{"s":[0,0],"t":[0,-0.828427124746],"type":"crease","scope":"flap","text":"上面的三角形往下摺，摺線連起剛剛兩條摺痕的上端，壓出橫摺痕再打開。"},{"segs":[[[0.414213562373,-0.414213562373],[-0.414213562373,0.414213562373],true,"M"],[[0.414213562373,-0.414213562373],[0.707106781187,-0.707106781187],false,null],[[0,-1.414213562373],[0,1.414213562373],false,null],[[0,-1.414213562373],[0.414213562373,-0.414213562373],true,"M"],[[0,-1.414213562373],[-0.414213562373,-0.414213562373],true,"M"],[[-0.414213562373,-0.414213562373],[0.414213562373,-0.414213562373],true,"V"],[[0.414213562373,0.414213562373],[-0.414213562373,-0.414213562373],true,"M"],[[0.414213562373,0.414213562373],[0.707106781187,0.707106781187],false,null],[[1.414213562373,0],[-1.414213562373,0],true,"V"],[[1.414213562373,0],[0.414213562373,0.414213562373],true,"M"],[[1.414213562373,0],[0.414213562373,-0.414213562373],true,"M"],[[0.414213562373,-0.414213562373],[0.414213562373,0.414213562373],false,null],[[-0.414213562373,0.414213562373],[-0.707106781187,0.707106781187],false,null],[[0,1.414213562373],[-0.414213562373,0.414213562373],true,"M"],[[0,1.414213562373],[0.414213562373,0.414213562373],true,"M"],[[0.414213562373,0.414213562373],[-0.414213562373,0.414213562373],true,"V"],[[-0.414213562373,-0.414213562373],[-0.707106781187,-0.707106781187],false,null],[[-1.414213562373,0],[-0.414213562373,-0.414213562373],true,"M"],[[-1.414213562373,0],[-0.414213562373,0.414213562373],true,"M"],[[-0.414213562373,0.414213562373],[-0.414213562373,-0.414213562373],false,null]],"root":[0.05,-0.25],"back":true,"s":[0,-1.414213562373],"t":[0,0.585786437627],"text":"背面也做一次花瓣摺，完成「鶴基本型」。（複合摺：沿箭頭拖）"},{"region":{"c":[1.414213562373,0],"r":1.1},"s":[0,-1.414213562373],"t":[-0.95,0.15],"type":"inside","text":"脖子：左邊那隻寬的尖角沿著箭頭往上內翻摺，從兩片翅膀中間翻到左上方。（沿箭頭拖）"},{"region":{"c":[-1.414213562373,0],"r":1.1},"s":[0,-1.414213562373],"t":[0.95,0.15],"type":"inside","text":"尾巴：右邊那隻也往上內翻摺，翻到右上方。（沿箭頭拖）"},{"region":{"c":[1.414213562373,0],"r":0.48,"any":true},"s":[-0.95,0.15],"t":[-0.909005803873,-0.186511059993],"type":"inside","text":"頭：脖子的尖端往下內翻一小段。完成！拿著胸口、輕輕拉尾巴，翅膀就會拍動。（沿箭頭拖）"}];
 PRO.balloon=[{"s":[-1,1],"t":[1,-1],"type":"crease","scope":"all","text":"白色朝上。沿對角線對摺再打開。"},{"s":[1,1],"t":[-1,-1],"type":"crease","scope":"all","text":"另一條對角線也壓出摺痕。"},{"flip":true,"text":"翻面，彩色朝上。"},{"s":[0,1],"t":[0,-1],"type":"crease","scope":"all","text":"上下對摺再打開，壓出橫的中線。"},{"flip":true,"text":"翻回白色朝上。"},{"segs":[[[0,0],[1,1],true,"V"],[[0,0],[-1,1],true,"V"],[[0,0],[-1,-1],true,"V"],[[0,0],[1,-1],true,"V"],[[0,0],[1,0],true,"M"],[[0,0],[-1,0],true,"M"],[[0,0],[0,1],false],[[0,0],[0,-1],false]],"root":[0.02,-0.5],"s":[1,1],"t":[1,-1],"text":"沿著摺痕收合成「水雷基本型」：左右兩邊沿橫中線往內收，上半部翻到後面，變成三角形。（複合摺：沿箭頭拖）"},{"s":[-1,-1],"t":[0,0],"type":"valley","scope":"flap","text":"最上面那層的左下角往上摺到頂點。"},{"s":[1,-1],"t":[0,0],"type":"valley","scope":"flap","text":"右下角也摺到頂點，前面變成菱形。"},{"flip":true,"text":"翻面。"},{"s":[-1,-1],"t":[0,0],"type":"valley","scope":"flap","text":"這面也把左下角摺到頂點。"},{"s":[1,-1],"t":[0,0],"type":"valley","scope":"flap","text":"右下角摺到頂點。"},{"flip":true,"text":"翻回來。"},{"s":[-0.5,-0.5],"t":[0,-0.5],"type":"valley","scope":"flap","text":"左右兩個角往中間摺，對齊中線。先摺左邊（只摺最上面那片）。"},{"s":[0.5,-0.5],"t":[0,-0.5],"type":"valley","scope":"flap","text":"再摺右邊。"},{"flip":true,"text":"翻面。"},{"s":[-0.5,-0.5],"t":[0,-0.5],"type":"valley","scope":"flap","text":"這面也把左邊的角摺到中線。"},{"s":[0.5,-0.5],"t":[0,-0.5],"type":"valley","scope":"flap","text":"右邊的角也摺到中線。完成！真的紙還要把上面的小三角塞進旁邊的口袋，再從底下的小洞吹氣，水球就會鼓起來。"}];
-PRO.fox=[{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成尖角朝上的三角形。"},{"s":[-1.414213562373,0],"t":[-0.42,1.32],"type":"valley","scope":"all","text":"左角沿著靠中間的線往上摺，變成尖尖的左耳（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.42,1.32],"type":"valley","scope":"all","text":"右角也往上摺成右耳。","free":true},{"s":[0,1.414213562373],"t":[0,0.55],"type":"mountain","scope":"layers","n":2,"text":"頂角往後摺（山摺），兩耳中間變成頭頂（位置自己決定）。完成！","free":true}];
+PRO.fox=[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"白色朝上擺成菱形，左右對摺再打開，壓出直的中線（耳朵要左右對稱）。"},{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成尖角朝上的三角形。"},{"s":[-1.414213562373,0],"t":[-0.42,1.32],"type":"valley","scope":"all","text":"左角沿著靠中間的線往上摺，變成尖尖的左耳（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.42,1.32],"type":"valley","scope":"all","text":"右角也往上摺成右耳。","free":true},{"s":[0,1.414213562373],"t":[0,0.55],"type":"mountain","scope":"layers","n":2,"text":"頂角往後摺（山摺），兩耳中間變成頭頂（位置自己決定）。完成！","free":true}];
 PRO.tulip=[{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"白色朝上擺成菱形，下角往上摺到上角，變成尖角朝上的三角形。"},{"s":[-1.414213562373,0],"t":[-0.5,1.16],"type":"valley","scope":"all","text":"左角往上摺，尖端停在頂點左邊一點，變成左邊的花瓣（位置自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.5,1.16],"type":"valley","scope":"all","text":"右角也往上摺，變成右邊的花瓣，跟中間的尖角排成三個尖。","free":true},{"s":[-0.221173704178,0],"t":[-0.06,0.19],"type":"mountain","scope":"all","text":"下面左右兩個角往後摺一點，花的底部收窄（位置自己決定）。","free":true},{"s":[0.221173704178,0],"t":[0.06,0.19],"type":"mountain","scope":"all","text":"另一邊也往後摺。完成！","free":true}];
 const LESSONS=[
   {id:'l1', name:'谷摺與山摺', start:'diamond', color:'#F4C93A', sym:'valley', steps:PRO.l1,
@@ -1138,7 +1223,7 @@ if(typeof module!=='undefined') module.exports={applyStep,vertexFold,compoundSte
 const $=id=>document.getElementById(id);
 const cv=$('mat'), ctx=cv.getContext('2d');
 const BACK='#FBF8F0', BACK_EDGE='rgba(70,70,50,.30)', FRONT_EDGE='rgba(0,0,0,.30)';
-const MAT={bg:'#2D5A4A', fine:'rgba(235,245,238,.07)', bold:'rgba(235,245,238,.16)'};
+const MAT={bg:'#CBEAF6', fine:'rgba(255,255,255,.45)', bold:'rgba(255,255,255,.85)'};
 const GUIDE='#FF7A59', HINT='#8FDBFF', INK='#2B2420';
 // 摺紙圖的線：谷線＝虛線、山線＝一長兩點的點虛線、摺痕＝細短虛線（Origami Resource Center 的符號慣例）
 const TYPES={
@@ -1541,8 +1626,15 @@ function drawArrow(c,s,t,V,color,noStart){
   if(!noStart){ c.beginPath(); c.arc(A[0],A[1],6,0,Math.PI*2); c.lineWidth=2; c.stroke(); }
   c.restore();
 }
+function drawDemoHand(c,V,h){
+  const T=1900, t=(performance.now()%T)/T, u=t<.15?0:t>.85?1:(t-.15)/.7, e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+  const q=[h.s[0]+(h.t[0]-h.s[0])*e, h.s[1]+(h.t[1]-h.s[1])*e], [X,Y]=toScreen(q,V,zTop(q)+.003), press=t>.1&&t<.9;
+  c.save(); if(press){ c.beginPath(); c.arc(X,Y,14,0,Math.PI*2); c.fillStyle='rgba(255,143,171,.35)'; c.fill(); }
+  c.font='34px system-ui,"Apple Color Emoji","Segoe UI Emoji"'; c.textAlign='left'; c.textBaseline='top'; c.globalAlpha=t>.92?1-(t-.92)/.08:1;
+  c.fillText('👆',X-11,Y-4+(press?0:-6)); c.restore(); kick(); }
 function drawOverlays(c,V){
   const h=hintCache;
+  if(document.getElementById('app').classList.contains('kid') && h && h.s && !h.flip && !h.rot && !h.done && !drag && !anim && !alive && !lv.free && !v3) drawDemoHand(c,V,h);
   if(lockS && !anim){ const [lx,ly]=toScreen(lockS,V,zTop(lockS)), ph=(performance.now()/600)%1; c.save();
     c.beginPath(); c.arc(lx,ly,11,0,Math.PI*2); c.fillStyle='rgba(255,122,89,.3)'; c.fill(); c.lineWidth=2.5; c.strokeStyle=GUIDE; c.stroke();
     c.beginPath(); c.arc(lx,ly,11+ph*12,0,Math.PI*2); c.globalAlpha=1-ph; c.lineWidth=1.5; c.stroke(); c.globalAlpha=1;
@@ -1587,6 +1679,7 @@ function drawLoupe(){
   ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.arc(lx,ly,R+1.5,0,Math.PI*2); ctx.stroke();
 }
 function drawAxes(c,V){
+  if($('app').classList.contains('kid') && !$('app').classList.contains('showall')) return;   // 小朋友模式不顯示座標軸
   const o=[40,H-62], cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0), cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0);
   const dir=n=>{ const x1=n[0]*cy-n[1]*sy, y1=n[0]*sy+n[1]*cy; return [x1, y1*cp+n[2]*sp, -y1*sp+n[2]*cp]; };
   const ax=[[1,0,0,'X','#E5675A'],[0,1,0,'Y','#7FCB7A'],[0,0,1,'Z','#6FB2F0']].map(a=>({a, d:dir(a)})).sort((p,q)=>p.d[2]-q.d[2]);
@@ -1681,6 +1774,7 @@ function setViewMode(m,quiet){ viewMode=m; try{ localStorage.setItem('origami.vi
   Object.assign(viewT,camOf(m)); $('zMode').firstChild.textContent=m==='2d'?'2D':'3D'; $('zMode').classList.toggle('on',m==='3d');
   userZoom=false; fitView(false); kick(); if(!quiet) showToast(m==='2d'?'2D：從正上方看，拖空白處移動畫面':'3D：拖空白處轉視角，兩指可以旋轉；「視角」鈕切換預設角度'); }
 $('zMode').onclick=()=>setViewMode(viewMode==='2d'?'3d':'2d');
+$('sndBtn').onclick=()=>{ sound=!sound; try{ localStorage.setItem('origami.sound',sound?'on':'off'); }catch(e){} $('sndBtn').firstChild.textContent=sound?'🔊':'🔇'; if(sound) SFX.fold(); };
 $('zMore').onclick=()=>{ const b=$('moreBox'); b.hidden=!b.hidden; $('zMore').classList.toggle('on',!b.hidden); };
 $('zView').onclick=()=>{ if(viewMode==='2d') setViewMode('3d',true); view3i=(view3i+1)%VIEWS3.length; const v=VIEWS3[view3i]; viewT.yaw=v.yaw; viewT.pitch=v.pitch; viewT.persp=1; userZoom=false; fitView(false); kick(); showToast('視角：'+v.name); };
 setViewMode(viewMode,true);
@@ -1839,6 +1933,7 @@ function startAnim(fold,mid){ alive=null;
   anim={...fold, type:foldType, track, crease:!!mid, u0:0, t0:performance.now(), dur:reduce?1:(mid?900:760), u:0, tu:0}; kick(); }
 function commitFold(){
   if(anim && anim.revert){ anim=null; draw(); return; }
+  SFX.fold();
   lockS=null; lockFollow=null;
   const res=anim.res; lastFoldType=anim.type||null; anim=null; redoStack=[];
   history.push(paper); histFold.push(true);
@@ -1878,6 +1973,7 @@ function comeAlive(){
   const st=$('stage'), cry=document.createElement('div'); cry.className='cry'; cry.textContent=isLesson()?'學會了！':lv.cry;
   $('stepCard').hidden=true;
   setTimeout(()=>{ st.append(cry); setTimeout(()=>cry.remove(),1500); },420);
+  SFX.done(); confetti();
   kick();
   setTimeout(showDone,1500);
 }
@@ -1886,12 +1982,12 @@ function starHtml(n){ return '★'.repeat(n)+`<span class="off">${'★'.repeat(3
 function showDone(){
   if(!alive) return;
   const sc=lastMatch.score, n=starCount(sc), par=parOf(lv);
-  $('doneTitle').textContent=isLesson()?`學會「${lv.name}」`:`${lv.name}摺好了`;
+  $('doneTitle').textContent=isLesson()?`學會了！`:`好棒！${lv.name}！`;
   $('collect').textContent=isLesson()?'回到首頁':'收進圖鑑';
   $('donePct').textContent=Math.floor(sc*100)+'%';
   $('doneStars').innerHTML=starHtml(n);
-  $('doneInfo').textContent=`用了 ${foldCount} 摺（範例 ${par} 摺）`+(n<3?(foldCount>par?'。少摺幾次可以拿三星':'。再摺準一點可以拿三星'):'');
-  drawPet($('doneCanvas'), paper.facets, paperColor, alive.face);
+  $('doneInfo').textContent=`🖐 ${foldCount} 摺`;
+  drawPet($('doneCanvas'), paper.facets, paperColor, alive.face); $('doneMz').innerHTML=mascot('cheer');
   $('done').hidden=false;
 }
 $('keep').onclick=()=>{ $('done').hidden=true; };
@@ -1905,6 +2001,30 @@ $('collect').onclick=()=>{
 
 /* ---- 提示 ---- */
 let hintCache=null;
+/* 吉祥物「摺摺」：一張有臉的小方紙（右上角摺起來） */
+function mascot(mood='happy'){
+  const mouth = mood==='wow' ? '<ellipse cx="50" cy="66" rx="6" ry="7" fill="#7A3B2E"/>' : mood==='cheer' ? '<path d="M38 60 Q50 76 62 60 Z" fill="#7A3B2E"/>' : '<path d="M40 62 Q50 71 60 62" fill="none" stroke="#7A3B2E" stroke-width="4" stroke-linecap="round"/>';
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true"><path d="M14 18 H70 L86 34 V86 H14 Z" fill="#FFB86B" stroke="#E8913A" stroke-width="3" stroke-linejoin="round"/><path d="M70 18 V34 H86 Z" fill="#FFE2B8" stroke="#E8913A" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="37" cy="50" r="5.5" fill="#3B2A22"/><circle cx="63" cy="50" r="5.5" fill="#3B2A22"/><circle cx="35.5" cy="48" r="1.8" fill="#fff"/><circle cx="61.5" cy="48" r="1.8" fill="#fff"/>
+    <ellipse cx="27" cy="61" rx="6" ry="4" fill="#FF8FAB" opacity=".75"/><ellipse cx="73" cy="61" rx="6" ry="4" fill="#FF8FAB" opacity=".75"/>${mouth}</svg>`; }
+// 每一步只講一句短話
+function shortSay(h){
+  if(!h) return '咦？按「回去」退一步';
+  if(h.done) return '完成囉！';
+  if(h.flip) return '把紙翻過來！';
+  if(h.rot) return '把紙轉一下！';
+  if(h.vertex) return '沿著箭頭拖過去！';
+  return {valley:'拖過去，摺起來！', mountain:'往後面摺！', crease:'摺一下，再打開！', outside:'往外翻過去！', inside:'往裡面塞進去！', squash:'壓開它！'}[h.type]||'拖過去，摺起來！'; }
+/* 音效：用瀏覽器合成，不用載檔案 */
+let sound=true; try{ sound=localStorage.getItem('origami.sound')!=='off'; }catch(e){}
+let actx=null;
+function beep(notes){ if(!sound) return; try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); const t0=actx.currentTime;
+  notes.forEach(([f,dt,len,type])=>{ const o=actx.createOscillator(), g=actx.createGain(); o.type=type||'sine'; o.frequency.value=f; g.gain.setValueAtTime(0,t0+dt); g.gain.linearRampToValueAtTime(.18,t0+dt+.015); g.gain.exponentialRampToValueAtTime(.001,t0+dt+len); o.connect(g).connect(actx.destination); o.start(t0+dt); o.stop(t0+dt+len+.05); }); }catch(e){} }
+const SFX={ fold:()=>beep([[660,0,.12,'triangle'],[990,.06,.14,'triangle']]), oops:()=>beep([[300,0,.18,'sine'],[220,.1,.2,'sine']]), done:()=>beep([[523,0,.18],[659,.12,.18],[784,.24,.18],[1047,.36,.4,'triangle']]) };
+function confetti(){ if(matchMedia('(prefers-reduced-motion: reduce)').matches) return; const box=document.createElement('div'); box.className='confetti';
+  const cols=['#FF8FAB','#FFB400','#6CC6F0','#3DB37A','#B28DFF','#FF7A59'];
+  for(let i=0;i<60;i++){ const p=document.createElement('i'); p.style.left=Math.random()*100+'vw'; p.style.background=cols[i%cols.length]; p.style.animationDuration=(1.6+Math.random()*1.6)+'s'; p.style.animationDelay=(Math.random()*.5)+'s'; p.style.transform=`rotate(${Math.random()*360}deg)`; box.append(p); }
+  document.body.append(box); setTimeout(()=>box.remove(),4000); }
 function computeHint(){
   hintCache=null;
   if(lv.free) return;
@@ -1921,13 +2041,21 @@ function computeHint(){
   }
 }
 // 教學卡：目前第幾步、要用的摺法與範圍；跟目前設定不一樣就標橘色，點一下切換
-let stepCollapsed=false;
+let stepCollapsed=true;   // 詳細說明預設收起來（按 ? 才看）
 function renderStepCard(){
   const el=$('stepCard');
   if(v3){ el.hidden=true; return; }
   if(!lv || lv.free || stickerMode || alive || (hintCache && hintCache.done)){ el.hidden=true; return; }
   const h=hintCache, N=lv.steps.length;
+  if(!h && document.getElementById('app').classList.contains('kid')){ el.innerHTML=`<div class="bubble"><span class="mz">${mascot('wow')}</span><div class="say"><b>${shortSay(null)}</b></div></div>`; el.hidden=false; $('undo').classList.add('pulse'); return; }
+  $('undo').classList.remove('pulse');
   if(!h){ el.innerHTML=`<div class="chips"><span class="chip no">對不上範例</span><button class="x" type="button" id="stepX">${stepCollapsed?'展開':'收起'}</button></div>`+(stepCollapsed?'':`<div>目前的形狀跟教學的任何一步都對不上。按「復原」退回上一步再試試。</div>`); }
+  else if(document.getElementById('app').classList.contains('kid')){
+    const st=lv.steps[h.i]; let dots='';
+    for(let k=0;k<N;k++) dots+=`<i class="${k<h.i?'on':k===h.i?'now':''}"></i>`;
+    el.innerHTML=`<div class="bubble"><span class="mz">${mascot(h.flip?'wow':'happy')}</span><div class="say"><b>${shortSay(h)}</b><div class="dots">${dots}</div></div><button class="q" type="button" id="stepX" aria-label="詳細說明">?</button></div>`+(stepCollapsed?'':`<div class="more">${st.text}</div>`);
+    $('flip').classList.toggle('pulse',!!h.flip); $('rot').classList.toggle('pulse',!!h.rot);
+  }
   else{
     const st=lv.steps[h.i];
     let chips=`<span class="n">第 ${h.i+1} / ${N} 步</span>`;
@@ -1949,6 +2077,7 @@ function renderStepCard(){
 }
 $('hint').onclick=()=>{
   if(lv.free){ enterStickers(); return; }
+  if($('app').classList.contains('kid')){ hintOn=true; showToast(shortSay(hintCache)); renderStepCard(); draw(); return; }   // 小朋友：再示範一次
   const h=hintCache;
   if(!h){ showToast(lastMatch&&lastMatch.score>=.94?'已經摺好了':'目前的形狀跟範例對不上，先按「復原」退回去'); hintOn=false; draw(); return; }
   if(h.done){ showToast('步驟都做完了'); return; }
@@ -1961,6 +2090,8 @@ $('hint').onclick=()=>{
 };
 
 /* ---- 工具列 ---- */
+$('sndBtn').firstChild.textContent=sound?'🔊':'🔇';
+$('advBtn').onclick=()=>{ $('app').classList.toggle('showall'); $('advBtn').classList.toggle('on',$('app').classList.contains('showall')); };
 $('undo').onclick=()=>{ if(anim||!history.length) return; const f=histFold.pop(); redoStack.push({paper, fold:f}); paper=history.pop(); if(f) foldCount=Math.max(0,foldCount-1); afterChange(); };
 $('redo').onclick=()=>{ if(anim||!redoStack.length){ showToast('沒有可以重做的'); return; } const r=redoStack.pop(); history.push(paper); histFold.push(r.fold); paper=r.paper; if(r.fold) foldCount++; const keep=redoStack; afterChange(); redoStack=keep; };
 $('pinBtn').onclick=()=>{ if(pin||pinMode){ pinMode=false; setPin(null); showToast('放開了'); return; } pinMode=true; $('pinBtn').classList.add('on');
@@ -2215,6 +2346,7 @@ $('nameSave').onclick=()=>{
 
 /* ---- 圖鑑首頁與選紙 ---- */
 function openHome(justGot){
+  $('heroMz').innerHTML=mascot('happy');
   const lg=$('lessonGrid'); lg.innerHTML=''; const learned=book.lessons||{};
   $('lessonCount').textContent=`${LESSONS.filter(l=>learned[l.id]).length} / ${LESSONS.length} 學會`;
   LESSONS.forEach((l,i)=>{
@@ -2294,9 +2426,10 @@ function loadAnimal(a,color){
   $('lvSub').textContent=a.free?'自由創作 · 摺好按「完成」':`${a.learn?'基本功':a.level} · ${parOf(a)} 摺`;
   $('targetBox').style.visibility=a.free?'hidden':'visible';
   if(!a.free) drawPet($('thumb'), target.facets, color, null);
-  $('hintLbl').textContent=a.free?'完成':'提示';
+  $('hintLbl').textContent=a.free?'完成':'教我';
   $('hint').classList.toggle('go',!!a.free);
-  userZoom=false; setType('valley'); setScope('all'); hideToast(); exitStickers(); stepCollapsed=false;
+  userZoom=false; setType('valley'); setScope('all'); hideToast(); exitStickers(); stepCollapsed=true; hintOn=!a.free;
+  $('app').classList.toggle('kid',!a.free); $('app').classList.remove('showall');
   if(a.free){ $('coach').textContent=a.tip; $('coach').hidden=false; }
   fitView(true); updateUndo(); updateReadout(); computeHint(); computeScore(); renderStepCard(); draw();
 }
