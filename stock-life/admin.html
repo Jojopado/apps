@@ -106,7 +106,7 @@ th{color:var(--sub);font-weight:600}
       <div class="sub">20 位電腦玩家會自動交易、走路，讓股市和排行榜熱鬧。在遊戲裡會標示「AI」。</div>
       <div class="btns"><button class="b" id="aiBtn">AI 散戶</button></div>
       <h2 style="margin-top:12px">📥 匯出數據</h2>
-      <div class="sub">下載 CSV（Excel 可以開）：每位玩家每天的步數、戶外步數、總資產、交易次數。</div>
+      <div class="sub">下載 CSV（Excel 可以開）：每位玩家每天的步數、健走步數、總資產、交易次數。</div>
       <div class="btns"><button class="b go" id="csvBtn">下載玩家數據 CSV</button></div>
     </div>
   </div>
@@ -214,7 +214,7 @@ var SCEN = [
 ];
 var CHECK = [
   '走路：模擬走路（或真的走）後，「領取」按鈕的金額變多，按下去錢包增加、有金幣動畫',
-  '出門散步：開啟後在戶外走，戶外步數增加，賺的錢算兩倍',
+  '健走：連續走 5 分鐘以上（電腦版按住 W 超過 5 秒），「健走」步數增加，賺的錢算兩倍',
   '買進：買了以後「資產」頁出現持股，錢包減少',
   '賣出：賣出後跳出賺／賠的特效，成交紀錄有這筆',
   '限價單：掛一個比現價低的買單，股價跌到才成交（在資產頁可以取消）',
@@ -250,7 +250,7 @@ function showDetail(u){
       '<div class="stat"><span class="pill">總資產 ' + money(nw) + '</span><span class="pill ' + cls(nw - base) + '">報酬 ' + pct(nw / base - 1) + '</span><span class="pill">現金 ' + money(p.cash) + '</span><span class="pill">本金 ' + money(base) + '</span><span class="pill">累計步數 ' + (p.tot || 0).toLocaleString() + '</span><span class="pill">破產 ' + (p.resets || 0) + ' 次</span></div>' +
       (p.ai ? '' : '<div class="row2" style="margin-top:8px"><div><label>發錢金額（負數 = 扣錢）</label><input id="gAmt" type="number" value="100000"></div><div><label>附言（玩家看得到）</label><input id="gNote" value="測試玩家獎勵"></div></div><div class="btns"><button class="b go" id="gBtn">💰 發錢</button><button class="b" id="dClose">關閉</button></div>') +
       '<div class="cols" style="margin-top:8px"><div><b>持股</b><table><tr><th>股票</th><th>股數</th><th>均價</th><th>市值</th><th>損益</th></tr>' + (hold || '<tr><td colspan="5" class="sub">沒有持股</td></tr>') + '</table></div>' +
-      '<div><b>每天紀錄</b><div class="scroll" style="max-height:220px"><table><tr><th>日期</th><th>步數</th><th>戶外</th><th>總資產</th><th>交易</th></tr>' + (hist || '<tr><td colspan="5" class="sub">還沒有紀錄</td></tr>') + '</table></div></div>' +
+      '<div><b>每天紀錄</b><div class="scroll" style="max-height:220px"><table><tr><th>日期</th><th>步數</th><th>健走</th><th>總資產</th><th>交易</th></tr>' + (hist || '<tr><td colspan="5" class="sub">還沒有紀錄</td></tr>') + '</table></div></div>' +
       '<div><b>最近成交</b><div class="scroll" style="max-height:220px"><table><tr><th>時間</th><th></th><th>股票</th><th>股數</th><th>價</th><th>損益</th></tr>' + (fills || '<tr><td colspan="6" class="sub">沒有</td></tr>') + '</table></div></div></div>';
     box.scrollIntoView({behavior:'smooth', block:'start'});
   });
@@ -260,7 +260,7 @@ function showDetail(u){
 function exportCsv(){
   toast('準備中…');
   fetch(DB + '/players.json').then(function(r){ return r.json(); }).then(function(all){
-    var lines = [['玩家','ID','AI','日期','步數','戶外步數','總資產','交易次數','目前現金','本金','累計步數','破產次數'].join(',')];
+    var lines = [['玩家','ID','AI','日期','步數','健走步數','總資產','交易次數','目前現金','本金','累計步數','破產次數'].join(',')];
     Object.keys(all || {}).forEach(function(u){
       var p = all[u]; if(!p) return;
       var days = Object.keys(p.hist || {}).sort();
@@ -293,7 +293,7 @@ function draw(){
   if(!A) return;
   var pl = (A.players || []).filter(function(p){ return pFilter === 'all' || !p.ai; });
   $('pCount').textContent = pl.length;
-  $('plTbl').innerHTML = '<tr><th>玩家</th><th>總資產</th><th>報酬</th><th>現金</th><th>今日步數（戶外）</th><th>累計步數</th><th>最後上線</th><th>持股</th></tr>' + pl.map(function(p){
+  $('plTbl').innerHTML = '<tr><th>玩家</th><th>總資產</th><th>報酬</th><th>現金</th><th>今日步數（健走）</th><th>累計步數</th><th>最後上線</th><th>持股</th></tr>' + pl.map(function(p){
     var pos = Object.keys(p.pos || {}).map(function(s){ return s + '×' + p.pos[s]; }).join(' ');
     var ret = p.base ? p.nw / p.base - 1 : 0;
     return '<tr class="prow" data-u="' + esc(p.u) + '" style="cursor:pointer"><td>' + (p.ai ? '🤖 ' : p.vip ? '⭐ ' : '') + esc(p.name) + (p.acct ? '' : ' <span class="sub">(未設密碼)</span>') + (p.resets ? ' 💸' + p.resets : '') + '</td><td>' + money(p.nw) + '</td><td class="' + cls(ret) + '">' + pct(ret) + '</td><td>' + money(p.cash) + '</td><td>' + (p.st || 0).toLocaleString() + '（' + (p.out || 0).toLocaleString() + '）</td><td>' + (p.tot || 0).toLocaleString() + '</td><td>' + (p.ai ? '—' : ago(p.seen)) + '</td><td style="text-align:left;font-size:11px">' + esc(pos || '—') + (p.open ? '（委託 ' + p.open + '）' : '') + '</td></tr>';
