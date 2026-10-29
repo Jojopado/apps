@@ -16,7 +16,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-const VERSION = '0.5.2';
+const VERSION = '0.6.0';
 const BOARD = 60;            // 車進站後可以上車的秒數（起站：開車前 60 秒）
 const STALE = 50000;         // 多久沒心跳算離線（毫秒）
 const BYE = 60;              // 到站前幾秒提醒說再見
@@ -61,7 +61,7 @@ let S = (() => {
   return Object.assign({
     id: 'p' + Math.random().toString(36).slice(2, 10), name: '', color: COLORS[(Math.random() * COLORS.length) | 0],
     hair: HAIRS[(Math.random() * HAIRS.length) | 0], station: 1000, sel: null, ride: null, stamps: {},
-    prof: { mb: '', pc: '', tg: [] }, area: 'hall', test: false, tBase: 0, rBase: 0, speed: 1, x: 80, y: 60
+    prof: { mb: '', pc: '', tg: [] }, area: 'hall', sound: true, test: false, tBase: 0, rBase: 0, speed: 1, x: 80, y: 60
   }, s);
 })();
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
@@ -190,7 +190,7 @@ const Net = {
     }
     const mine = S.ride && v.cp === S.ride.cp && S.ride.cp != null;
     if (mine && (!old || old.cp !== v.cp)) logChat('', `${v.n || '旅伴'} 進到包廂了`);
-    if (mine && v.m && v.mt && (!old || old.mt !== v.mt) && Date.now() - v.mt < 20000) logChat(v.n, v.m);
+    if (mine && v.m && v.mt && (!old || old.mt !== v.mt) && Date.now() - v.mt < 20000) { logChat(v.n, v.m); Sfx.play('pop'); }
     this.peers[k] = v;
   },
   push() {
@@ -354,7 +354,7 @@ function npcTick(t) {
     const q = npcQ[i]; if (Date.now() < q.at) continue;
     npcQ.splice(i, 1);
     const n = ns.find(x => x.id === q.id); if (!n) continue;
-    n.m = q.m; n.mt = Date.now(); lastTalk = Date.now(); logChat(n.n, q.m);
+    n.m = q.m; n.mt = Date.now(); lastTalk = Date.now(); logChat(n.n, q.m); Sfx.play('pop');
   }
 }
 
@@ -479,6 +479,7 @@ function drawStationScene(t) {
 let sceneTrain = null;
 
 function terrain(tr, i) { return ['field', 'city', 'sea', 'mountain', 'field', 'mountain'][hash(tr.no + '-' + i) % 6]; }
+const inTunnel = (tr, pos) => pos.kind === 'move' && terrain(tr, pos.i) === 'mountain' && pos.f > 0.35 && pos.f < 0.55;
 function drawRideScene(t, tr, pos) {
   const g = sg, W = SW, H = SH, h = hourOf(t);
   sky(g, W, H, h);
@@ -486,7 +487,7 @@ function drawRideScene(t, tr, pos) {
   const ter = moving ? terrain(tr, pos.i) : 'station';
   const dist = moving ? (t - tr.stops[pos.i].d) * 26 : 0;
   const night = h < 5 || h >= 19.5;
-  const tunnel = ter === 'mountain' && pos.f > 0.35 && pos.f < 0.55;
+  const tunnel = inTunnel(tr, pos);
   if (tunnel) {
     g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
     g.fillStyle = '#ffd36a'; for (let k = 0; k < 8; k++) g.fillRect(((k * 34 - dist * 1.2) % (W + 40) + W + 40) % (W + 40) - 20, H * 0.4, 6, 2);
@@ -695,7 +696,7 @@ function board() {
   const t = now(), si = selInfo(t);
   if (!si || !si.open) return;
   S.ride = { key: si.tr.key, from: si.i, dest: S.sel.dest, fromC: si.tr.stops[si.i].c, destC: si.tr.stops[S.sel.dest].c, cp: null, cs: 0, seat: 0, jt: Date.now() };
-  S.sel = null; save();
+  S.sel = null; save(); Sfx.play('door');
   myMsg = { m: '', mt: 0 };
   Net.join(roomName());
   dirty = true; listSig = '';
@@ -721,6 +722,7 @@ $('btnBoard').onclick = board;
 const PLATFORM_EARLY = 600;
 function canPlatform(t) { const si = selInfo(t); return si && t >= si.o - PLATFORM_EARLY ? si : null; }
 function goPlatform() {
+  Sfx.play('tap');
   const t = now(), si = selInfo(t);
   if (!si) { toast('要先買票才能過閘門進月台'); return; }
   if (t < si.o - PLATFORM_EARLY) { toast(`車進站前 10 分鐘才能進月台（還要 ${dur(si.o - PLATFORM_EARLY - t)}）`); return; }
@@ -738,7 +740,7 @@ function arrive(i) {
   const met = allMates(t).map(m => m.n);
   S.station = code; S.ride = null; S.area = 'hall'; npcQ.length = 0; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
   myMsg = { m: '', mt: 0 }; $('chatLog').hidden = true;
-  save(); Net.join(roomName()); dirty = true; listSig = '';
+  save(); Net.join(roomName()); dirty = true; listSig = ''; Sfx.play('chime'); setTimeout(() => Sfx.play('stamp'), 700);
   openModal(`<h2>🚪 到站了！列車長請你下車</h2>
     <p style="margin:0 0 4px;font-size:14px">${esc(stName(code))} 站到了，包廂的聊天到這裡結束。${met.length ? `<br>這趟遇到：<b>${met.map(esc).join('、')}</b>` : ''}</p>
     ${stampSVG(code, st.d, 'bigstamp')}
@@ -936,6 +938,7 @@ $('list').addEventListener('click', e => {
     if (S.sel) { toast('你已經有車票了，要換請先取消'); return; }
     if (tr && now() > tr.stops[+chip.dataset.i].d) { toast('這班已經開走了'); return; }
     S.sel = { key: k, dest: +chip.dataset.dest, destC: tr.stops[+chip.dataset.dest].c }; save(); listSig = '';
+    Sfx.play('ticket');
     toast(`🎫 買好了：${tr.no} 次 → ${stName(tr.stops[S.sel.dest].c)}，準時上車喔`);
     return;
   }
@@ -1047,6 +1050,35 @@ function fixTicket(tk, isRide) {
   }
   return true;
 }
+// ---------- 聲音 ----------
+const snd = { key: '', phase: '', kind: '', seg: -1, ann: -1, close: -1 };
+function soundState(t) {
+  if (!S.ride) return { place: S.area, trainNear: !!sceneTrain };
+  const tr = TR[S.ride.key]; if (!tr) return { place: 'ride', speed: 0 };
+  const pos = trainPos(tr, t), mv = pos.kind === 'move';
+  const sp = mv ? clamp(Math.min(pos.f / 0.12, (1 - pos.f) / 0.1, 1), 0.15, 1) : 0;   // 出站加速、進站減速
+  return { place: 'ride', speed: sp, tunnel: inTunnel(tr, pos), braking: mv && pos.f > 0.92 };
+}
+function soundEvents(t) {
+  if (!S.ride && S.area === 'platform' && sceneTrain) {
+    const st = sceneTrain, ph = t < st.o ? 'in' : t <= st.e - 8 ? 'open' : t <= st.e ? 'closing' : 'out';
+    if (snd.key !== st.tr.key) { snd.key = st.tr.key; snd.phase = ''; if (ph === 'in') Sfx.play('horn'); }
+    if (ph !== snd.phase) {
+      if (ph === 'open' && snd.phase) { Sfx.play('chime'); Sfx.play('door'); }
+      if (ph === 'closing') Sfx.play('doorClose');
+      snd.phase = ph;
+    }
+  }
+  if (S.ride && TR[S.ride.key]) {
+    const tr = TR[S.ride.key], pos = trainPos(tr, t);
+    if (pos.kind !== snd.kind) { if (pos.kind === 'stop' && snd.kind === 'move') { Sfx.play('chime'); Sfx.play('door'); } snd.kind = pos.kind; }
+    if (pos.kind === 'stop' && t >= tr.stops[pos.i].d - 8 && snd.close !== pos.i) { snd.close = pos.i; Sfx.play('doorClose'); }
+    if (pos.kind === 'move' && tr.stops[pos.i + 1].a - t < 40 && snd.ann !== pos.i) { snd.ann = pos.i; Sfx.play('announce'); }
+    if (tr.stops[S.ride.dest].a - t <= BYE && !S.ride.byeSnd) { S.ride.byeSnd = 1; Sfx.play('bye'); }
+  }
+}
+$('btnSound').onclick = () => { S.sound = !S.sound; save(); Sfx.init(); Sfx.setOn(S.sound); $('btnSound').textContent = S.sound ? '🔊' : '🔇'; };
+
 // ---------- 主迴圈 ----------
 let lastLogic = 0;
 function logic(t) {
@@ -1073,6 +1105,7 @@ function logic(t) {
   }
   if (!S.ride && S.area === 'platform' && !S.sel) { goHall(); toast('沒有車票，回到大廳'); }
   if (S.ride) npcTick(t);
+  soundEvents(t);
   const si = !S.ride && S.area === 'platform' && selInfo(t);
   const cp = !S.ride && S.area === 'hall' && canPlatform(t);
   $('btnPlatform').hidden = !cp;
@@ -1100,6 +1133,7 @@ function frame() {
   try {
     if (S.ride && TR[S.ride.key]) drawRideScene(t, TR[S.ride.key], trainPos(TR[S.ride.key], t)); else drawStationScene(t);
     drawBubbles(drawYard(t, people(t)));
+    Sfx.update(soundState(t));
   } catch (e) { console.error(e); }
   requestAnimationFrame(frame);
 }
@@ -1107,6 +1141,7 @@ function frame() {
 // ---------- 開始 ----------
 (async function start() {
   resize(); applyTest();
+  Sfx.on = S.sound !== false; $('btnSound').textContent = Sfx.on ? '🔊' : '🔇';
   try {
     let g;
     [ST, DATES, g] = await Promise.all([fetch('data/stations.json').then(r => r.json()), fetch('data/index.json').then(r => r.json()), fetch('data/game.json').then(r => r.json())]);
