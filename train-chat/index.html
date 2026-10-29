@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Train Chat">
+<meta name="theme-color" content="#1b2433">
+<title>Train Chat 趕火車交朋友</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <button id="btnStation" class="hbtn"><span id="stName">臺北</span> ▾</button>
+    <div id="clock">--:--:--</div>
+    <button id="btnBook" class="hbtn" title="印章簿">📮 <span id="stampCount">0</span></button>
+    <button id="btnSet" class="hbtn" title="設定">⚙</button>
+  </header>
+  <div id="testbar" hidden>
+    <span>🧪</span>
+    <button data-t="-600">−10分</button><button data-t="60">+1分</button><button data-t="600">+10分</button><button data-t="3600">+1時</button>
+    <button data-t="jump">到我的車</button>
+    <select id="speed"><option value="1">×1</option><option value="10">×10</option><option value="60">×60</option></select>
+    <button data-t="now">現在</button>
+  </div>
+
+  <!-- ① 火車／窗外 -->
+  <section id="sceneWrap">
+    <canvas id="scene"></canvas>
+    <div id="sceneLabel"></div>
+  </section>
+
+  <!-- ② 月台／車廂（草圖的黃色區塊） -->
+  <section id="yardWrap">
+    <canvas id="yard"></canvas>
+    <div id="bubbles"></div>
+    <div id="board"></div>
+    <button id="btnBoard" hidden>🚪 上車！</button>
+    <div id="chatLog" hidden></div>
+  </section>
+  <form id="chatBar" autocomplete="off">
+    <button type="button" id="btnLog" title="聊天紀錄">💬</button>
+    <input id="chatIn" maxlength="40" placeholder="說點什麼…（對話框會出現在頭上）" enterkeyhint="send">
+    <button id="btnSend">送出</button>
+  </form>
+
+  <!-- ③ 時刻表／停靠站 -->
+  <section id="listWrap">
+    <div id="listHead"></div>
+    <div id="list"></div>
+  </section>
+</div>
+
+<div id="modal" hidden><div id="modalBox"></div></div>
+<div id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
