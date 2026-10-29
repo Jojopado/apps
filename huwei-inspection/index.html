@@ -112,9 +112,9 @@ const HEX = {"光陽":"#e8710a","三陽":"#1a73e8","山葉":"#8e24aa","其他":"
 STATIONS.forEach((s,i)=>s.idx=i+1);
 
 const map = L.map('map',{zoomControl:false,attributionControl:true}).setView([23.7065,120.4310],15);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-  maxZoom:20, subdomains:'abcd',
-  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
 let filter = "全部", me = null, meMarker = null, selected = null;
