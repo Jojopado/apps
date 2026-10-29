@@ -225,7 +225,7 @@ function tickNpcTalk(list) {
 function livePeers() { return Object.entries(Net.peers).filter(([, v]) => Date.now() - (v.t || 0) < STALE); }
 
 // ---------- 畫布 ----------
-const scene = $('scene'), yard = $('yard');
+const scene = $('scene'), yard = $('tcPlatform');
 const sg = scene.getContext('2d'), yg = yard.getContext('2d');
 const SW = 160; let SH = 60, YW = 160, YH = 80;
 function resize() {
@@ -576,12 +576,18 @@ let openRow = null, listSig = '';
 function renderList(t) {
   if (S.ride) return renderStops(t);
   const deps = departures(S.station, t);
-  const sig = 'st|' + S.station + '|' + deps.map(d => d.tr.key).join(',') + '|' + openRow + '|' + JSON.stringify(S.sel) + '|' + Object.keys(S.stamps).length;
+  const sig = 'st|' + S.station + '|' + deps.map(d => d.tr.key).join(',') + '|' + openRow + '|' + JSON.stringify(S.sel) + '|' + Object.keys(S.stamps).length + '|' + (() => { const tg = waitTarget(t); return tg ? boardWin(tg.tr, tg.i)[0] - t > 600 : 0; })();
   if (sig === listSig) return updateCountdowns(t);
   listSig = sig;
   $('listHead').innerHTML = `🚉 ${esc(stName(S.station))} 出發 <small>點一班 → 選下車站</small>`;
-  if (!deps.length) { $('list').innerHTML = `<div class="empty">${Object.keys(DAY).length ? '接下來 6 小時沒有車了。<br>換一站看看，或明天早上再來。' : '時刻表載入中…'}</div>`; return; }
-  $('list').innerHTML = deps.map(d => {
+  if (!deps.length) { $('list').innerHTML = `<div class="empty">${Object.keys(DAY).length ? '接下來 6 小時沒有車了。<br>點左上角站名換一站，或用 ⚙ 設定裡的測試模式快轉。' : '時刻表載入中…'}</div>`; return; }
+  const target = waitTarget(t), wait = target ? boardWin(target.tr, target.i)[0] - t : 0;
+  const h = hourOf(t), night = h < 5 || h >= 23.5;
+  const banner = target && wait > 600 ? `<div class="waitCard"><div class="wcT">${night ? '😴 深夜沒有車' : '⏳ 下一班要等一下'}</div>
+      <div class="wcD">${S.sel ? '你選的' : night ? '首班' : '下一班'} <b>${hm(target.d)}</b> ${badge(target.tr.cls)} 往${esc(destName(target.tr))}，還要 <b data-wait="${boardWin(target.tr, target.i)[0]}">${dur(wait)}</b> 才進站</div>
+      <button class="btn" data-skip="1">⏩ 直接跳到車進站（測試用）</button>
+      <div class="wcN">正式版是真實時間；跳過會打開測試模式，⚙ 設定可關掉。</div></div>` : '';
+  $('list').innerHTML = banner + deps.map(d => {
     const mine = S.sel && S.sel.key === d.tr.key, rest = d.tr.stops.slice(d.i + 1);
     let h = `<div class="row${mine ? ' mine' : ''}" data-k="${d.tr.key}">
       <div class="tm">${hm(d.d)}</div>${badge(d.tr.cls)}
@@ -593,7 +599,14 @@ function renderList(t) {
   }).join('');
   updateCountdowns(t);
 }
+// 要等的那班：選了就是選的那班，不然是下一班還沒進站的
+function waitTarget(t) {
+  const si = selInfo(t);
+  if (si) return { tr: si.tr, i: si.i, d: si.e };
+  return departures(S.station, t).find(d => boardWin(d.tr, d.i)[0] > t) || null;
+}
 function updateCountdowns(t) {
+  document.querySelectorAll('[data-wait]').forEach(el => { const s = dur(+el.dataset.wait - t); if (el.textContent !== s) el.textContent = s; });
   document.querySelectorAll('[data-cd]').forEach(el => {
     const d = +el.dataset.cd, o = +el.dataset.o;
     let s, soon = false;
@@ -617,6 +630,15 @@ $('list').addEventListener('click', e => {
     return;
   }
   if (e.target.closest('[data-cancel]')) { S.sel = null; save(); listSig = ''; return; }
+  if (e.target.closest('[data-skip]')) {
+    const t = now(), tg = waitTarget(t); if (!tg) return;
+    if (!S.test) { S.test = true; S.speed = 1; }
+    setGameTime(boardWin(tg.tr, tg.i)[0] + 2); applyTest();
+    if (!S.sel) openRow = tg.tr.key;
+    listSig = ''; $('list').scrollTop = 0;
+    toast(S.sel ? '車進站了！快按「上車！」' : '車進站了！先點一個下車站，再按「上車！」', 3500);
+    return;
+  }
   const chip = e.target.closest('.chip');
   if (chip) {
     const k = chip.dataset.k, tr = TR[k];
@@ -663,7 +685,7 @@ function renderBoard(t) {
   } else {
     const si = selInfo(t), deps = departures(S.station, t).filter(d => d.d >= t);
     if (si) h = `我的車 ${si.tr.no} 往${esc(destName(si.tr))}<br><span class="g">${si.open ? '🚪 上車！剩 ' + dur(si.e - t) : '開車還有 ' + dur(si.e - t)}</span>`;
-    else if (deps.length) { const d = deps[0]; h = `${hm(d.d)} ${esc(d.tr.cls)} 往${esc(destName(d.tr))}<br><span class="g">${t >= boardWin(d.tr, d.i)[0] ? '列車進站中' : '還有 ' + dur(d.d - t)}</span>`; }
+    else if (deps.length) { const d = deps[0]; h = `${hm(d.d)} ${esc(d.tr.cls)} 往${esc(destName(d.tr))}<br><span class="g">${t >= boardWin(d.tr, d.i)[0] ? '進站中！點下面選下車站' : '還有 ' + dur(d.d - t)}</span>`; }
     else if (Object.keys(DAY).length) h = '今日已無班次';
   }
   if (h !== renderBoard.last) { $('board').innerHTML = h; renderBoard.last = h; }

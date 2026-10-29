@@ -11,6 +11,7 @@ button, input, select { font: inherit; color: inherit; }
 #clock { flex: 1; text-align: center; font: 700 20px ui-monospace, Menlo, Consolas, monospace; color: #ffcf4a; letter-spacing: 1px; }
 #clock.test { color: #7fe0ff; }
 #testbar { display: flex; gap: 4px; padding: 4px 6px; background: #0e3a4a; font-size: 12px; overflow-x: auto; white-space: nowrap; }
+#testbar[hidden] { display: none; }
 #testbar button, #testbar select { background: #17566b; border: 0; border-radius: 6px; padding: 4px 7px; }
 
 canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -131,3 +132,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .mcNo { font-size: 12px; color: #999; border: 2px dashed #ccc; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; text-align: center; flex: none; }
 .mcInfo { font-size: 13px; color: #555; margin: 6px 0 10px; line-height: 1.7; }
 #mapCard .btn { width: 100%; }
+
+/* 要等很久的提示 */
+.waitCard { margin: 10px 12px; padding: 12px 14px; background: #1f2b40; color: #e9eef6; border-radius: 12px; }
+.waitCard .wcT { font-weight: 900; font-size: 16px; }
+.waitCard .wcD { font-size: 13px; margin: 6px 0 10px; line-height: 1.7; }
+.waitCard .wcD b { color: #ffcf4a; }
+.waitCard .btn { width: 100%; background: #2f6fed; color: #fff; border: 0; border-radius: 10px; padding: 10px; font-weight: 800; font-size: 15px; cursor: pointer; }
+.waitCard .wcN { font-size: 11px; color: #9aa7bb; margin-top: 6px; }
