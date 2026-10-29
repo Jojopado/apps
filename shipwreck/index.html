@@ -75,7 +75,11 @@ img.ico{image-rendering:pixelated;width:24px;height:24px;flex:none}
 #btn-boat{position:relative;overflow:hidden}
 #btn-boat .bar{position:absolute;left:0;top:0;bottom:0;background:rgba(255,205,117,.45);width:0;pointer-events:none}
 #btn-boat span{position:relative}
-.inv{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.inv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+#btn-pick.dim{opacity:.45}
+.stash{display:flex;align-items:center;gap:3px;flex-wrap:wrap;min-height:22px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.stash .lbl{font-size:11px;color:var(--dim);margin-right:4px}
+img.ico.sm{width:16px;height:16px}
 .cell{height:50px;min-width:0;overflow:hidden;white-space:nowrap;border:2px dashed var(--line);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:11px;color:var(--dim);gap:1px}
 .cell.full{border-style:solid;background:var(--panel);color:var(--ink);cursor:pointer}
@@ -127,21 +131,21 @@ img.ico{image-rendering:pixelated;width:24px;height:24px;flex:none}
   <section id="scr-title" class="scr on">
     <canvas id="title-cv" width="160" height="72"></canvas>
     <h1>沉船倒數</h1>
-    <div class="sub">30 秒搜刮，然後在海上活下去</div>
+    <div class="sub">40 秒搜刮，然後在海上活下去</div>
     <div class="story">凌晨 3:12，貨輪「晨星號」撞上暗礁。船身開始傾斜，船尾已經在進水。廣播只說了一句：<b>所有人棄船。</b></div>
     <ol>
       <li><b>拖曳畫面</b>移動，靠近東西按<b>「撿起」</b></li>
-      <li>背包只有 <b>6 格</b>，點背包裡的東西可以丟掉</li>
+      <li>手上只能拿 <b>4 格</b>，搬回甲板左邊<b>放進救生艇</b>（12 格）</li>
       <li>船會<b>越來越斜</b>、水從船尾淹上來</li>
-      <li>30 秒到你一定會落海——<b>在甲板上</b>落海最安全</li>
-      <li>左邊有<b>救生艇</b>，按住按鈕解開纜繩</li>
+      <li>記得<b>按住按鈕解開救生艇纜繩</b>，不然艇裡的東西會跟船一起沉</li>
+      <li>40 秒到你一定會落海——<b>人在甲板上</b>才游得到救生艇</li>
     </ol>
     <button id="btn-start" class="main" style="font-size:18px;padding:14px">警報響了 →</button>
   </section>
 
   <section id="scr-ship" class="scr">
     <div class="hud">
-      <div id="timer">30.0</div>
+      <div id="timer">40.0</div>
       <div class="meta">你在：<b id="room">左船艙</b><br>傾斜 <b id="tilt">0°</b>　進水 <b id="flood">0%</b></div>
     </div>
     <div id="stage">
@@ -152,11 +156,12 @@ img.ico{image-rendering:pixelated;width:24px;height:24px;flex:none}
       <div id="toast"></div>
     </div>
     <div class="acts">
-      <button id="btn-pick" disabled>附近沒有東西</button>
+      <button id="btn-pick"><span id="btn-pick-t">撿起</span></button>
       <button id="btn-boat" class="warn" style="display:none"><div class="bar"></div><span>按住解開救生艇</span></button>
     </div>
     <div class="inv" id="ship-inv"></div>
-    <div class="invcap" id="invcap">0 / 6 格・點東西可以丟掉</div>
+    <div class="invcap" id="invcap"></div>
+    <div class="stash" id="stash"></div>
   </section>
 
   <section id="scr-wreck" class="scr">
@@ -213,6 +218,9 @@ const SPR={
   medkit:["..ssss..",".wwwwww.","wwwrrwww","wwrrrrww","wwrrrrww","wwwrrwww",".wwwwww.","........"],
   rope:["..MMMM..",".M....M.","M..MM..M","M.M..M.M","M.M..M.M","M..MM..M",".M....M.","..MMMM.."],
   photo:["wwwwwwww","wBBBBBBw","wBpBBpBw","wBrBBrBw","wgrggrgw","wggggggw","wwwwwwww","........"],
+  oar:["......MM",".....MMM","....MMM.","...m.M..","..m.....",".m......","m.......","........"],
+  blanket:["........","rrwrrwrr","rrwrrwrr","wwwwwwww","rrwrrwrr","rrwrrwrr","wwwwwwww","........"],
+  radio:["......s.",".....s..","SSSSSSSS","SkkkSyyS","SkkkSddS","SkkkSyyS","SSSSSSSS","........"],
   laptop:["........",".SSSSSS.",".SccccS.",".SccccS.",".SSSSSS.","ssssssss","SSSSSSSS","........"],
   man0:["..kkkk..","..kppk..","..pppp..",".bbbbbb.","p.bbbb.p","..bbbb..","..d..d..","..k..k.."],
   man1:["..kkkk..","..kppk..","..pppp..",".bbbbbb.","p.bbbb.p","..bbbb..","..d.d...","..k.k..."],
@@ -251,9 +259,12 @@ const ITEMS={
   medkit:{n:'急救包',sz:1,d:'體力 +35'},
   rope:{n:'繩子',sz:1,d:'綁東西、紮木筏'},
   photo:{n:'全家福',sz:1,d:'每晚體力 +4'},
+  oar:{n:'槳',sz:2,d:'划船、打鯊魚'},
+  blanket:{n:'毯子',sz:1,d:'夜裡保暖'},
+  radio:{n:'收音機',sz:1,d:'聽海巡廣播'},
   laptop:{n:'筆電',sz:1,d:'……真的要帶嗎'},
 };
-const CAP=6;
+const CAP=4, BOAT_CAP=12;
 const invSize=inv=>inv.reduce((a,id)=>a+ITEMS[id].sz,0);
 
 // ============ 船的地圖（20×40 格，每格 8px；上面是船頭甲板，下面是船尾貨艙） ============
@@ -317,7 +328,7 @@ function roomAt(x,y){
   for(const rm of ROOMS){const[a,b,c,d]=rm.r;if(tx>=a&&tx<=c&&ty>=b&&ty<=d)return rm}
   return ROOMS[0];
 }
-const T_SCAV=30;
+const T_SCAV=40;
 
 // ============ 遊戲狀態 ============
 let S={phase:'title'};
@@ -325,10 +336,10 @@ const input={x:0,y:0,hold:false,keys:{}};
 
 function spawnItems(){
   const spec=[
-    ['deck',['ring','plank','rope']],
-    ['bridge',['torch','mirror','biscuit',R()<.5?'flare':'water']],
-    ['cabinL',['jacket','photo','biscuit']],
-    ['cabinR',[R()<.5?'jacket':'medkit','water','laptop']],
+    ['deck',['ring','plank','rope','oar']],
+    ['bridge',['torch','mirror','biscuit','radio',R()<.5?'flare':'water']],
+    ['cabinL',['jacket','photo','biscuit','blanket']],
+    ['cabinR',[R()<.5?'jacket':'medkit','water','laptop','blanket']],
     ['galley',['water','water','can','can','knife','biscuit']],
     ['cargo',['flare','tarp','rod','water','medkit','rope','plank','can']],
   ];
@@ -351,7 +362,7 @@ function spawnItems(){
 
 function newShip(){
   return {t:0,x:4*TW+4,y:16*TW+4,face:1,walk:0,busy:0,theta:0,level:150,
-    items:spawnItems(),inv:[],hold:0,released:false,over:false,lastBeep:-1,near:null};
+    items:spawnItems(),inv:[],stash:[],hold:0,released:false,over:false,lastBeep:-1,near:null};
 }
 
 function tiltAt(t){
@@ -362,7 +373,7 @@ function underwater(sh,x,y){
   const th=sh.theta*Math.PI/180;
   return (x-CX)*Math.sin(th)+(y-CY)*Math.cos(th)>sh.level;
 }
-function nearBoat(sh){return sh.x<6*TW&&sh.y>5*TW&&sh.y<10*TW}
+function nearBoat(sh){return sh.x<7*TW&&sh.y>4.5*TW&&sh.y<10*TW}
 function onDeck(sh){return sh.y<10*TW}
 
 function moveBody(o,dx,dy,r){
@@ -390,7 +401,9 @@ function shipStep(dt){
   const spd=36*(wet?.5:1);
   if(mx)sh.face=mx>0?1:-1;
   if(mx||my)sh.walk+=dt;
-  moveBody(sh,(mx*spd+sn*48)*dt,(my*spd+7*u)*dt,3);
+  // 按住纜繩時抓著不會被傾斜推走
+  const grip=input.hold&&nearBoat(sh)&&!sh.released?0:1;
+  moveBody(sh,(mx*spd+sn*48*grip)*dt,(my*spd+7*u*grip)*dt,3);
   // 地上的東西會跟著傾斜滑動
   for(const it of sh.items){
     const w=underwater(sh,it.x,it.y), mu=w?5:14;
@@ -401,9 +414,7 @@ function shipStep(dt){
     moveBody(it,it.vx*dt,it.vy*dt,2);
   }
   // 最近的可撿物品
-  let best=null,bd=11;
-  for(const it of sh.items){const d=Math.hypot(it.x-sh.x,it.y-sh.y);if(d<bd){bd=d;best=it}}
-  sh.near=best;
+  sh.near=nearestItem(sh);
   // 救生艇纜繩
   if(!sh.released){
     if(input.hold&&nearBoat(sh)){
@@ -417,14 +428,31 @@ function shipStep(dt){
   if(sh.t>=T_SCAV)endShip('time');
 }
 
+const PICK_R=15;
+function nearestItem(sh){
+  let best=null,bd=PICK_R;
+  for(const it of sh.items){const d=Math.hypot(it.x-sh.x,it.y-sh.y);if(d<bd){bd=d;best=it}}
+  return best;
+}
 function pickUp(){
-  const sh=S.ship; if(!sh||sh.over||sh.busy>0||!sh.near)return;
-  const it=sh.near;
-  if(invSize(sh.inv)+ITEMS[it.id].sz>CAP){toast('背包滿了！點下面的東西可以丟掉');return}
+  const sh=S.ship; if(!sh||sh.over)return;
+  if(nearBoat(sh)&&sh.inv.length)return stashAll();
+  if(sh.busy>.1)return;
+  const it=nearestItem(sh);
+  if(!it){toast('再靠近一點');return}
+  if(invSize(sh.inv)+ITEMS[it.id].sz>CAP){toast('手拿不下了！搬去救生艇放，或點下面的東西丟掉');return}
   sh.inv.push(it.id);
   sh.items.splice(sh.items.indexOf(it),1);
   sh.near=null; sh.busy=.3;
   beep(660,.08,.05,'triangle');
+  renderShipInv();
+}
+function stashAll(){
+  const sh=S.ship; if(!sh||sh.over)return;
+  let moved=0;
+  while(sh.inv.length&&invSize(sh.stash)+ITEMS[sh.inv[0]].sz<=BOAT_CAP){sh.stash.push(sh.inv.shift());moved++}
+  if(sh.inv.length)toast('救生艇滿了！');else if(moved)toast(`放進救生艇 ${moved} 樣`);
+  if(moved){beep(520,.1,.05,'triangle');sh.busy=.25}
   renderShipInv();
 }
 function dropAt(i){
@@ -444,17 +472,17 @@ function endShip(reason){
   const sh=S.ship; if(sh.over)return;
   sh.over=true;
   const kept=sh.inv.slice(), lost=[];
-  let boat=false,pen=0,title,text;
+  let boat=false,pen=0,title,text,stashLost=[];
   const wet=underwater(sh,sh.x,sh.y);
   if(reason==='boat'||(sh.released&&nearBoat(sh))){
     boat=true;title='你跳上了救生艇';
     text='你抓著纜繩滑進救生艇。回頭看，晨星號的船頭慢慢豎起來，然後整艘沒入黑色的海裡。';
-  }else if(reason==='jump'){
-    title='你自己跳進海裡';
-    text='你沒等船翻，抱緊東西從甲板邊跳了下去。冰冷的海水一下子灌進鼻子，但你手上的東西都還在。';
-  }else if(onDeck(sh)){
-    title='船翻了';
-    text='時間到了。船身猛地一斜，你從甲板上被甩進海裡。還好在甲板上，你沒被困住。';
+  }else if(sh.released&&onDeck(sh)){
+    boat=true;title='你游向救生艇';
+    text='你從甲板跳進海裡，拚命游向已經放下去的救生艇，翻身爬了進去。';
+  }else if(reason==='jump'||onDeck(sh)){
+    title=reason==='jump'?'你自己跳進海裡':'船翻了';
+    text=reason==='jump'?'你沒等船翻，抱緊東西從甲板邊跳了下去。':'時間到了。船身猛地一斜，你從甲板上被甩進海裡。';
   }else if(!wet){
     title='船翻了';
     text='時間到了。船艙整個翻轉過來，你在黑暗中摸到艙門游了出去，';
@@ -467,15 +495,18 @@ function endShip(reason){
     for(let n=0;n<2&&kept.length;n++){const i=Math.floor(R()*kept.length);lost.push(kept.splice(i,1)[0])}
     text+=lost.length?`${lost.map(id=>ITEMS[id].n).join('、')}在掙扎中弄丟了。（體力 -20）`:'（體力 -20）';
   }
+  if(!boat&&sh.stash.length){stashLost=sh.stash.slice();
+    text+=sh.released?'<br><br>放下去的救生艇被浪推走了，你追不上，裡面的東西全沒了。':'<br><br>救生艇沒放下來，跟著晨星號一起沉了——裡面的東西全沒了。'}
+  const stash=boat?sh.stash.slice():[];
   if(!boat&&!kept.some(id=>id==='jacket'||id==='ring'||id==='plank'))text+='<br><br><b style="color:var(--danger)">你身上沒有任何能浮的東西……</b>';
-  S.wreck={kept,lost,boat,pen,brought:sh.inv.slice()};
+  S.wreck={kept:kept.concat(stash),lost:lost.concat(stashLost),boat,pen,brought:sh.inv.concat(stash)};
   S.phase='wreck';
   $('#wreck-title').textContent=title;
   $('#wreck-text').innerHTML=text;
-  $('#wreck-items').innerHTML=kept.map(id=>`<span class="chip">${ico(id)}${ITEMS[id].n}</span>`).join('')+
-    lost.map(id=>`<span class="chip lost">${ico(id)}${ITEMS[id].n}</span>`).join('')+
+  $('#wreck-items').innerHTML=S.wreck.kept.map(id=>`<span class="chip">${ico(id)}${ITEMS[id].n}</span>`).join('')+
+    S.wreck.lost.map(id=>`<span class="chip lost">${ico(id)}${ITEMS[id].n}</span>`).join('')+
     (boat?`<span class="chip">🚣 救生艇</span>`:'')+
-    (!kept.length&&!lost.length&&!boat?'<span class="note" style="color:var(--dim)">你什麼都沒帶。</span>':'');
+    (!S.wreck.kept.length&&!S.wreck.lost.length&&!boat?'<span class="note" style="color:var(--dim)">你什麼都沒帶。</span>':'');
   input.hold=false;input.x=input.y=0;$('#joy').style.display='none';
   beep(110,.8,.06,'sawtooth');
   show('scr-wreck');
@@ -522,8 +553,9 @@ function renderShip(now){
   ctx.fillStyle='#2b6aa0';
   for(let i=0;i<26;i++){const x=(i*37+Math.floor(t*6+i*3))%160,y=(i*71)%320;if(tileAt(Math.floor(x/8),Math.floor(y/8))==='~')ctx.fillRect(x,y,2,1)}
   // 救生艇
-  if(!sh.released)drawBoat(ctx,24,48);
-  else{drawBoat(ctx,0,50+Math.round(Math.sin(t*2)));ctx.fillStyle='#c28a4a';ctx.fillRect(14,52,10,1)}
+  const bx=sh.released?0:24,by=sh.released?50+Math.round(Math.sin(t*2)):48;
+  drawBoat(ctx,bx,by);if(sh.released){ctx.fillStyle='#c28a4a';ctx.fillRect(14,52,10,1)}
+  sh.stash.forEach((id,i)=>{ctx.fillStyle=PAL[SPR[id][3].replace(/\./g,'')[0]||'w'];ctx.fillRect(bx+5+(i%3)*2,by+4+Math.floor(i/3)*2+(i>=6?3:0),2,2)});
   if(sh.hold>0&&!sh.released){ctx.fillStyle='#ffcd75';ctx.fillRect(24,45,Math.round(16*sh.hold/2),2)}
   // 地上的東西
   for(const it of sh.items)drawSpr(ctx,it.id,Math.round(it.x-4),Math.round(it.y-4));
@@ -570,24 +602,31 @@ function updateShipHud(){
   $('#room').textContent=roomAt(sh.x,sh.y).n+(underwater(sh,sh.x,sh.y)?'（泡在水裡）':'');
   $('#tilt').textContent=Math.round(Math.abs(sh.theta))+'°';
   $('#flood').textContent=Math.round(clamp((150-sh.level)/230,0,1)*100)+'%';
-  const pb=$('#btn-pick');
-  if(sh.near){const it=ITEMS[sh.near.id];pb.disabled=false;pb.innerHTML=`撿起 ${it.n}<small style="font-weight:400;opacity:.7">（${it.d}）</small>`}
-  else{pb.disabled=true;pb.textContent='附近沒有東西'}
+  let pt;
+  if(nearBoat(sh)&&sh.inv.length)pt=`放進救生艇（${sh.inv.length} 樣）`;
+  else if(sh.near){const it=ITEMS[sh.near.id];pt=`撿起 ${it.n}・${it.d}`}
+  else pt='撿起';
+  setText($('#btn-pick-t'),pt);
+  $('#btn-pick').classList.toggle('dim',!sh.near&&!(nearBoat(sh)&&sh.inv.length));
   const bb=$('#btn-boat'),lbl=bb.querySelector('span');
   if(nearBoat(sh)){
-    bb.style.display='';
-    lbl.textContent=sh.released?'跳上救生艇！':'按住解開救生艇纜繩';
+    setDisp(bb,'');
+    setText(lbl,sh.released?'跳上救生艇！':'按住解開救生艇纜繩');
     bb.querySelector('.bar').style.width=(sh.released?100:sh.hold/2*100)+'%';
-  }else if(onDeck(sh)){bb.style.display='';lbl.textContent='提早跳海';bb.querySelector('.bar').style.width='0'}
-  else bb.style.display='none';
+  }else if(onDeck(sh)){setDisp(bb,'');setText(lbl,sh.released?'跳海游向救生艇':'提早跳海');bb.querySelector('.bar').style.width='0'}
+  else setDisp(bb,'none');
 }
+function setText(el,t){if(el.textContent!==t)el.textContent=t}
+function setDisp(el,d){if(el.style.display!==d)el.style.display=d}
 function renderShipInv(){
   const sh=S.ship,el=$('#ship-inv');
   let html='';
   sh.inv.forEach((id,i)=>{html+=`<div class="cell full" data-i="${i}" style="grid-column:span ${ITEMS[id].sz}">${ico(id)}${ITEMS[id].n}</div>`});
   for(let i=invSize(sh.inv);i<CAP;i++)html+='<div class="cell">空</div>';
   el.innerHTML=html;
-  $('#invcap').textContent=`${invSize(sh.inv)} / ${CAP} 格・點東西可以丟掉`;
+  $('#invcap').textContent=`手上 ${invSize(sh.inv)} / ${CAP} 格・點東西可以丟掉`;
+  $('#stash').innerHTML=`<span class="lbl">🚣 救生艇 ${invSize(sh.stash)}/${BOAT_CAP}</span>`+
+    (sh.stash.length?sh.stash.map(id=>`<img class="ico sm" src="${ICON[id]}" alt="${ITEMS[id].n}">`).join(''):'<span class="lbl">空的，撿了東西搬回甲板左邊放</span>');
 }
 let toastT=0;
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1600)}
@@ -605,7 +644,9 @@ function take(s,id){const i=s.inv.indexOf(id);if(i>=0)s.inv.splice(i,1)}
 function loseRandom(s){const i=Math.floor(R()*s.inv.length);return s.inv.splice(i,1)[0]}
 function rescue(s,p,ok){
   // 第一艘船很遠、第二艘近一點、第三艘直接經過
-  const k=s.shipDays.indexOf(s.day),far=[.55,.8,1][k<0?2:k];
+  const k=s.shipDays.indexOf(s.day);let far=[.55,.8,1][k<0?2:k];
+  if(s.heardRadio)far=Math.min(1,far+.25);
+  if(s.helper)p=Math.min(.98,p+.1);
   if(R()<p*far){s.rescued=true;return ok}
   s.hp-=5;return '船沒有看到你。它慢慢開遠，最後消失在海平線上……（體力 -5）';
 }
@@ -613,16 +654,21 @@ const EVENTS=[
   {id:'sun',w:3,scene:'sun',title:'烈日當頭',text:'一片雲都沒有。太陽曬得皮膚發燙，嘴唇開始裂開。',choices:[
     {label:'躲在救生艇的遮篷下',show:s=>s.boat,act:s=>{s.thirst-=5;return '遮篷下涼多了，你省下不少水分。（口渴 -5）'}},
     {label:'撐起防水布遮陽',need:'tarp',show:s=>!s.boat,act:s=>{s.thirst-=5;return '布底下有一小片陰影，你撐過了最熱的中午。（口渴 -5）'}},
+    {label:'用毯子蓋住頭和手臂',need:'blanket',show:s=>!s.boat,act:s=>{s.thirst-=9;return '悶熱，但至少沒被曬傷。（口渴 -9）'}},
+    {label:'泡進海裡降溫',show:s=>!s.boat,act:s=>{s.thirst-=10;if(R()<.3){s.hp-=12;return '涼快多了……直到一隻水母擦過你的腿。（口渴 -10、體力 -12）'}return '整個人泡進水裡，涼快多了。（口渴 -10）'}},
     {label:'把衣服浸濕蓋在頭上',act:s=>{s.thirst-=12;s.hp-=6;return '衣服一下就被曬乾，鹽巴刺得皮膚好痛。（口渴 -12、體力 -6）'}},
     {label:'什麼都不做，硬撐',act:s=>{s.thirst-=18;s.hp-=3;return '你頭暈眼花，海面一直在晃。（口渴 -18、體力 -3）'}},
   ]},
   {id:'rain',w:2,scene:'rain',title:'下雨了！',text:'烏雲飄過來，大顆的雨滴打在海面上。這是淡水！',choices:[
     {label:'攤開防水布接雨',need:'tarp',act:s=>{s.thirst+=40;s.inv.push('water');return '布上積了好多水！你喝個痛快，還裝滿了一瓶。（口渴 +40、得到瓶裝水）'}},
+    {label:'用救生艇的凹槽積水',show:s=>s.boat,act:s=>{s.thirst+=30;return '艇底積了一層雨水，你趴著喝了個飽。（口渴 +30）'}},
+    {label:'把毯子淋濕再擰出水',need:'blanket',act:s=>{s.thirst+=22;return '擰出來的水有點毛毛的味道，但是淡水！（口渴 +22）'}},
     {label:'仰頭張嘴接雨',act:s=>{s.thirst+=15;return '你張大嘴，喝到了一點點。（口渴 +15）'}},
   ]},
   {id:'shark',w:2,scene:'shark',title:'鯊魚',text:'一片背鰭在你身邊繞圈，越繞越近……',choices:[
     {label:'拿刀戒備',need:'knife',act:s=>{if(R()<.7)return '牠衝過來時你朝牠鼻子一刀，牠甩尾逃走了。';
       s.hp-=15;s.food+=20;return '牠撲上來，你一陣亂刺……牠逃了，你也受了傷，還割下一塊肉。（體力 -15、飽足 +20）'}},
+    {label:'用槳打牠的鼻子',need:'oar',act:s=>{if(R()<.65)return '「咚！」牠愣了一下，掉頭走了。';s.hp-=12;s.cause='被鯊魚咬傷';return '牠咬住槳甩了兩下，你差點被拖下水。（體力 -12）'}},
     {label:'保持不動',act:s=>{if(R()<(s.boat?.85:.5))return '你屏住呼吸。過了好久，背鰭消失了。';
       s.hp-=30;s.cause='被鯊魚咬傷';return '牠咬住了你的腿……你拚命踢開牠。（體力 -30）'}},
     {label:'拍水嚇牠',act:s=>{if(R()<.4)return '水花嚇到牠了，牠游走了。';
@@ -637,6 +683,9 @@ const EVENTS=[
   {id:'debris',w:2,scene:'debris',title:'漂流物',text:'不遠處漂來一個木箱和一堆碎木頭，大概是晨星號的。',choices:[
     {label:'抱住一塊碎木頭',show:s=>floatOf(s)==='none',act:s=>{s.hp-=5;s.inv.push('plank');return '你游過去抱住它。終於不用一直踩水了！（體力 -5、得到木板）'}},
     {label:'用繩子把碎木綁成木筏',need:'rope',show:s=>!s.boat&&!s.raft,act:s=>{s.raft=true;s.hp-=5;return '你花了一整個下午，綁出一個能躺上去的木筏！之後每天消耗的體力少很多。（體力 -5）'}},
+    {label:'划過去撿',need:'oar',act:s=>{const it=pick(['water','water','biscuit','can','flare','rope','medkit','blanket']);s.inv.push(it);
+      if(!s.boat&&!s.raft&&has(s,'rope')){s.raft=true;return `你划過去撈起箱子，還順手用繩子把碎木綁成木筏。箱子裡有${ITEMS[it].n}！`}
+      return `划過去一點都不累。箱子裡有……${ITEMS[it].n}！`}},
     {label:'游過去打開木箱',act:s=>{s.hp-=10;const it=pick(['water','water','biscuit','can','flare','rope','medkit','laptop']);s.inv.push(it);
       return `游過去好累，但箱子裡有……${ITEMS[it].n}！（體力 -10）`}},
     {label:'太遠了，不去',act:s=>'你看著它慢慢漂遠。'},
@@ -648,6 +697,8 @@ const EVENTS=[
   ]},
   {id:'storm',w:2,scene:'storm',title:'大浪',text:'風突然變大，浪頭比人還高，一波一波打過來。',choices:[
     {label:'用繩子把東西綁在身上',need:'rope',act:s=>{const d=s.boat?5:10;s.hp-=d;return `你被浪打得暈頭轉向，但東西一件都沒掉。（體力 -${d}）`}},
+    {label:'用槳讓船頭對著浪',need:'oar',show:s=>s.boat||s.raft,act:s=>{s.hp-=4;return '你學過的唯一一招：船頭對浪。真的有用！（體力 -4）'}},
+    {label:'把東西都塞進防水布包起來',need:'tarp',act:s=>{s.hp-=s.boat?6:12;return `東西都包好了，一件也沒掉，只是你被浪打得很慘。（體力 -${s.boat?6:12}）`}},
     {label:'死命抱緊',act:s=>{const d=s.boat?5:15;s.hp-=d;s.cause='被大浪捲走';
       if(s.inv.length&&R()<(s.boat?.3:.6)){const l=loseRandom(s);return `一個大浪打來，${ITEMS[l].n}被沖走了！（體力 -${d}）`}
       return `你撐過來了。（體力 -${d}）`}},
@@ -655,21 +706,63 @@ const EVENTS=[
   {id:'calm',w:3,scene:'calm',title:'平靜的一天',text:'海面平得像鏡子。什麼都沒發生。',choices:[
     {label:'用急救包處理傷口',need:'medkit',consume:true,act:s=>{s.hp+=35;return '消毒、包紮。好多了。（體力 +35）'}},
     {label:'看看全家福',need:'photo',act:s=>{s.hp+=10;return '你一定要回家。（體力 +10）'}},
+    {label:'用槳往海鳥飛的方向划',need:'oar',act:s=>{s.thirst-=8;s.toward=(s.toward||0)+1;return '划了一整天，手都起水泡了。陸地應該更近了吧？（口渴 -8，離陸地更近）'}},
+    {label:'用防水布做蒸餾器',need:'tarp',act:s=>{s.thirst+=12;return '你把海水放在布下曬，收集凝結的水珠，一天只有一小口。（口渴 +12）'}},
     {label:'睡一覺保留體力',act:s=>{s.hp+=8;return '你漂著漂著就睡著了。（體力 +8）'}},
+  ]},
+  {id:'cold',w:2,scene:'night',title:'寒冷的夜',text:'太陽一下山，風就變得刺骨。濕透的衣服貼在身上，你一直發抖。',choices:[
+    {label:'裹上毯子',need:'blanket',act:s=>'毯子濕了一半，但還是很暖。你睡得不錯。'},
+    {label:'用防水布擋風',need:'tarp',act:s=>{s.hp-=4;return '風擋住了，還是有點冷。（體力 -4）'}},
+    {label:'縮在救生艇底部',show:s=>s.boat,act:s=>{s.hp-=3;return '艇身擋住了大部分的風。（體力 -3）'}},
+    {label:'抱緊自己撐過去',act:s=>{s.hp-=12;s.cause='失溫';return '你整晚牙齒都在打顫。（體力 -12）'}},
+  ]},
+  {id:'island',w:1,when:s=>s.day>=4,scene:'island',title:'島的影子？',text:'海平線上好像有一塊灰灰的東西……是島嗎？還是雲？',choices:[
+    {label:'用槳拚命划過去',need:'oar',act:s=>{s.thirst-=15;if(R()<.35+.15*(s.toward||0)){s.landed=true;return '是島！你的槳撞到了沙子。'}s.hp-=8;return '划到天黑才發現那只是一片雲。（口渴 -15、體力 -8）'}},
+    {label:'游過去',show:s=>!s.boat,act:s=>{s.hp-=25;s.cause='游泳力竭';if(R()<.2){s.landed=true;return '你游到沒有感覺……腳踩到了沙子！'}return '游了好久，它還是一樣遠。（體力 -25）'}},
+    {label:'不要浪費體力',act:s=>'你看著它慢慢消失。'},
+  ]},
+  {id:'jelly',w:2,scene:'jelly',title:'水母群',text:'海面下漂來一大片透明的水母，正往你這邊飄過來。',choices:[
+    {label:'用槳把牠們撥開',need:'oar',act:s=>'你小心地把水母一隻隻撥走。'},
+    {label:'把腳縮上救生艇',show:s=>s.boat,act:s=>'你縮在艇上，等牠們慢慢飄過去。'},
+    {label:'用毯子包住腿',need:'blanket',show:s=>!s.boat,act:s=>{s.hp-=3;return '毯子擋住了大部分的刺。（體力 -3）'}},
+    {label:'踢水游開',show:s=>!s.boat,act:s=>{s.hp-=15;s.cause='被水母螫傷';return '腿被螫了好幾下，火辣辣地痛。（體力 -15）'}},
+  ]},
+  {id:'turtle',w:2,scene:'turtle',title:'海龜',text:'一隻大海龜浮上來換氣，就在你旁邊。',choices:[
+    {label:'用刀抓牠來吃',need:'knife',act:s=>{if(R()<.6){s.food+=50;s.thirst+=10;return '你很抱歉，但這是好幾天的食物。（飽足 +50、口渴 +10）'}s.hp-=6;return '牠一下就潛走了，你還被爪子刮傷。（體力 -6）'}},
+    {label:'抓著牠的殼休息一下',show:s=>!s.boat&&!s.raft,act:s=>{s.hp+=8;return '牠居然讓你抓著漂了一會兒。（體力 +8）'}},
+    {label:'看著牠游走',act:s=>{s.hp+=3;return '牠慢慢游走了。你覺得海好像沒那麼可怕。（體力 +3）'}},
+  ]},
+  {id:'survivor',w:1,when:s=>!s.metSurvivor,scene:'survivor',title:'另一個倖存者',text:'一個抱著油桶的船員漂了過來，嘴唇發白：「水……有水嗎……」',choices:[
+    {label:'分他一瓶水',need:'water',consume:true,act:s=>{s.metSurvivor=true;s.hp+=10;s.inv.push(pick(['flare','torch','biscuit','can']));
+      return '他喝完水，從口袋掏出一樣東西塞給你：「拿去，我用不到了。」（體力 +10，得到一樣東西）'}},
+    {label:'讓他上救生艇',show:s=>s.boat,act:s=>{s.metSurvivor=true;s.thirst-=10;s.food-=10;s.helper=true;return '多一張嘴，但他會幫你守夜。之後遇到船，他會跟你一起喊。（口渴 -10、飽足 -10）'}},
+    {label:'假裝沒聽到',act:s=>{s.metSurvivor=true;s.hp-=5;return '他慢慢漂遠了。你整天都在想他。（體力 -5）'}},
+  ]},
+  {id:'infection',w:4,when:s=>s.hp<50,scene:'calm',title:'傷口發炎',text:'腿上的傷口紅腫發燙，你開始發燒。',choices:[
+    {label:'用急救包消毒',need:'medkit',consume:true,act:s=>{s.hp+=30;return '藥膏刺痛，但燒慢慢退了。（體力 +30）'}},
+    {label:'用刀把爛掉的部分割掉',need:'knife',act:s=>{s.hp-=5;return '痛到你差點昏過去，但傷口乾淨多了。（體力 -5）'}},
+    {label:'用海水沖洗',act:s=>{if(R()<.5)return '鹽水刺得要命，但好像有用。';s.hp-=12;s.cause='傷口感染';return '越洗越痛，燒沒退。（體力 -12）'}},
   ]},
   {id:'seawater',w:5,when:s=>s.thirst<35,scene:'calm',title:'好渴……',text:'喉嚨像火在燒。四周全是水，只是全都是鹹的。',choices:[
     {label:'喝一點海水',act:s=>{s.thirst+=20;s.hp-=22;s.cause='喝海水脫水';return '一時解渴，但很快開始頭痛、想吐。（口渴 +20、體力 -22）'}},
     {label:'忍住',act:s=>'你咬緊牙關。'},
   ]},
 ];
+EVENTS.push({id:'static',w:2,when:s=>has(s,'radio')&&!s.heardRadio,scene:'calm',title:'收音機',text:'收音機裡有沙沙的聲音，好像有人在說話。',choices:[
+  {label:'調頻道仔細聽',need:'radio',act:s=>{s.heardRadio=true;const next=s.shipDays.find(d=>d>s.day);
+    return next?`「……晨星號……搜救船……第 ${next} 天……附近海域……」你知道船什麼時候會來了！那天的求救成功率會提高。`:'只有雜訊。'}},
+  {label:'省電，關掉',act:s=>'你把收音機收好。'},
+]});
 const SHIP_DAY={id:'ship',scene:'ship',title:'有船！',text:'海平線上出現一艘貨輪，正往這個方向開，但距離還很遠。',choices:[
   {label:'發射信號彈',need:'flare',consume:true,act:s=>rescue(s,.95,'紅色的煙在天上炸開。貨輪鳴了一聲長笛，轉向你開過來！')},
   {label:'用鏡子反射陽光',need:'mirror',act:s=>rescue(s,.7,'你對準貨輪一閃、一閃……船轉向了！')},
   {label:'用筆電螢幕反光',need:'laptop',act:s=>rescue(s,.35,'泡過水的筆電螢幕居然還能反光。船轉向了！原來它有用！')},
+  {label:'把毯子綁在槳上揮',need:'oar',show:s=>has(s,'blanket'),act:s=>rescue(s,.45,'紅白格子的毯子在海上很顯眼。船轉向了！')},
   {label:'拚命揮手大喊',act:s=>rescue(s,.12,'你喊到破音……船上有人看到你了！')},
 ]};
 const SHIP_NIGHT={id:'shipnight',scene:'shipnight',title:'遠方的燈',text:'半夜，黑暗中有一盞燈在移動。是船！',choices:[
   {label:'發射信號彈',need:'flare',consume:true,act:s=>rescue(s,.95,'紅光照亮整片海面。船上的探照燈掃了過來！')},
+  {label:'用收音機的燈閃',need:'radio',act:s=>rescue(s,.3,'小小的紅燈一閃一閃……船真的看到了！')},
   {label:'用手電筒打 SOS',need:'torch',act:s=>rescue(s,.75,'三短、三長、三短。那盞燈閃了兩下回應你！')},
   {label:'大喊救命',act:s=>rescue(s,.08,'風剛好往那邊吹，有人聽到了！')},
 ]};
@@ -705,8 +798,9 @@ function visibleChoices(s){return s.ev.choices.filter(c=>!c.show||c.show(s))}
 function afterResult(){
   const s=S.sea; if(!s||s.stage!=='result')return;
   if(s.rescued)return endGame('rescued');
+  if(s.landed)return endGame('island');
   if(s.hp<=0)return endGame('dead');
-  s.stage='night';s.night='';
+  s.stage='night';s.night='';s.nightDone=false;
   renderSea();
 }
 function useItem(id){
@@ -724,12 +818,22 @@ function useItem(id){
   clampSea(s);s.night=msg;
   renderSea();
 }
+function nightAct(a){
+  const s=S.sea; if(!s||s.stage!=='night'||s.nightDone)return;
+  let msg='';
+  if(a==='fish'&&has(s,'rod')){if(R()<.55){s.food+=20;msg='夜裡的魚比較笨，你釣到一條！（飽足 +20）'}else{s.hp-=2;msg='坐了好久，什麼都沒有。（體力 -2）'}}
+  else if(a==='stars'){s.hp+=3;msg='你躺著看星星，想著回家要先吃什麼。（體力 +3）'}
+  else if(a==='dew'&&has(s,'tarp')){s.thirst+=8;msg='你把防水布攤開，天亮前收集到一點露水。（口渴 +8）'}
+  else return;
+  s.nightDone=true;clampSea(s);s.night=msg;renderSea();
+}
 function sleep(){
   const s=S.sea; if(!s||s.stage!=='night')return;
   const f=floatOf(s),parts=[];
   s.thirst-=20;s.food-=12;parts.push('口渴 -20','飽足 -12');
   const d=FLOAT[f].drain; let hp=-d;
   if(f==='none')s.cause='沒有浮具，踩水到力氣用盡';
+  if(!has(s,'blanket')&&!s.boat){hp-=3;parts.push('夜裡好冷')}
   clampSea(s);
   if(s.thirst<=0){hp-=25;s.cause='脫水';parts.push('脫水')}
   if(s.food<=0){hp-=12;if(s.thirst>0)s.cause='飢餓';parts.push('飢餓')}
@@ -763,7 +867,7 @@ function renderSea(){
     h+=`<h3>${s.ev.title}</h3><p class="res">${s.res}</p>`;
     h+=`<button data-act="next" class="main">${s.rescued?'得救了 →':s.hp<=0?'……':'天黑了 →'}</button>`;
   }else if(s.stage==='night'){
-    h+=`<h3>第 ${s.day} 天・夜晚</h3><p>睡前要吃點、喝點什麼嗎？過一夜會：口渴 -20、飽足 -12、體力 -${FLOAT[floatOf(s)].drain}（${FLOAT[floatOf(s)].n}）${has(s,'photo')?'，全家福 +4':''}。</p>`;
+    h+=`<h3>第 ${s.day} 天・夜晚</h3><p>睡前要吃點、喝點什麼嗎？過一夜會：口渴 -20、飽足 -12、體力 -${FLOAT[floatOf(s)].drain}（${FLOAT[floatOf(s)].n}）${!has(s,'blanket')&&!s.boat?'、沒毯子 -3':''}${has(s,'photo')?'，全家福 +4':''}。</p>`;
     if(s.night)h+=`<p class="res">${s.night}</p>`;
     const usable=['water','biscuit','can','medkit'].filter(id=>has(s,id));
     for(const id of usable){
@@ -772,6 +876,12 @@ function renderSea(){
       h+=`<button data-use="${id}">${ico(id)}<span>${verb} ${ITEMS[id].n}${cnt>1?' ×'+cnt:''}</span><small>${ITEMS[id].d}</small></button>`;
     }
     if(!usable.length)h+='<p class="note">你沒有任何能吃能喝的東西。</p>';
+    if(!s.nightDone){
+      h+='<p class="note">睡前再做一件事（只能選一個）：</p>';
+      h+=`<button data-night="fish"${has(s,'rod')?'':' disabled'}>${ico('rod')}<span>夜釣</span><small>${has(s,'rod')?'55% 飽足 +20':'需要釣竿'}</small></button>`;
+      h+=`<button data-night="dew"${has(s,'tarp')?'':' disabled'}>${ico('tarp')}<span>攤布收集露水</span><small>${has(s,'tarp')?'口渴 +8':'需要防水布'}</small></button>`;
+      h+=`<button data-night="stars"><span>看星星</span><small>體力 +3</small></button>`;
+    }
     h+='<button data-act="sleep" class="main">睡覺 →</button>';
   }
   card.innerHTML=h;
@@ -786,6 +896,7 @@ $('#card').addEventListener('click',e=>{
   else if(b.dataset.use)useItem(b.dataset.use);
   else if(b.dataset.act==='next')afterResult();
   else if(b.dataset.act==='sleep')sleep();
+  else if(b.dataset.night)nightAct(b.dataset.night);
 });
 
 // 海面像素場景
@@ -831,6 +942,11 @@ function renderSeaScene(now){
   if(scene==='rain'||scene==='storm'){g.fillStyle='#c6dcf0';const r=mulberry32(Math.floor(t*12));for(let i=0;i<40;i++)g.fillRect(Math.floor(r()*160),Math.floor(r()*96),1,3)}
   if(scene==='fish'){g.fillStyle=night?'#0a1626':'#124a78';for(let i=0;i<6;i++){const a=t*.8+i;g.fillRect(Math.round(80+Math.cos(a)*(14+i*3)),Math.round(82+Math.sin(a*1.3)*4),5,2)}}
   if(scene==='debris'){g.fillStyle='#b07a3f';const y=62+Math.round(Math.sin(t*2));g.fillRect(124,y,9,7);g.fillStyle='#6b4a2a';g.fillRect(124,y+3,9,1);g.fillStyle='#c28a4a';g.fillRect(108,y+5,10,2);g.fillRect(138,y+2,7,2)}
+  if(scene==='island'){g.fillStyle=night?'#1a2550':'#5d7a8c';g.fillRect(118,42,26,6);g.fillRect(124,39,12,3);g.fillStyle='#38b764';g.fillRect(129,34,2,6);g.fillRect(126,33,8,2)}
+  if(scene==='jelly'){const r=mulberry32(7);for(let i=0;i<9;i++){const x=Math.floor(r()*150)+5,y=58+Math.floor(r()*34)+Math.round(Math.sin(t*1.5+i)*2);
+    g.fillStyle='#d9a0e8';g.fillRect(x,y,4,2);g.fillStyle='#b070c8';g.fillRect(x,y+2,1,2);g.fillRect(x+2,y+2,1,3)}}
+  if(scene==='turtle'){const x=Math.round(110+Math.sin(t*.7)*6),y=74;g.fillStyle='#257179';g.fillRect(x,y,10,5);g.fillStyle='#38b764';g.fillRect(x+1,y+1,8,3);g.fillStyle='#a7f070';g.fillRect(x+10,y+1,3,2)}
+  if(scene==='survivor'){const x=Math.round(118+Math.sin(t)*2),y=66;g.fillStyle='#b13e53';g.fillRect(x,y,8,6);g.fillStyle='#1a1c2c';g.fillRect(x+2,y-5,4,2);g.fillStyle='#ffccaa';g.fillRect(x+2,y-3,4,3)}
   if(scene==='bird'){g.fillStyle='#f4f4f4';const y=60+Math.round(Math.sin(t*3));g.fillRect(98,y,6,3);g.fillRect(103,y-2,3,2);g.fillStyle='#ffcd75';g.fillRect(106,y-1,2,1)}
   if(scene==='shark'){const a=t*.9,x=Math.round(80+Math.cos(a)*42),y=Math.round(72+Math.sin(a)*12);g.fillStyle='#566c86';
     for(let i=0;i<6;i++)g.fillRect(x+Math.floor(i/2),y-i,6-i,1);g.fillStyle='#c6dcf0';g.fillRect(x-2,y+1,10,1)}
@@ -843,7 +959,7 @@ function endGame(kind){
   const days=s.day;
   let title,text;
   if(kind==='rescued'){title='獲救！';text=`漂流第 ${days} 天，你被救上船。<br>船員給你披上毯子，問你是怎麼撐下來的。`}
-  else if(kind==='island'){title='漂到小島';text=`第 12 天清晨，你被浪沖上一座小島的沙灘。<br>島上有椰子樹，還有……一個漁夫的小屋。你活下來了。`}
+  else if(kind==='island'){title='漂到小島';text=s.landed?`第 ${days} 天，你爬上了一座小島的沙灘。<br>島上有椰子樹，還有……一個漁夫的小屋。你活下來了。`:`第 12 天清晨，你被浪沖上一座小島的沙灘。<br>島上有椰子樹，還有……一個漁夫的小屋。你活下來了。`}
   else{title='你沒能撐過去';text=`漂流第 ${days} 天。<br>死因：${s.cause||'體力耗盡'}。`}
   $('#end-title').textContent=title;
   $('#end-text').innerHTML=text+`<br><br>口渴 ${Math.round(s.thirst)}・飽足 ${Math.round(s.food)}・體力 ${Math.round(s.hp)}`;
@@ -854,7 +970,7 @@ function endGame(kind){
   const b=s.brought;
   if(!b.some(id=>['flare','mirror','torch'].includes(id)))tips.push('信號彈、鏡子、手電筒能讓路過的船看到你——船大概在第 3～4、6～7、9～10 天經過，越後面的越近。');
   if(!S.wreck.boat&&!b.some(id=>['jacket','ring','plank'].includes(id)))tips.push('沒有浮具每天會掉 30 體力。左船艙通常有救生衣，甲板有救生圈。');
-  if(!S.wreck.boat)tips.push('救生艇在甲板左邊：按住按鈕 2 秒解開纜繩。有遮篷、不怕鯊魚，每天不掉體力。');
+  if(!S.wreck.boat)tips.push('救生艇在甲板左邊：東西搬進去放，再按住按鈕 2 秒解開纜繩，時間到人要在甲板上。救生艇每天不掉體力。');
   if(!b.includes('water')&&!b.includes('tarp'))tips.push('水比食物重要：廚房、貨艙有瓶裝水，防水布可以接雨。');
   if(S.wreck.lost.length)tips.push('時間到時人在船艙裡會弄丟東西，提早回到甲板吧。');
   $('#end-tips').innerHTML=tips.length?'<b>下次試試：</b><br>'+tips.slice(0,3).map(x=>'・'+x).join('<br>'):'';
@@ -984,7 +1100,8 @@ function runFuzz(){
           if(blocked(sh.x,sh.y,3))throw Error(`player in wall ${sh.x.toFixed(1)},${sh.y.toFixed(1)}`);
           if(invSize(sh.inv)>CAP)throw Error('inv over cap');
           for(const it of sh.items){if(!isFinite(it.x)||!isFinite(it.y))throw Error('item NaN');if(blocked(it.x,it.y,2))throw Error('item in wall '+it.id)}
-          const cnt=sh.items.length+sh.inv.length;if(cnt!==S.ship._cnt&&S.ship._cnt!==undefined)throw Error('item count changed');S.ship._cnt=cnt;
+          if(invSize(sh.stash)>BOAT_CAP)throw Error('stash over cap');
+          const cnt=sh.items.length+sh.inv.length+sh.stash.length;if(cnt!==S.ship._cnt&&S.ship._cnt!==undefined)throw Error('item count changed');S.ship._cnt=cnt;
         }
         ticks++;
       }
@@ -1028,20 +1145,24 @@ function botPath(sh,tx,ty){ // 格子 BFS，回傳下一個要走的格子中心
   return cur;
 }
 function botShip(sh){
-  const want=['jacket','water','flare','water','knife','tarp','mirror','torch'];
+  const want=['jacket','water','flare','water','knife','tarp','mirror','torch','oar','blanket','water','can','rod','medkit','radio','rope','biscuit'];
   input.hold=false;
   const left=T_SCAV-sh.t;
+  const have=sh.inv.concat(sh.stash);
   let target=null;
-  if(left>12&&invSize(sh.inv)<CAP){
+  if(nearBoat(sh)&&sh.inv.length&&(invSize(sh.inv)>=CAP-1||left<12)){pickUp();return}
+  if(nearBoat(sh)&&!sh.released&&!sh.inv.length){input.x=input.y=0;input.hold=true;return}
+  if(left>13&&invSize(sh.inv)<CAP-1){
     let bd=1e9;
     for(const it of sh.items){if(!want.includes(it.id)||invSize(sh.inv)+ITEMS[it.id].sz>CAP)continue;
-      if(want.filter(w=>w===it.id).length<=sh.inv.filter(w=>w===it.id).length)continue;
+      if(want.filter(w=>w===it.id).length<=have.filter(w=>w===it.id).length)continue;
+      if(invSize(sh.stash)+invSize(sh.inv)+ITEMS[it.id].sz>BOAT_CAP+1)continue;
       const d=Math.hypot(it.x-sh.x,it.y-sh.y);if(d<bd){bd=d;target=it}}
   }
   if(target&&sh.near===target){input.x=input.y=0;pickUp();return}
   let tx,ty;
   if(target){tx=Math.floor(target.x/TW);ty=Math.floor(target.y/TW)}
-  else{tx=5;ty=7;if(nearBoat(sh)){input.x=input.y=0;if(!sh.released)input.hold=true;else boatAction();return}}
+  else{tx=5;ty=7;if(nearBoat(sh)){input.x=input.y=0;if(sh.inv.length){pickUp();return}if(!sh.released)input.hold=true;else if(left<4)boatAction();return}}
   const nx=botPath(sh,tx,ty);
   if(!nx){input.x=input.y=0;return}
   const gx=target&&nx[0]===tx&&nx[1]===ty?target.x:nx[0]*TW+4, gy=target&&nx[0]===tx&&nx[1]===ty?target.y:nx[1]*TW+4;
@@ -1052,11 +1173,12 @@ function botSea(s){
     if(s.thirst<65&&has(s,'water'))return useItem('water');
     if(s.food<55&&(has(s,'can')||has(s,'biscuit'))&&!s.canTried)return useItem(has(s,'can')?'can':'biscuit');
     if(s.hp<60&&has(s,'medkit'))return useItem('medkit');
+    if(!s.nightDone)return nightAct(has(s,'rod')?'fish':has(s,'tarp')?'dew':'stars');
     return sleep();
   }
   if(s.stage==='result')return afterResult();
   const cs=visibleChoices(s);let i=cs.findIndex(c=>c.need&&has(s,c.need));
-  if(i<0)i=cs.findIndex(c=>/保持不動|睡一覺|張嘴|忍住|浸濕|看著牠|不浪費|太遠|揮手|大喊|抱住|死命/.test(c.label));
+  if(i<0)i=cs.findIndex(c=>/縮|保持不動|睡一覺|張嘴|忍住|浸濕|看著牠|不浪費|太遠|揮手|大喊|抱住|死命/.test(c.label));
   choose(Math.max(0,i));
 }
 function runBot(){
@@ -1069,7 +1191,7 @@ function runBot(){
     const w=S.wreck;if(w.boat)st.boat++;st.items+=w.brought.length;st.lost+=w.lost.length;
     startSea();let c=0;while(S.phase==='sea'&&c<500){botSea(S.sea);c++}
     const t=$('#end-title').textContent;st[t==='獲救！'?'rescued':t==='漂到小島'?'island':'dead']++;
-    lines.push(`${k}: boat=${w.boat} items=${w.brought.join(',')} → ${t} day ${S.sea.day} ${S.sea.cause||''}`);
+    lines.push(`${k}: end@${Math.round(S.ship.x)},${Math.round(S.ship.y)} rel=${S.ship.released} inv=${S.ship.inv} stash=${S.ship.stash.length} boat=${w.boat} items=${w.brought.join(',')} → ${t} day ${S.sea.day} ${S.sea.cause||''}`);
   }
   out.textContent=`BOT n=${n} boat=${st.boat} rescued=${st.rescued} island=${st.island} dead=${st.dead} avgItems=${(st.items/n).toFixed(1)} lost=${st.lost}\n`+lines.join('\n');
 }
