@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#0f1420">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="操盤人生">
+<title>操盤人生</title>
+<style>
+:root{--bg:#0f1420;--card:#171e2d;--card2:#1f2839;--line:#2a3549;--text:#eef2f8;--sub:#8d9ab0;--accent:#4c8dff;--up:#ff4d5e;--down:#1fc67a;--warn:#ffb648}
+:root[data-theme="light"]{--bg:#f3f5f9;--card:#fff;--card2:#eef1f6;--line:#dde3ec;--text:#141a26;--sub:#68748a;--accent:#2f6fe8;--warn:#d98a00}
+:root.gup{--up:#1fc67a;--down:#ff4d5e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.45;overscroll-behavior:none}
+body{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--sub)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.brand{font-weight:900;font-size:18px;letter-spacing:.5px}
+.mstat{font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--sub);white-space:nowrap}
+.mstat.on{color:var(--down);background:color-mix(in srgb,var(--down) 15%,transparent)}
+.mstat.bad{color:var(--warn)}
+.nw{margin-left:auto;text-align:right;font-size:11px;color:var(--sub);line-height:1.2}
+.nw b{display:block;font-size:16px;color:var(--text)}
+main{max-width:640px;margin:0 auto;padding:10px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px}
+.sec{font-size:12.5px;color:var(--sub);font-weight:700;margin:14px 2px 6px;display:flex;align-items:center}
+.sec span{margin-left:auto;font-weight:400}
+.idxv{font-size:30px;font-weight:800}
+.chg{font-size:14px;font-weight:700}
+canvas{width:100%;display:block}
+.heat{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.heat button{border-radius:12px;padding:8px 4px;text-align:center;font-size:12px;color:#fff;min-height:54px}
+.heat b{display:block;font-size:13px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.row:last-child{border-bottom:0}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm small{color:var(--sub);font-size:11.5px}
+.row .pr{text-align:right;font-weight:700}
+.pill{min-width:70px;text-align:center;border-radius:8px;padding:4px 6px;font-weight:800;font-size:13.5px;color:#fff}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:12.5px;color:var(--sub)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.news{padding:10px 2px;border-bottom:1px solid var(--line);width:100%;text-align:left;display:block}
+.news:last-child{border-bottom:0}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:5px;margin-right:6px;background:var(--card2);color:var(--sub)}
+.tag.t快訊{color:var(--accent)}.tag.t財報{color:var(--warn)}.tag.t傳聞{color:#c77dff}.tag.t總經{color:#4dd0e1}.tag.t澄清{color:var(--sub)}.tag.t預告{color:var(--warn)}
+.ntime{font-size:11px;color:var(--sub);margin-top:2px}
+.steps{display:flex;align-items:center;gap:12px}
+.steps .big{font-size:24px;font-weight:800}
+.bar{height:8px;border-radius:4px;background:var(--card2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--down))}
+.btn{border-radius:12px;padding:10px 14px;font-weight:700;background:var(--card2);border:1px solid var(--line)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.buy{background:var(--up);border-color:var(--up);color:#fff}
+.btn.sell{background:var(--down);border-color:var(--down);color:#fff}
+.btn:disabled{opacity:.4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv{background:var(--card2);border-radius:12px;padding:8px 10px}
+.kv small{display:block;color:var(--sub);font-size:11px}
+.kv b{font-size:15px}
+.empty{text-align:center;color:var(--sub);padding:28px 8px;font-size:13.5px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:7px 0 6px;font-size:10.5px;color:var(--sub);display:flex;flex-direction:column;align-items:center}
+nav button i{font-style:normal;font-size:19px;line-height:1.25}
+nav button.on{color:var(--accent);font-weight:700}
+.page{position:fixed;inset:0;z-index:8;background:var(--bg);overflow-y:auto;display:none;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.page.show{display:block}
+.ptop{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid var(--line);z-index:2}
+.back{font-size:22px;padding:2px 10px}
+.tradebar{position:fixed;left:0;right:0;bottom:0;z-index:9;display:none;gap:10px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+.tradebar.show{display:flex}
+.tradebar .btn{flex:1;padding:13px;font-size:16px}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;padding:8px;border-radius:9px;font-weight:700;color:var(--sub)}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.seg button.on.b{color:var(--up)}.seg button.on.s{color:var(--down)}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.mask.show{display:flex}
+.mask.center{align-items:center}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.mask.center .sheet{border-radius:20px;width:calc(100% - 32px);max-width:420px}
+.sheet h3{margin:0 0 4px}
+.sub{color:var(--sub);font-size:13px}
+.field{display:flex;align-items:center;gap:6px;margin:8px 0}
+.field label{width:56px;color:var(--sub);font-size:13px}
+.field input{flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);font-size:16px;text-align:center}
+.field .pm{width:40px;height:42px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:18px}
+.quick{display:flex;gap:6px;margin:4px 0 10px}
+.quick button{flex:1;padding:7px 0;border-radius:9px;background:var(--card2);border:1px solid var(--line);font-size:12.5px}
+.est{background:var(--card2);border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}
+.est div{display:flex;justify-content:space-between;padding:2px 0}
+.est .tot{font-weight:800;font-size:15px;border-top:1px solid var(--line);margin-top:4px;padding-top:6px}
+.warn{color:var(--warn);font-size:12.5px;margin:6px 0}
+.toast{position:fixed;left:50%;top:calc(64px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.me-top{text-align:center;padding:6px 0 4px}
+.me-top .v{font-size:30px;font-weight:900}
+.rank{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}
+.rank .no{width:30px;text-align:center;font-weight:900;color:var(--sub)}
+.rank.me{background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:10px}
+.rank .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm{font-size:12px;color:var(--sub)}
+.odr{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.odr:last-child{border-bottom:0}
+.odr .x{margin-left:auto;padding:4px 10px;border-radius:8px;background:var(--card2);font-size:12px}
+.desc{color:var(--sub);font-size:13px;margin:4px 0 0}
+.range{display:flex;gap:6px;margin:8px 0 2px}
+.range button{padding:4px 12px;border-radius:8px;font-size:12.5px;background:var(--card2);color:var(--sub)}
+.range button.on{background:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">📈 操盤人生</div>
+  <div class="mstat" id="mstat">連線中…</div>
+  <div class="nw">總資產<b class="num" id="hdrNw">—</b></div>
+</header>
+<main id="view"></main>
+<nav id="nav">
+  <button data-tab="home" class="on"><i>🏠</i>市場</button>
+  <button data-tab="list"><i>📊</i>個股</button>
+  <button data-tab="news"><i>📰</i>新聞</button>
+  <button data-tab="me"><i>💼</i>我的</button>
+  <button data-tab="rank"><i>🏆</i>排行</button>
+</nav>
+
+<div class="page" id="detail"></div>
+<div class="tradebar" id="tradebar"><button class="btn buy" data-trade="buy">買進</button><button class="btn sell" data-trade="sell">賣出</button></div>
+<div class="mask" id="mask"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+'use strict';
+var SD = window.STOCK_DATA, G = SD.GAME, DB = G.DB;
+var COMP = SD.COMPANIES, SEC = SD.SECTORS;
+var BY = {}; COMP.forEach(function(c){ BY[c.sym] = c; });
+var SECBY = {}; SEC.forEach(function(s){ SECBY[s.id] = s; });
+
+// ---------- per-device storage ----------
+function load(k, d){ try{ var v = localStorage.getItem('stk_' + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem('stk_' + k, JSON.stringify(v)); }catch(e){} }
+var uid = load('uid', null);
+if(!uid){ var ch = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; uid = 'u'; for(var i=0;i<19;i++) uid += ch[Math.floor(Math.random()*ch.length)]; save('uid', uid); }
+var prefs = load('prefs', {greenUp:false});
+if(prefs.greenUp) document.documentElement.classList.add('gup');
+
+// ---------- state ----------
+var M = null, ME = null, NEWS = [], BOARD = null, DAY = null, IDXCHART = [];
+var UI = {tab: load('tab','home'), sec: 'all', sort: 'chg', detail: null, range: 'day', lastFillT: 0, confirmReset: false};
+var chartCache = {}, dailyCache = {};
+
+// ---------- realtime (Firebase REST streaming) ----------
+function setAt(obj, path, data){
+  var parts = path.split('/').filter(Boolean);
+  if(!parts.length) return data;
+  obj = (obj && typeof obj === 'object') ? obj : {};
+  var o = obj;
+  for(var i=0;i<parts.length-1;i++){ if(!o[parts[i]] || typeof o[parts[i]] !== 'object') o[parts[i]] = {}; o = o[parts[i]]; }
+  if(data === null) delete o[parts[parts.length-1]]; else o[parts[parts.length-1]] = data;
+  return obj;
+}
+function listen(path, cb){
+  var cur = null, es;
+  function open(){
+    try{ es = new EventSource(DB + '/' + path + '.json'); }catch(e){ return; }
+    es.addEventListener('put', function(e){ try{ var d = JSON.parse(e.data); cur = setAt(cur, d.path, d.data); cb(cur); }catch(x){} });
+    es.addEventListener('patch', function(e){ try{ var d = JSON.parse(e.data); Object.keys(d.data || {}).forEach(function(k){ cur = setAt(cur, (d.path + '/' + k).replace(/\/+/g,'/'), d.data[k]); }); cb(cur); }catch(x){} });
+    es.onerror = function(){ if(es.readyState === 2){ setTimeout(open, 3000); } };
+  }
+  open();
+}
+function send(obj){
+  return fetch(DB + '/orders/' + uid + '.json', {method:'POST', body: JSON.stringify(obj)}).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ toast('⚠️ 網路錯誤，請再試一次'); return null; });
+}
+function getJson(p){ return fetch(DB + '/' + p + '.json').then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }); }
+
+// ---------- formatting ----------
+function tickSize(p){ return p < 10 ? 0.01 : p < 50 ? 0.05 : p < 100 ? 0.1 : p < 500 ? 0.5 : p < 1000 ? 1 : 5; }
+function fpx(p){ if(p == null || isNaN(p)) return '—'; return p < 50 ? (+p).toFixed(2) : p < 500 ? (+p).toFixed(1) : String(Math.round(p)); }
+function money(v){ if(v == null || isNaN(v)) return '—'; var n = Math.round(v); return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US'); }
+function pct(v){ if(v == null || !isFinite(v)) return '—'; return (v > 0 ? '+' : '') + (v*100).toFixed(2) + '%'; }
+function cls(v){ return v > 1e-9 ? 'up' : v < -1e-9 ? 'down' : 'flat'; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function ago(t){ var s = Math.max(0, Math.round((Date.now() - t)/1000)); if(s < 60) return s + ' 秒前'; var m = Math.round(s/60); if(m < 60) return m + ' 分鐘前'; var h = Math.round(m/60); if(h < 24) return h + ' 小時前'; return Math.round(h/24) + ' 天前'; }
+function clockOf(ms){ var d = new Date(ms + G.SESSION.tzOffsetMin*60000); var wd = '日一二三四五六'[d.getUTCDay()]; return '週' + wd + ' ' + ('0'+d.getUTCHours()).slice(-2) + ':' + ('0'+d.getUTCMinutes()).slice(-2); }
+function todayKey(){ return new Date(Date.now() + G.SESSION.tzOffsetMin*60000).toISOString().slice(0,10); }
+var toastT;
+function toast(msg){ var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('show'); }, 2200); }
+
+// ---------- derived numbers ----------
+function px(s){ return M && M.px ? M.px[s] : BY[s].p; }
+function prev(s){ return M && M.prev && M.prev[s] ? M.prev[s] : px(s); }
+function chg(s){ var p = prev(s); return p ? px(s)/p - 1 : 0; }
+function holdings(){ return (ME && ME.pos) || {}; }
+function stockValue(){ var v = 0, h = holdings(); Object.keys(h).forEach(function(s){ v += h[s].q * px(s); }); return v; }
+function netWorth(){ return ME ? (ME.cash || 0) + stockValue() : null; }
+function secChg(id){ var a = COMP.filter(function(c){ return c.sec === id; }); var s = 0; a.forEach(function(c){ s += chg(c.sym); }); return a.length ? s / a.length : 0; }
+function fee(a){ return Math.max(G.FEE_MIN, Math.round(a * G.FEE_RATE)); }
+function heatColor(v){
+  var k = Math.max(-1, Math.min(1, v / 0.04)), up = getComputedStyle(document.documentElement).getPropertyValue('--up').trim(), dn = getComputedStyle(document.documentElement).getPropertyValue('--down').trim();
+  if(Math.abs(k) < 0.04) return 'background:#55617a';
+  return 'background:color-mix(in srgb,' + (k > 0 ? up : dn) + ' ' + Math.round(35 + Math.abs(k)*65) + '%,#3a4458)';
+}
+
+// ---------- chart ----------
+function drawLine(canvas, pts, base, h){
+  var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth || 300;
+  canvas.width = w * dpr; canvas.height = h * dpr; canvas.style.height = h + 'px';
+  var g = canvas.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0,0,w,h);
+  if(!pts || pts.length < 2){ g.fillStyle = '#8d9ab0'; g.font = '12px sans-serif'; g.textAlign = 'center'; g.fillText(pts && pts.length ? '資料累積中…' : '開盤後開始畫線', w/2, h/2); return; }
+  var mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts);
+  if(base){ mn = Math.min(mn, base); mx = Math.max(mx, base); }
+  if(mx - mn < 1e-9){ mx += 1; mn -= 1; }
+  var pad = 6;
+  function X(i){ return i / (pts.length - 1) * (w - 2) + 1; }
+  function Y(v){ return pad + (1 - (v - mn)/(mx - mn)) * (h - pad*2); }
+  var last = pts[pts.length-1], col = getComputedStyle(document.documentElement).getPropertyValue(last >= (base || pts[0]) ? '--up' : '--down').trim();
+  if(base){ g.strokeStyle = '#8d9ab0'; g.setLineDash([4,4]); g.lineWidth = 1; g.beginPath(); g.moveTo(0, Y(base)); g.lineTo(w, Y(base)); g.stroke(); g.setLineDash([]); }
+  g.beginPath(); pts.forEach(function(v,i){ if(i) g.lineTo(X(i), Y(v)); else g.moveTo(X(i), Y(v)); });
+  g.strokeStyle = col; g.lineWidth = 2; g.stroke();
+  g.lineTo(X(pts.length-1), h); g.lineTo(X(0), h); g.closePath();
+  var gr = g.createLinearGradient(0,0,0,h); gr.addColorStop(0, col + '55'); gr.addColorStop(1, col + '00'); g.fillStyle = gr; g.fill();
+}
+
+// ---------- views ----------
+function statusText(){
+  if(!M) return {t:'連線中…', c:''};
+  if(Date.now() - M.t > 30000) return {t:'⚠️ 市場連線中斷', c:'bad'};
+  if(M.open) return {t:'● 交易中', c:'on'};
+  if(M.paused) return {t:'暫停交易', c:''};
+  return {t:'已收盤' + (M.next ? '・' + clockOf(M.next) + ' 開盤' : ''), c:''};
+}
+function stockRow(c){
+  var v = chg(c.sym), h = holdings()[c.sym];
+  return '<button class="row" data-open="' + c.sym + '"><div class="nm"><b>' + esc(c.name) + '</b><small>' + c.sym + '・' + esc(SECBY[c.sec].name) + (h ? '・持有 ' + h.q.toLocaleString() + ' 股' : '') + '</small></div>' +
+    '<div class="pr num ' + cls(v) + '">' + fpx(px(c.sym)) + '</div><div class="pill num" style="' + heatColor(v) + '">' + pct(v) + '</div></button>';
+}
+function stepsCard(){
+  var n = stepsToday(), cap = G.STEP_CAP;
+  var h = '<div class="card"><div class="steps"><div style="font-size:30px">🚶</div><div style="flex:1"><div class="sm">今天走路賺的錢</div><div class="big num">' + n.toLocaleString() + ' 步 → ' + money(n * G.STEP_PAY) + '</div><div class="bar"><i style="width:' + Math.min(100, n/cap*100) + '%"></i></div><div class="sm">每 1,000 步 = ' + money(1000*G.STEP_PAY) + '・每天上限 ' + cap.toLocaleString() + ' 步</div></div></div>';
+  h += '<div style="display:flex;gap:8px;margin-top:10px">';
+  h += '<button class="btn pri" style="flex:1" id="walkBtn">' + (PED.on ? '⏸ 停止計步（' + PED.session + ' 步）' : '▶️ 開始走路計步') + '</button>';
+  if(M && M.mode === 'test') h += '<button class="btn" id="fakeSteps">+1,000 步（測試）</button>';
+  h += '</div><div class="sm" style="margin-top:6px">網頁版要開著畫面才會計步；App 版會直接讀 iPhone「健康」的步數。</div></div>';
+  return h;
+}
+function viewHome(){
+  var h = '';
+  var iv = M ? M.idx : 1000, ip = M ? M.idxPrev || iv : 1000, ic = iv/ip - 1;
+  h += '<div class="card"><div class="sm">' + esc(G.INDEX_NAME) + '</div><div style="display:flex;align-items:baseline;gap:10px"><div class="idxv num ' + cls(ic) + '">' + (+iv).toFixed(2) + '</div><div class="chg num ' + cls(ic) + '">' + (iv - ip >= 0 ? '▲' : '▼') + Math.abs(iv - ip).toFixed(2) + '（' + pct(ic) + '）</div></div><canvas id="idxCanvas"></canvas></div>';
+  if(ME) h += stepsCard();
+  h += '<div class="sec">產業熱力圖<span>點一下看個股</span></div><div class="heat">';
+  SEC.forEach(function(s){ var v = secChg(s.id); h += '<button data-sec="' + s.id + '" style="' + heatColor(v) + '">' + s.icon + '<b>' + esc(s.name) + '</b><span class="num">' + pct(v) + '</span></button>'; });
+  h += '</div>';
+  var sorted = COMP.slice().sort(function(a,b){ return chg(b.sym) - chg(a.sym); });
+  h += '<div class="sec">漲幅前三</div><div class="card" style="padding:2px 10px">' + sorted.slice(0,3).map(stockRow).join('') + '</div>';
+  h += '<div class="sec">跌幅前三</div><div class="card" style="padding:2px 10px">' + sorted.slice(-3).reverse().map(stockRow).join('') + '</div>';
+  h += '<div class="sec">最新消息<span><button data-tab="news" style="color:var(--accent)">全部 ›</button></span></div><div class="card" style="padding:2px 12px">' + (NEWS.length ? NEWS.slice(0,4).map(newsRow).join('') : '<div class="empty">還沒有新聞</div>') + '</div>';
+  return h;
+}
+function viewList(){
+  var h = '<div class="chips"><button class="chip' + (UI.sec === 'all' ? ' on' : '') + '" data-fsec="all">全部 ' + COMP.length + '</button><button class="chip' + (UI.sec === 'mine' ? ' on' : '') + '" data-fsec="mine">⭐ 我的持股</button>';
+  SEC.forEach(function(s){ h += '<button class="chip' + (UI.sec === s.id ? ' on' : '') + '" data-fsec="' + s.id + '">' + s.icon + ' ' + esc(s.name) + '</button>'; });
+  h += '</div><div class="chips">';
+  [['chg','漲幅'],['chgd','跌幅'],['px','股價'],['name','代號']].forEach(function(o){ h += '<button class="chip' + (UI.sort === o[0] ? ' on' : '') + '" data-sort="' + o[0] + '">' + o[1] + '</button>'; });
+  h += '</div>';
+  var list = COMP.filter(function(c){ return UI.sec === 'all' || (UI.sec === 'mine' ? !!holdings()[c.sym] : c.sec === UI.sec); });
+  list.sort(function(a,b){ return UI.sort === 'chg' ? chg(b.sym) - chg(a.sym) : UI.sort === 'chgd' ? chg(a.sym) - chg(b.sym) : UI.sort === 'px' ? px(b.sym) - px(a.sym) : a.sym < b.sym ? -1 : 1; });
+  h += '<div class="card" style="padding:2px 10px">' + (list.length ? list.map(stockRow).join('') : '<div class="empty">' + (UI.sec === 'mine' ? '你還沒有持股，挑一檔買買看吧' : '沒有股票') + '</div>') + '</div>';
+  return h;
+}
+function newsRow(n){
+  var c = n.sym && BY[n.sym];
+  return '<button class="news"' + (c ? ' data-open="' + n.sym + '"' : n.sec ? ' data-sec="' + esc(n.sec) + '"' : '') + '><span class="tag t' + esc(n.tag) + '">' + esc(n.tag) + '</span>' + esc(n.title) +
+    (n.body ? '<div class="desc">' + esc(n.body) + '</div>' : '') +
+    '<div class="ntime">' + ago(n.t) + (c ? '・' + c.sym + ' <span class="' + cls(chg(n.sym)) + '">' + fpx(px(n.sym)) + ' ' + pct(chg(n.sym)) + '</span>' : n.sec && SECBY[n.sec] ? '・' + SECBY[n.sec].icon + ' ' + esc(SECBY[n.sec].name) : '') + '</div></button>';
+}
+function viewNews(){ return '<div class="card" style="padding:2px 12px">' + (NEWS.length ? NEWS.map(newsRow).join('') : '<div class="empty">還沒有新聞</div>') + '</div>'; }
+function viewMe(){
+  if(!ME) return '<div class="empty">載入中…</div>';
+  var nw = netWorth(), ret = nw / G.START_CASH - 1, h = '';
+  h += '<div class="card me-top"><div class="sm">' + esc(ME.name) + ' 的總資產</div><div class="v num">' + money(nw) + '</div><div class="chg num ' + cls(ret) + '">' + (ret >= 0 ? '+' : '') + money(nw - G.START_CASH).replace('$','$') + '（' + pct(ret) + '）</div>' +
+    '<div class="grid2" style="margin-top:10px"><div class="kv"><small>現金</small><b class="num">' + money(ME.cash) + '</b></div><div class="kv"><small>股票市值</small><b class="num">' + money(stockValue()) + '</b></div></div></div>';
+  var hs = holdings(), keys = Object.keys(hs);
+  h += '<div class="sec">持股（' + keys.length + '）</div><div class="card" style="padding:2px 10px">';
+  if(!keys.length) h += '<div class="empty">還沒有持股</div>';
+  keys.forEach(function(s){
+    var x = hs[s], c = BY[s]; if(!c) return;
+    var mv = x.q * px(s), pl = mv - x.c, avg = x.c / x.q;
+    h += '<button class="row" data-open="' + s + '"><div class="nm"><b>' + esc(c.name) + '</b><small>' + x.q.toLocaleString() + ' 股・均價 ' + fpx(avg) + '</small></div><div class="pr num">' + money(mv) + '<div class="sm ' + cls(pl) + '">' + (pl >= 0 ? '+' : '') + money(pl) + '（' + pct(pl / x.c) + '）</div></div></button>';
+  });
+  h += '</div>';
+  var op = ME.open || {}, oks = Object.keys(op);
+  if(oks.length){
+    h += '<div class="sec">委託中（' + oks.length + '）</div><div class="card" style="padding:2px 12px">';
+    oks.forEach(function(k){ var o = op[k]; h += '<div class="odr"><span class="' + (o.side === 'buy' ? 'up' : 'down') + '">' + (o.side === 'buy' ? '買' : '賣') + '</span><b>' + esc((BY[o.sym]||{}).name || o.sym) + '</b>' + o.qty.toLocaleString() + ' 股 @ ' + (o.type === 'lmt' ? fpx(o.px) : '市價') + '<button class="x" data-cancel="' + esc(k) + '">取消</button></div>'; });
+    h += '</div>';
+  }
+  if(ME.fills && ME.fills.length){
+    h += '<div class="sec">成交紀錄</div><div class="card" style="padding:2px 12px">';
+    ME.fills.slice(0, 15).forEach(function(f){
+      var c = BY[f.sym] || {name:f.sym};
+      h += '<div class="odr">' + (f.ok ? '<span class="' + (f.side === 'buy' ? 'up' : 'down') + '">' + (f.side === 'buy' ? '買' : '賣') + '</span>' : '❌') + '<span>' + esc(c.name) + ' ' + f.qty.toLocaleString() + ' 股' + (f.ok ? ' @ ' + fpx(f.px) : '・' + esc(f.why || '失敗')) + '</span><span class="sm" style="margin-left:auto">' + (f.ok && f.pl != null ? '<span class="' + cls(f.pl) + '">' + (f.pl >= 0 ? '+' : '') + money(f.pl) + '</span> ' : '') + ago(f.t) + '</span></div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="sec">設定</div><div class="card">';
+  h += '<div class="field"><label>暱稱</label><input id="nameIn" maxlength="12" value="' + esc(ME.name) + '"><button class="btn" id="nameSave">儲存</button></div>';
+  h += '<div class="field"><label>顏色</label><div class="seg" style="flex:1;margin:0"><button class="' + (!prefs.greenUp ? 'on' : '') + '" data-color="red">紅漲綠跌</button><button class="' + (prefs.greenUp ? 'on' : '') + '" data-color="green">綠漲紅跌</button></div></div>';
+  h += '<div class="sm" style="margin:8px 0">已重新開始 ' + (ME.resets || 0) + ' 次・最高資產 ' + money(Math.max(ME.best || 0, nw)) + '</div>';
+  h += UI.confirmReset ? '<div class="warn">確定要清空所有持股和現金，從 ' + money(G.START_CASH) + ' 重新開始嗎？</div><div style="display:flex;gap:8px"><button class="btn sell" style="flex:1" id="resetYes">確定重來</button><button class="btn" style="flex:1" id="resetNo">算了</button></div>' : '<button class="btn" id="resetAsk">🔄 重新開始</button>';
+  h += '</div>';
+  h += '<div class="card sm">交易成本：手續費 0.1425%（最低 $20），賣出另收 0.3% 交易稅。<br>開盤時間：' + (M && M.mode === 'test' ? '目前是測試期間，全天開放交易' : '週一～週五 ' + G.SESSION.open + '–' + G.SESSION.close) + '。</div>';
+  return h;
+}
+function viewRank(){
+  if(!BOARD || !BOARD.top) return '<div class="empty">排行榜載入中…</div>';
+  var my = -1; BOARD.top.forEach(function(r,i){ if(r.u === uid) my = i; });
+  var h = '<div class="card" style="text-align:center"><div class="sm">你的名次</div><div class="idxv">' + (my >= 0 ? '第 ' + (my+1) + ' 名' : '—') + '</div><div class="sm">共 ' + BOARD.n + ' 位玩家・每 30 秒更新</div></div><div class="card" style="padding:4px 8px">';
+  BOARD.top.forEach(function(r,i){
+    var ret = r.nw / G.START_CASH - 1;
+    h += '<div class="rank' + (r.u === uid ? ' me' : '') + '"><div class="no">' + (i < 3 ? ['🥇','🥈','🥉'][i] : i+1) + '</div><div class="nm">' + esc(r.name) + (r.resets ? ' <span class="sm">💸×' + r.resets + '</span>' : '') + '</div><div class="num" style="text-align:right"><b>' + money(r.nw) + '</b><div class="sm ' + cls(ret) + '">' + pct(ret) + '</div></div></div>';
+  });
+  return h + '</div>';
+}
+
+// ---------- detail page ----------
+function openDetail(sym){
+  if(!BY[sym]) return;
+  UI.detail = sym; UI.range = 'day';
+  document.getElementById('detail').classList.add('show');
+  document.getElementById('tradebar').classList.add('show');
+  renderDetail();
+  getJson('chart/' + sym).then(function(d){ chartCache[sym] = Array.isArray(d) ? d.filter(function(x){ return x != null; }) : []; if(UI.detail === sym) renderDetail(); });
+  getJson('daily/' + sym).then(function(d){ dailyCache[sym] = Array.isArray(d) ? d.filter(Boolean) : []; if(UI.detail === sym && UI.range === 'd90') renderDetail(); });
+}
+function closeDetail(){ UI.detail = null; document.getElementById('detail').classList.remove('show'); document.getElementById('tradebar').classList.remove('show'); }
+function renderDetail(){
+  var s = UI.detail; if(!s) return;
+  var c = BY[s], v = chg(s), p = px(s), pv = prev(s), h = holdings()[s];
+  var ds = DAY || {};
+  var html = '<div class="ptop"><button class="back" id="backBtn">‹</button><div><b>' + esc(c.name) + '</b> <span class="sm">' + s + '</span></div><div class="mstat" style="margin-left:auto">' + SECBY[c.sec].icon + ' ' + esc(SECBY[c.sec].name) + '</div></div><main>';
+  html += '<div class="card"><div style="display:flex;align-items:baseline;gap:10px"><div class="idxv num ' + cls(v) + '">' + fpx(p) + '</div><div class="chg num ' + cls(v) + '">' + (p - pv >= 0 ? '▲' : '▼') + fpx(Math.abs(p - pv)) + '（' + pct(v) + '）</div></div>';
+  html += '<div class="range"><button class="' + (UI.range === 'day' ? 'on' : '') + '" data-range="day">今日</button><button class="' + (UI.range === 'd90' ? 'on' : '') + '" data-range="d90">近 90 日</button></div><canvas id="stkCanvas"></canvas>';
+  html += '<div class="grid2" style="margin-top:8px;grid-template-columns:repeat(4,1fr)">' +
+    [['開盤', ds.open && ds.open[s]], ['最高', ds.hi && ds.hi[s]], ['最低', ds.lo && ds.lo[s]], ['昨收', pv]].map(function(k){ return '<div class="kv"><small>' + k[0] + '</small><b class="num" style="font-size:13px">' + fpx(k[1]) + '</b></div>'; }).join('') + '</div>';
+  html += '<p class="desc">' + esc(c.desc) + '</p></div>';
+  html += '<div class="card"><div class="sm">我的持股</div>';
+  if(h){ var mv = h.q*p, pl = mv - h.c; html += '<div class="grid2" style="margin-top:6px"><div class="kv"><small>股數・均價</small><b class="num">' + h.q.toLocaleString() + ' 股・' + fpx(h.c/h.q) + '</b></div><div class="kv"><small>未實現損益</small><b class="num ' + cls(pl) + '">' + (pl >= 0 ? '+' : '') + money(pl) + '</b></div></div>'; }
+  else html += '<div style="margin-top:4px">還沒有持股・現金 ' + money(ME ? ME.cash : 0) + '</div>';
+  html += '</div>';
+  var rel = NEWS.filter(function(n){ return n.sym === s || n.sec === c.sec; }).slice(0, 6);
+  html += '<div class="sec">相關新聞</div><div class="card" style="padding:2px 12px">' + (rel.length ? rel.map(newsRow).join('') : '<div class="empty">目前沒有相關新聞</div>') + '</div></main>';
+  var el = document.getElementById('detail'), st = el.scrollTop;
+  el.innerHTML = html; el.scrollTop = st;
+  var cv = document.getElementById('stkCanvas');
+  if(UI.range === 'day'){ var pts = (chartCache[s] || []).slice(); if(M && M.open) pts.push(p); drawLine(cv, pts, pv, 170); }
+  else { var d = (dailyCache[s] || []).map(function(x){ return x[1]; }); d.push(p); drawLine(cv, d, null, 170); }
+}
+
+// ---------- order sheet ----------
+var OS = null;
+function openOrder(side){
+  if(!ME){ toast('還在載入，稍等一下'); return; }
+  var s = UI.detail;
+  OS = {sym:s, side:side, type:'mkt', qty: 0, px: px(s)};
+  renderOrder(); document.getElementById('mask').classList.add('show');
+}
+function closeSheet(){ document.getElementById('mask').classList.remove('show'); document.getElementById('mask').classList.remove('center'); OS = null; }
+function orderEst(){
+  var p = OS.type === 'lmt' ? OS.px : px(OS.sym), amt = p * OS.qty, f = OS.qty ? fee(amt) : 0, t = OS.side === 'sell' ? Math.round(amt * G.TAX_RATE) : 0;
+  return {p:p, amt:amt, fee:f, tax:t, total: OS.side === 'buy' ? amt + f : amt - f - t};
+}
+function maxBuy(){ var p = OS.type === 'lmt' ? OS.px : px(OS.sym); var q = Math.floor((ME.cash - G.FEE_MIN) / (p * (1 + G.FEE_RATE))); return Math.max(0, q); }
+function renderOrder(){
+  var c = BY[OS.sym], isBuy = OS.side === 'buy';
+  var html = '<h3>' + esc(c.name) + ' <span class="sm">' + c.sym + '・現價 <span id="ohdrpx" class="' + cls(chg(OS.sym)) + '">' + fpx(px(OS.sym)) + '</span></span></h3>';
+  html += '<div class="seg" style="margin-top:10px"><button class="b' + (isBuy ? ' on' : '') + '" data-oside="buy">買進</button><button class="s' + (!isBuy ? ' on' : '') + '" data-oside="sell">賣出</button></div>';
+  html += '<div class="seg"><button class="' + (OS.type === 'mkt' ? 'on' : '') + '" data-otype="mkt">市價（馬上成交）</button><button class="' + (OS.type === 'lmt' ? 'on' : '') + '" data-otype="lmt">限價（到價才成交）</button></div>';
+  if(OS.type === 'lmt') html += '<div class="field"><label>價格</label><button class="pm" data-pstep="-1">−</button><input id="pxIn" inputmode="decimal" value="' + fpx(OS.px) + '"><button class="pm" data-pstep="1">＋</button></div>';
+  html += '<div class="field"><label>股數</label><button class="pm" data-qstep="-1">−</button><input id="qtyIn" inputmode="numeric" value="' + (OS.qty || '') + '" placeholder="0"><button class="pm" data-qstep="1">＋</button></div>';
+  html += '<div class="quick">' + [0.25, 0.5, 1].map(function(f){ return '<button data-qf="' + f + '">' + (f === 1 ? (isBuy ? '全部現金' : '全部持股') : f*100 + '%') + '</button>'; }).join('') + '</div>';
+  html += '<div id="odyn">' + orderDyn() + '</div>';
+  document.getElementById('sheet').innerHTML = html;
+}
+// the part of the order sheet that changes while typing / while prices move (inputs are never rebuilt)
+function renderOrderDyn(){ var el = document.getElementById('odyn'); if(el && OS) el.innerHTML = orderDyn(); var hp = document.getElementById('ohdrpx'); if(hp && OS){ hp.textContent = fpx(px(OS.sym)); hp.className = cls(chg(OS.sym)); } }
+function orderDyn(){
+  var h = holdings()[OS.sym], e = orderEst(), have = h ? h.q : 0, isBuy = OS.side === 'buy';
+  var html = '<div class="sm" style="margin:-4px 0 8px">' + (isBuy ? '可用現金 ' + money(ME.cash) + '・最多買 ' + maxBuy().toLocaleString() + ' 股' : '持有 ' + have.toLocaleString() + ' 股') + '</div>';
+  html += '<div class="est"><div><span>成交金額</span><span class="num">' + money(e.amt) + '</span></div><div><span>手續費</span><span class="num">' + money(e.fee) + '</span></div>' + (isBuy ? '' : '<div><span>交易稅 0.3%</span><span class="num">' + money(e.tax) + '</span></div>') + '<div class="tot"><span>' + (isBuy ? '總共付出' : '實際拿到') + '</span><span class="num">' + money(e.total) + '</span></div></div>';
+  var err = '';
+  if(OS.qty < 1) err = ' ';
+  else if(isBuy && e.total > ME.cash) err = '現金不夠';
+  else if(!isBuy && OS.qty > have) err = '持股不夠';
+  if(OS.type === 'lmt' && !(OS.px > 0)) err = '請輸入價格';
+  if(err.trim()) html += '<div class="warn">⚠️ ' + err + '</div>';
+  if(M && !M.open) html += '<div class="warn">現在已收盤，委託會在下次開盤後處理</div>';
+  if(OS.type === 'lmt') html += '<div class="sm" style="margin-bottom:8px">' + (isBuy ? '股價跌到 ' + fpx(OS.px) + ' 以下才會買進' : '股價漲到 ' + fpx(OS.px) + ' 以上才會賣出') + '；成交前可以在「我的」取消</div>';
+  html += '<button class="btn ' + (isBuy ? 'buy' : 'sell') + '" style="width:100%;padding:13px;font-size:16px" id="placeOrder"' + (err ? ' disabled' : '') + '>' + (isBuy ? '確認買進' : '確認賣出') + '</button><button class="btn" style="width:100%;margin-top:8px;background:none;border:0;color:var(--sub)" id="closeSheet">取消</button>';
+  return html;
+}
+function placeOrder(){
+  if(!OS) return;
+  var o = {sym: OS.sym, side: OS.side, qty: OS.qty, type: OS.type};
+  if(OS.type === 'lmt') o.px = OS.px;
+  var c = BY[OS.sym];
+  closeSheet();
+  send(o).then(function(r){ if(r) toast('📨 已送出：' + (o.side === 'buy' ? '買進' : '賣出') + ' ' + c.name + ' ' + o.qty.toLocaleString() + ' 股'); });
+}
+
+// ---------- name / bankrupt modals ----------
+function askName(){
+  var html = '<h3>👋 歡迎來到操盤人生</h3><p class="sub">你有 ' + money(G.START_CASH) + ' 本金。走路賺錢、看新聞、買股票，看你能滾到多少。</p><div class="field"><label>暱稱</label><input id="joinName" maxlength="12" placeholder="排行榜上顯示的名字"></div><button class="btn pri" style="width:100%;padding:12px" id="joinBtn">開始</button>';
+  document.getElementById('sheet').innerHTML = html;
+  var m = document.getElementById('mask'); m.classList.add('show', 'center');
+}
+var bankruptShown = false;
+function checkBankrupt(){
+  if(!ME || !M) return;
+  var nw = netWorth(), open = ME.open ? Object.keys(ME.open).length : 0;
+  if(nw < G.BANKRUPT_BELOW && !open && !bankruptShown){
+    bankruptShown = true;
+    document.getElementById('sheet').innerHTML = '<h3>💸 你破產了</h3><p class="sub">總資產只剩 ' + money(nw) + '。股市就是這麼無情……</p><p class="sub">重新開始會拿回 ' + money(G.START_CASH) + '，排行榜會記下你的破產次數。</p><button class="btn pri" style="width:100%;padding:12px" id="resetYes">重新開始</button>';
+    document.getElementById('mask').classList.add('show', 'center');
+  }
+  if(nw >= G.BANKRUPT_BELOW) bankruptShown = false;
+}
+
+// ---------- pedometer (web: device motion while the page is open) ----------
+var PED = {on:false, session:0, last:0, avg:9.8, above:false, pending:false};
+function stepsToday(){
+  var server = ME && ME.steps && ME.steps.d === todayKey() ? ME.steps.n : 0;
+  var local = load('steps_' + todayKey(), 0);
+  return Math.min(G.STEP_CAP, Math.max(server, local));
+}
+function addSteps(n){
+  var v = Math.min(G.STEP_CAP, stepsToday() + n);
+  save('steps_' + todayKey(), v);
+  PED.pending = true;
+}
+function onMotion(e){
+  var a = e.accelerationIncludingGravity; if(!a || a.x == null) return;
+  var mag = Math.sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+  PED.avg = PED.avg * 0.9 + mag * 0.1;
+  var now = Date.now();
+  if(!PED.above && mag > PED.avg + 1.6 && now - PED.last > 280){ PED.above = true; PED.last = now; PED.session++; addSteps(1); if(PED.session % 5 === 0) render(); }
+  else if(PED.above && mag < PED.avg) PED.above = false;
+}
+function toggleWalk(){
+  if(PED.on){ PED.on = false; window.removeEventListener('devicemotion', onMotion); render(); return; }
+  function start(){ PED.on = true; PED.session = 0; window.addEventListener('devicemotion', onMotion); render(); toast('🚶 開始計步，手機拿著走就好'); }
+  if(typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+    DeviceMotionEvent.requestPermission().then(function(r){ if(r === 'granted') start(); else toast('需要允許「動作與方向」才能計步'); }).catch(function(){ toast('這台裝置不能計步'); });
+  } else if(typeof DeviceMotionEvent !== 'undefined'){ start(); }
+  else toast('這台裝置不能計步');
+}
+setInterval(function(){ if(PED.pending && ME){ PED.pending = false; send({steps: stepsToday()}); } }, 5000);
+
+// ---------- render ----------
+function render(){
+  var st = statusText(), ms = document.getElementById('mstat'); ms.textContent = st.t; ms.className = 'mstat ' + st.c;
+  var nw = netWorth(); document.getElementById('hdrNw').textContent = nw == null ? '—' : money(nw);
+  var v = document.getElementById('view');
+  var html = UI.tab === 'list' ? viewList() : UI.tab === 'news' ? viewNews() : UI.tab === 'me' ? viewMe() : UI.tab === 'rank' ? viewRank() : viewHome();
+  var focus = document.activeElement && document.activeElement.id;
+  if(focus === 'nameIn') return; // don't wipe the field while typing
+  v.innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function(b){ b.classList.toggle('on', b.getAttribute('data-tab') === UI.tab); });
+  if(UI.tab === 'home'){ var cv = document.getElementById('idxCanvas'); if(cv){ var pts = IDXCHART.slice(); if(M && M.open) pts.push(M.idx); drawLine(cv, pts, M ? M.idxPrev : null, 120); } }
+}
+var rq = false;
+function soon(){ if(rq) return; rq = true; requestAnimationFrame(function(){ rq = false; render(); if(UI.detail) renderDetail(); if(OS) renderOrderDyn(); checkBankrupt(); }); }
+function setTab(t){ UI.tab = t; save('tab', t); UI.confirmReset = false; closeDetail(); render(); window.scrollTo(0,0); }
+
+// ---------- events ----------
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest('button'); if(!t) return;
+  var a;
+  if((a = t.getAttribute('data-tab'))){ setTab(a); return; }
+  if((a = t.getAttribute('data-open'))){ openDetail(a); return; }
+  if((a = t.getAttribute('data-sec'))){ UI.sec = a; setTab('list'); return; }
+  if((a = t.getAttribute('data-fsec'))){ UI.sec = a; render(); return; }
+  if((a = t.getAttribute('data-sort'))){ UI.sort = a; render(); return; }
+  if((a = t.getAttribute('data-range'))){ UI.range = a; renderDetail(); return; }
+  if((a = t.getAttribute('data-trade'))){ openOrder(a); return; }
+  if((a = t.getAttribute('data-oside'))){ OS.side = a; OS.qty = 0; renderOrder(); return; }
+  if((a = t.getAttribute('data-otype'))){ OS.type = a; OS.px = px(OS.sym); renderOrder(); return; }
+  if((a = t.getAttribute('data-qstep'))){ OS.qty = Math.max(0, (OS.qty || 0) + (+a)); renderOrder(); return; }
+  if((a = t.getAttribute('data-pstep'))){ var ts = tickSize(OS.px || px(OS.sym)); OS.px = Math.max(ts, Math.round(((OS.px || 0) + ts * (+a)) / ts) * ts); OS.px = +OS.px.toFixed(2); renderOrder(); return; }
+  if((a = t.getAttribute('data-qf'))){ var f = +a; if(OS.side === 'buy') OS.qty = Math.floor(maxBuy() * f); else { var hh = holdings()[OS.sym]; OS.qty = hh ? Math.floor(hh.q * f) : 0; } renderOrder(); return; }
+  if((a = t.getAttribute('data-cancel'))){ send({cancel: a}).then(function(r){ if(r) toast('已送出取消'); }); return; }
+  if((a = t.getAttribute('data-color'))){ prefs.greenUp = a === 'green'; save('prefs', prefs); document.documentElement.classList.toggle('gup', prefs.greenUp); soon(); return; }
+  switch(t.id){
+    case 'backBtn': closeDetail(); render(); return;
+    case 'placeOrder': placeOrder(); return;
+    case 'closeSheet': closeSheet(); return;
+    case 'walkBtn': toggleWalk(); return;
+    case 'fakeSteps': addSteps(1000); PED.pending = false; send({steps: stepsToday()}).then(function(){ toast('🚶 +1,000 步 → +' + money(1000 * G.STEP_PAY)); }); render(); return;
+    case 'resetAsk': UI.confirmReset = true; render(); return;
+    case 'resetNo': UI.confirmReset = false; render(); return;
+    case 'resetYes': UI.confirmReset = false; closeSheet(); send({reset: true}).then(function(r){ if(r) toast('🔄 重新開始！本金 ' + money(G.START_CASH)); }); return;
+    case 'nameSave': var nm = document.getElementById('nameIn').value.trim(); if(nm){ document.getElementById('nameIn').blur(); send({join: nm}).then(function(r){ if(r) toast('暱稱已更新'); }); } return;
+    case 'joinBtn': var jn = (document.getElementById('joinName').value || '').trim() || ('玩家' + uid.slice(-4)); save('name', jn); send({join: jn}); closeSheet(); toast('🎉 歡迎，' + jn + '！'); return;
+  }
+});
+document.getElementById('mask').addEventListener('click', function(ev){ if(ev.target.id === 'mask' && OS) closeSheet(); });
+document.addEventListener('input', function(ev){
+  if(!OS) return;
+  if(ev.target.id === 'qtyIn'){ OS.qty = Math.max(0, Math.min(1e7, Math.floor(+ev.target.value.replace(/[^\d]/g,'') || 0))); renderOrderDyn(); }
+  if(ev.target.id === 'pxIn'){ var v = parseFloat(ev.target.value); OS.px = isFinite(v) && v > 0 ? v : 0; renderOrderDyn(); }
+});
+window.addEventListener('resize', function(){ soon(); });
+
+// ---------- boot ----------
+listen('market', function(d){ M = d; soon(); });
+listen('news', function(d){ NEWS = Array.isArray(d) ? d.filter(Boolean) : d ? Object.keys(d).map(function(k){ return d[k]; }).filter(Boolean).sort(function(a,b){ return b.t - a.t; }) : []; soon(); });
+listen('board', function(d){ BOARD = d; if(UI.tab === 'rank') soon(); });
+listen('dayStats', function(d){ DAY = d; if(UI.detail) soon(); });
+listen('players/' + uid, function(d){
+  var first = ME === null;
+  ME = d && typeof d === 'object' ? d : null;
+  if(ME){
+    ME.pos = ME.pos || {}; ME.open = ME.open || {};
+    ME.fills = Array.isArray(ME.fills) ? ME.fills.filter(Boolean) : ME.fills ? Object.keys(ME.fills).map(function(k){ return ME.fills[k]; }) : [];
+    var f = ME.fills[0];
+    if(f && UI.lastFillT && f.t > UI.lastFillT){
+      var c = BY[f.sym] || {name:f.sym};
+      toast(f.ok ? '✅ 成交：' + (f.side === 'buy' ? '買進' : '賣出') + ' ' + c.name + ' ' + f.qty.toLocaleString() + ' 股 @ ' + fpx(f.px) : '❌ 委託失敗：' + c.name + '（' + (f.why || '') + '）');
+    }
+    if(f) UI.lastFillT = Math.max(UI.lastFillT, f.t);
+    else if(!UI.lastFillT) UI.lastFillT = 1;
+  }
+  if(!ME && first && !load('name', null)) askName();
+  else if(!ME && load('name', null)) send({join: load('name', '')});
+  soon();
+});
+function refreshIdx(){ getJson('chart/IDX').then(function(d){ IDXCHART = Array.isArray(d) ? d.filter(function(x){ return x != null; }) : []; if(UI.tab === 'home') soon(); }); }
+refreshIdx(); setInterval(refreshIdx, 60000);
+setInterval(function(){ if(UI.detail){ var s = UI.detail; getJson('chart/' + s).then(function(d){ if(Array.isArray(d)) chartCache[s] = d.filter(function(x){ return x != null; }); }); } soon(); }, 60000);
+setInterval(soon, 10000);
+render();
+})();
+</script>
+</body>
+</html>
