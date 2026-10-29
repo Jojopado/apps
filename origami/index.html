@@ -179,11 +179,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
 
 <div class="home" id="home">
   <div class="home-in">
-    <h1>今天摺哪一隻？</h1>
-    <p class="lead">先學基本功，再照真正的摺紙教學摺動物。摺好牠會長出臉跟你打招呼，然後住進你的圖鑑。</p>
+    <h1>今天摺什麼？</h1>
+    <p class="lead">先學基本功，再照真正的摺紙教學一步一步摺。摺好的作品會收進你的圖鑑。</p>
     <div class="secthead"><h2>基本功</h2><span id="lessonCount">0 / 5 學會</span></div>
     <div class="lessons" id="lessonGrid"></div>
-    <div class="secthead"><h2>動物</h2><span>圖鑑 <b id="dexCount">0 / 7</b></span></div>
+    <div class="secthead"><h2>作品</h2><span>圖鑑 <b id="dexCount">0 / 1</b></span></div>
     <div class="grid" id="animalGrid"></div>
     <h2 id="mineTitle" hidden>我自己創作的</h2>
     <div class="mine" id="mineList" hidden></div>
@@ -733,38 +733,10 @@ const LESSONS=[
     learn:'跟外翻摺同一條線，但尖角往兩半中間塞進去。常用來做尾巴、腳、鳥嘴。'},
 ];
 const ANIMALS=[
-  {id:'rdog', name:'小狗', start:'diamond', color:'#C9955F', level:'入門', cry:'汪！', steps:PRO.dog,
-    tip:'用到：摺痕當對齊線、只摺上層做出白色口鼻。',
-    src:{label:'Red Ted Art〈Easy Origami Dog〉', url:'https://www.redtedart.com/easy-origami-dog-puppy/'},
-    face:[{t:'eye',p:[-.28,-.4]},{t:'eye',p:[.28,-.4]},{t:'nose',p:[0,-.84]},{t:'mouth',p:[0,-.95]},{t:'blush',p:[-.46,-.62]},{t:'blush',p:[.46,-.62]}]},
   {id:'pumpkin', name:'南瓜燈', start:'square', color:'#F26A3D', level:'挑戰', cry:'嘿嘿嘿～', steps:PRO.pumpkin, pass:.9,
     tip:'Nicolas Terry 設計的萬聖節南瓜燈。用到摺痕、邊對摺痕、只在一片壓摺痕、打開、單點複合摺（第 10～12 步，中線上 8 條摺痕一起動）和擠壓摺。臉是紙的顏色變化做出來的。修圓角那幾步位置自己決定，相似度 90% 就算過。',
     src:{label:'origami.me〈How to Fold an Origami Jack O’ Lantern〉（設計 Nicolas Terry）', url:'https://origami.me/jack-o-lantern/'},
     face:[]},
-  {id:'swan', name:'天鵝', start:'diamond', color:'#5FA3C9', level:'進階', cry:'嘎～', steps:PRO.swan,
-    tip:'傳統摺法。用到：風箏基本型、翻面、旋轉、只摺一片、對摺、拉出脖子（外翻摺）。',
-    src:{label:'origami.me〈How to Fold an Easy Origami Swan〉（傳統摺法）', url:'https://origami.me/swan/'},
-    face:[{t:'eye',p:[-.15,.86]},{t:'blush',p:[-.06,.74]}]},
-  {id:'rpenguin', name:'企鵝', start:'diamond', colorUp:true, color:'#34507E', level:'進階', cry:'嘎嘎！', steps:PRO.penguin, pass:.9,
-    tip:'彩色面朝上開始。用到：摺痕、留空隙的摺、兩次翻面、對摺、外翻摺做頭。第 3、4 步沒有精確位置，相似度 90% 就算過。',
-    src:{label:'origami.me〈How to Fold a Very Easy Origami Penguin〉', url:'https://origami.me/penguin/'},
-    face:[{t:'eye',p:[.03,.77]},{t:'blush',p:[-.1,.6]}]},
-  {id:'chick', name:'小雞', start:'diamond', color:'#F4C93A', level:'暖身', cry:'啾啾！',
-    tip:'上下兩個角摺到正中央，右邊的尖角往後摺，最後翻面。',
-    steps:[{s:[0,R],t:[0,0]},{s:[0,-R],t:[0,0]},{s:[R,0],t:[R/2,0],m:true},{flip:true}],
-    face:[{t:'eye',p:[-.5,.2]},{t:'beak',p:[-.97,0],dir:Math.PI},{t:'blush',p:[-.55,-.12]}]},
-  {id:'fox', name:'小狐狸', start:'diamond', color:'#EC8A3C', level:'暖身', cry:'嗷嗚～',
-    tip:'先摺成三角形，左右兩角從頂邊 1/4 處往上摺成尖耳朵。',
-    steps:[{s:[0,R],t:[0,-R]},{s:[-R,0],t:[-.1*R,.3*R]},{s:[R,0],t:[.1*R,.3*R]}],
-    face:[{t:'eye',p:[-.19,-.42]},{t:'eye',p:[.19,-.42]},{t:'nose',p:[0,-1.24]},{t:'blush',p:[-.36,-.66]},{t:'blush',p:[.36,-.66]}]},
-  {id:'bunny', name:'小兔', start:'diamond', color:'#C4AEDD', level:'暖身', cry:'噗嚕嚕～',
-    tip:'三角形之後，兩邊的角往上摺成長耳朵，下巴往後摺。',
-    steps:[{s:[0,R],t:[0,-R]},{s:[-R,0],t:[-.1*R,.3*R]},{s:[R,0],t:[.1*R,.3*R]},{s:[0,-R],t:[0,-R/2],m:true}],
-    face:[{t:'eye',p:[-.19,-.38]},{t:'eye',p:[.19,-.38]},{t:'nose',p:[0,-.58]},{t:'mouth',p:[0,-.66]},{t:'blush',p:[-.3,-.7]},{t:'blush',p:[.3,-.7]}]},
-  {id:'pig', name:'小豬', start:'square', color:'#F2A6B8', level:'暖身', cry:'噗噗～',
-    tip:'四個角都摺到 1/4 的位置變成八角形，最後翻面。',
-    steps:[{s:[-1,1],t:[-.5,.5]},{s:[1,1],t:[.5,.5]},{s:[1,-1],t:[.5,-.5]},{s:[-1,-1],t:[-.5,-.5]},{flip:true}],
-    face:[{t:'ear',p:[-.58,.66],dir:Math.PI*.75},{t:'ear',p:[.58,.66],dir:Math.PI*.25},{t:'eye',p:[-.3,.2]},{t:'eye',p:[.3,.2]},{t:'snout',p:[0,-.22]},{t:'blush',p:[-.6,-.2]},{t:'blush',p:[.6,-.2]}]},
 ];
 ANIMALS.forEach(a=>{ if(a.level==='暖身') a.mine=true; });
 const FREE={id:'free', name:'自由創作', start:'square', color:'#7FB27A', free:true, tip:'想摺什麼就摺什麼，摺好按「完成」幫牠貼上五官。'};
