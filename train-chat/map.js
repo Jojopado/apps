@@ -5,7 +5,9 @@ let MAP = null;
 const PX = lo => (lo - 119.9) * 91.6, PY = la => (25.4 - la) * 100;   // 簡單等距投影（緯度 23.7° 修正）
 const MV = { x: 0, y: 0, w: 200, h: 360, sel: null, el: null };
 async function loadMap() { if (!MAP) MAP = await fetch('data/map.json').then(r => r.json()); return MAP; }
-const mapStations = () => Object.keys(MAP.gps).filter(c => ST[c] && !stName(c).includes('-'));
+// 只有精選班次會停的站可以選；其他站畫成小灰點
+const mapStations = () => Object.keys(MAP.gps).filter(c => ST[c] && !stName(c).includes('-') && (CFG.allTrains || MAP.count[c]));
+const offStations = () => Object.keys(MAP.gps).filter(c => ST[c] && !stName(c).includes('-') && !CFG.allTrains && !MAP.count[c]);
 const sxy = c => { const g = MAP.gps[c]; return [PX(g[0]), PY(g[1])]; };
 
 async function openStations() {
@@ -16,7 +18,7 @@ async function openStations() {
     <div id="stL" class="stlist mapRes" hidden></div>
     <div id="mapBox"><svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="mapZoom"><button data-z="0.6">＋</button><button data-z="1.6">－</button><button data-z="me">📍</button></div>
-      <div class="mapLegend"><span><i style="background:#ffcf4a"></i>已蓋章</span><span><i style="background:#fff"></i>還沒去</span><span><i style="background:#e0441f"></i>你在這</span></div></div>
+      <div class="mapLegend"><span><i style="background:#ffcf4a"></i>已蓋章</span><span><i style="background:#fff"></i>還沒去</span><span><i style="background:#e0441f"></i>你在這</span><span><i style="background:#a9b1bd;width:6px;height:6px;border:0"></i>沒開放</span></div></div>
     <div id="mapCard"></div>`);
   $('modalBox').classList.add('mapModal');
   $('mapClose').onclick = closeModal;
@@ -83,6 +85,7 @@ function drawMap() {
     const pts = rideTr.stops.filter(s => MAP.gps[s.c]).map(s => sxy(String(s.c)).join(' '));
     o.push(`<polyline points="${pts.join(' ')}" fill="none" stroke="${clsOf(rideTr.cls).k}" stroke-width="${5 * k}" stroke-linejoin="round" opacity=".75"/>`);
   }
+  for (const c of offStations()) { const [x, y] = sxy(c); o.push(`<circle cx="${x}" cy="${y}" r="${1.6 * k}" fill="#a9b1bd"/>`); }
   const codes = mapStations(), zoomed = MV.w < 70;
   const HUBS = ['臺北', '臺中', '高雄', '花蓮', '臺東', '宜蘭', '新竹', '嘉義', '臺南', '屏東', '基隆', '彰化'];   // 先顯示這些站名
   const hub = c => { const i = HUBS.indexOf(stName(c)); return i < 0 ? 99 : i; };
@@ -118,8 +121,8 @@ function mapCard() {
   const here = !S.ride && +c === S.station, st = S.stamps[c];
   el.innerHTML = `<div class="mc"><div class="mcTop"><div><div class="mcName">${esc(stName(c))}</div><div class="mcEn">${esc(stEn(c))}</div></div>
       ${st ? `<div class="mcStamp">${stampSVG(c, st.d)}</div>` : '<div class="mcNo">還沒<br>蓋章</div>'}</div>
-    <div class="mcInfo">每天約 ${n} 班車停靠${deps.length ? `<br>下一班 <b>${hm(deps[0].d)}</b> ${badge(deps[0].tr.cls)} 往${esc(destName(deps[0].tr))}` : ''}</div>
-    ${S.ride ? '' : here ? '<button class="btn ghost" disabled>📍 你在這站</button>' : `<button class="btn" id="goSt">🚉 切換到 ${esc(stName(c))}</button>`}</div>`;
+    <div class="mcInfo">每天約 ${n} 班開放班次${deps.length ? `<br>下一班 <b>${hm(deps[0].d)}</b> ${badge(deps[0].tr.cls)} 往${esc(destName(deps[0].tr))}` : ''}</div>
+    ${S.ride ? '' : here ? '<button class="btn ghost" disabled>📍 你在這站</button>' : S.sel ? '<button class="btn ghost" disabled>🎫 有車票時不能換站（先取消車票）</button>' : `<button class="btn" id="goSt">🚉 切換到 ${esc(stName(c))}</button>`}</div>`;
   const go = $('goSt');
   if (go) go.onclick = () => {
     S.station = +c; S.sel = null; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;

@@ -140,3 +140,53 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .waitCard .wcD b { color: #ffcf4a; }
 .waitCard .btn { width: 100%; background: #2f6fed; color: #fff; border: 0; border-radius: 10px; padding: 10px; font-weight: 800; font-size: 15px; cursor: pointer; }
 .waitCard .wcN { font-size: 11px; color: #9aa7bb; margin-top: 6px; }
+
+/* 大廳車票列（大廳不能聊天） */
+#ticketBar { padding: 8px 12px; background: #121a26; font-weight: 800; font-size: 14px; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
+#ticketBar[hidden], #chatBar[hidden] { display: none; }
+#ticketBar small { font-weight: 500; font-size: 11px; color: #9aa7bb; margin-top: 2px; }
+.row.locked { opacity: .55; }
+.row .tk { font-size: 16px; }
+#board.bye { color: #fff; background: #b8321c; border-color: #fff; animation: pulse2 .8s infinite; }
+@keyframes pulse2 { 50% { opacity: .75; } }
+#chatLog .sys { color: #9aa7bb; }
+/* 包廂 */
+.seat-empty { position: absolute; transform: translate(-50%, -50%); font-size: 11px; color: rgba(255,255,255,.75); text-align: center; line-height: 1.1; pointer-events: none; }
+.seat-empty small { font-size: 9px; }
+.mbti { display: inline-block; font-size: 9px; background: rgba(0,0,0,.55); color: #fff; padding: 0 4px; border-radius: 4px; margin-left: 2px; vertical-align: 1px; }
+.bubble.down { transform: translate(-50%, 0); animation: popd .18s ease-out; }
+.bubble.down::after { bottom: auto; top: -10px; border-top-color: transparent; border-bottom-color: #1b1b1b; }
+.bubble.npc.down::after { border-bottom-color: #888; }
+@keyframes popd { from { transform: translate(-50%, 0) scale(.5); opacity: 0; } }
+.mates { margin: 8px 10px; background: #fff; border-radius: 12px; border: 2px solid #e5dfd3; overflow: hidden; }
+.matesH { padding: 8px 12px; font-weight: 800; font-size: 14px; background: #f8f4ea; border-bottom: 1px solid #e5dfd3; }
+.mate { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid #f0ebe0; }
+.mate:last-child { border-bottom: 0; }
+.mate > i { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.mate .mI { flex: 1; min-width: 0; font-size: 14px; }
+.mate .mbti { font-size: 10px; background: #2b3446; }
+.mT { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.mT span { font-size: 11px; background: #eee8dc; padding: 1px 6px; border-radius: 8px; }
+.mT span.same { background: #ffe08a; font-weight: 800; }
+.mD { font-size: 11px; color: #888; margin-top: 2px; }
+.mS { color: #f3a400; font-size: 12px; letter-spacing: -1px; white-space: nowrap; }
+.mate.empty1 { font-size: 12px; color: #888; }
+/* 選包廂 */
+.pick2 { display: flex; gap: 10px; margin-top: 10px; }
+.pickBox { flex: 1; background: #fff; border: 3px solid #d8d0c0; border-radius: 14px; padding: 14px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #222; }
+.pickBox:active { border-color: #2f6fed; background: #eef3ff; }
+.pickBox .pkI { font-size: 24px; line-height: 1.15; min-height: 56px; display: flex; align-items: center; text-align: center; }
+.pickBox b { font-size: 16px; } .pickBox small { color: #888; }
+/* 個人資料 */
+.intro { margin: 0 0 6px; line-height: 1.7; font-size: 13.5px; }
+.lbl small { font-weight: 800; color: #2f6fed; }
+.mbGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.mb, .pc, .tg, .qzO button { background: #fff; border: 2px solid #d8d0c0; border-radius: 9px; padding: 6px 2px; font-weight: 800; font-size: 13px; cursor: pointer; color: #333; }
+.mb.on, .pc.on, .tg.on, .qzO button.on { border-color: #2f6fed; background: #e8efff; color: #1d4fc4; }
+.linkBtn { background: none; border: 0; color: #2f6fed; font-weight: 700; font-size: 13px; padding: 8px 0 0; cursor: pointer; }
+.qz { margin-top: 8px; font-size: 13px; font-weight: 700; }
+.qzO { display: flex; gap: 6px; margin-top: 4px; } .qzO button { flex: 1; font-weight: 600; padding: 7px 4px; }
+.pcRow { display: flex; flex-direction: column; gap: 6px; } .pc { text-align: left; padding: 8px 10px; }
+.tagRow { display: flex; flex-wrap: wrap; gap: 6px; } .tg { padding: 5px 10px; font-weight: 600; }
+
+#sceneWrap #board { top: 8px; }
