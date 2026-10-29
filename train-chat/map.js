@@ -82,7 +82,7 @@ function drawMap() {
   o.push('</g>');
   const rideTr = S.ride && TR[S.ride.key];
   if (rideTr) {   // 我這班車的路線
-    const pts = rideTr.stops.filter(s => MAP.gps[s.c]).map(s => sxy(String(s.c)).join(' '));
+    const pts = (rideTr.full || rideTr.stops).filter(s => MAP.gps[s.c]).map(s => sxy(String(s.c)).join(' '));
     o.push(`<polyline points="${pts.join(' ')}" fill="none" stroke="${clsOf(rideTr.cls).k}" stroke-width="${5 * k}" stroke-linejoin="round" opacity=".75"/>`);
   }
   for (const c of offStations()) { const [x, y] = sxy(c); o.push(`<circle cx="${x}" cy="${y}" r="${1.6 * k}" fill="#a9b1bd"/>`); }
@@ -125,7 +125,7 @@ function mapCard() {
     ${S.ride ? '' : here ? '<button class="btn ghost" disabled>📍 你在這站</button>' : S.sel ? '<button class="btn ghost" disabled>🎫 有車票時不能換站（先取消車票）</button>' : `<button class="btn" id="goSt">🚉 切換到 ${esc(stName(c))}</button>`}</div>`;
   const go = $('goSt');
   if (go) go.onclick = () => {
-    S.station = +c; S.sel = null; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
+    S.station = +c; S.sel = null; S.area = 'hall'; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
     save(); Net.join(roomName()); dirty = true; listSig = ''; closeModal(); toast('來到 ' + stName(c) + ' 站');
   };
 }

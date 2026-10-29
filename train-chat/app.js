@@ -7,6 +7,7 @@ const CFG = Object.assign({ db: '', prefix: 'rooms/tc_', allTrains: false }, win
 const QS = new URLSearchParams(location.search);
 if (QS.get('db')) CFG.db = QS.get('db');
 if (QS.get('all')) CFG.allTrains = true;
+if (QS.get('pre')) CFG.prefix = QS.get('pre');   // 測試用：每輪用不同的房間前綴
 const SAVE_KEY = 'tc_state' + (QS.get('p') || '');   // ?p=2 → 同一台電腦開第二個玩家
 const $ = id => document.getElementById(id);
 const pad = n => String(Math.floor(n)).padStart(2, '0');
@@ -59,7 +60,7 @@ let S = (() => {
   return Object.assign({
     id: 'p' + Math.random().toString(36).slice(2, 10), name: '', color: COLORS[(Math.random() * COLORS.length) | 0],
     hair: HAIRS[(Math.random() * HAIRS.length) | 0], station: 1000, sel: null, ride: null, stamps: {},
-    prof: { mb: '', pc: '', tg: [] }, test: false, tBase: 0, rBase: 0, speed: 1, x: 80, y: 60
+    prof: { mb: '', pc: '', tg: [] }, area: 'hall', test: false, tBase: 0, rBase: 0, speed: 1, x: 80, y: 60
   }, s);
 })();
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
@@ -85,7 +86,7 @@ function dur(sec) {
 const dateStr = t => { const k = dayKey(t); return k.slice(0, 4) + '.' + k.slice(4, 6) + '.' + k.slice(6); };
 
 // ---------- 時刻表資料（預設只用精選班次） ----------
-let ST = {}, DATES = [], dirty = true;
+let ST = {}, DATES = [], GAME = null, dirty = true;
 const DAY = {}, PEND = {}, TR = {};
 const stName = c => (ST[c] || ['?'])[0];
 const stEn = c => (ST[c] || ['', ''])[1];
@@ -99,7 +100,10 @@ function loadDay(k) {
   }
   return PEND[k] = fetch('data/' + src + '.json').then(r => r.json()).then(j => {
     const m = midnight(k);
-    const arr = j.t.filter(t => CFG.allTrains || t[3]).map(([no, cls, st]) => ({ key: k + '_' + no, date: k, no, cls, stops: st.map(([c, a, d]) => ({ c, a: m + a, d: m + d })) }));
+    const arr = j.t.filter(t => CFG.allTrains || t[3]).map(([no, cls, st]) => {
+      const full = st.map(([c, a, d]) => ({ c, a: m + a, d: m + d }));
+      return { key: k + '_' + no, date: k, no, cls, full, stops: CFG.allTrains || !GAME ? full : full.filter(x => GAME.has(x.c)) };
+    }).filter(t => t.stops.length >= 2);
     for (const t of arr) TR[t.key] = t;
     DAY[k] = arr; delete PEND[k]; dirty = true; return arr;
   }).catch(() => { delete PEND[k]; return []; });
@@ -141,7 +145,7 @@ function trainPos(tr, t) {
   }
   return { kind: 'done', i: st.length - 1 };
 }
-const destName = tr => stName(tr.stops[tr.stops.length - 1].c);
+const destName = tr => { const f = tr.full || tr.stops; return stName(f[f.length - 1].c); };   // 顯示真實終點站
 
 // ---------- 連線（Firebase REST＋串流；沒設定就單機） ----------
 const Net = {
@@ -201,7 +205,7 @@ const Net = {
     fetch(this.url(S.id), { method: 'PUT', body: JSON.stringify(me) }).catch(() => { });
   }
 };
-const roomName = () => S.ride ? 'tr' + S.ride.key : 'st' + S.station;
+const roomName = () => S.ride ? 'tr' + S.ride.key : (S.area === 'platform' ? 'pf' : 'st') + S.station;
 
 // ---------- 包廂（同班車的玩家依個性排位） ----------
 // 還佔著位子的人：在線的，或離線睡著但還沒到他的下車站
@@ -252,6 +256,106 @@ function mates(t) {
   if (!S.ride || S.ride.cp == null) return [];
   return seatedPeers(t).filter(([, v]) => v.cp === S.ride.cp).map(([id, v]) => ({ id, ...v, sleep: Date.now() - (v.t || 0) >= STALE }));
 }
+const allMates = t => [...mates(t), ...(S.ride && S.ride.npcs || [])];
+
+// ---------- 包廂 NPC 旅客（沒有真人玩家時陪你聊；真人進來就讓位） ----------
+const NPC_NAMES = ['小芸', '阿哲', '婷婷', '阿凱', '小蓁', '俊宏', '佳穎', '冠宇', '怡君', '柏翰', '詩涵', '家豪'];
+const NPC_ASK = {
+  '🍜 美食': d => `你在${d}有想吃什麼嗎？`, '✈️ 旅行': () => '你最喜歡台灣哪裡？', '🎮 遊戲': () => '最近在玩什麼遊戲？',
+  '🎵 音樂': () => '坐車都聽什麼歌？', '🎬 電影': () => '最近有看什麼好看的嗎？', '📚 閱讀': () => '你在看什麼書？',
+  '⚽ 運動': () => '你平常有在運動嗎？', '📷 攝影': () => '這段風景超適合拍照欸', '🐱 寵物': () => '你有養寵物嗎？',
+  '🎨 動漫': () => '最近有在追什麼番嗎？', '💻 科技': () => '你是做什麼的呀？', '🌿 戶外': () => '你喜歡爬山還是去海邊？'
+};
+const NPC_KW = [
+  [/去哪|哪一站|下車|目的地/, n => [`我要去${stName(TR[S.ride.key].stops[n.dest].c)}！你呢？`, `${stName(TR[S.ride.key].stops[n.dest].c)}～去找朋友`]],
+  [/嗨|你好|哈囉|安安|hi|hello/i, n => [`嗨嗨！我是${n.n}，要去${stName(TR[S.ride.key].stops[n.dest].c)}～`, `你好呀～我是${n.n}，${n.mb} 一枚`]],
+  [/掰|再見|bye/i, () => ['掰掰～', '下次見！']],
+  [/吃|美食|便當|餓|好吃|小吃/, () => ['說到吃我就醒了 😋', '車站便當我推排骨的！', '你有私藏的小吃嗎？']],
+  [/遊戲|打電動|game|手遊/i, () => ['最近在玩什麼？', '我也超愛打電動！']],
+  [/旅行|旅遊|出去玩|景點/, () => ['我最喜歡去花東看海', '旅行最棒的就是坐火車了']],
+  [/音樂|歌|耳機/, () => ['你都聽什麼歌？', '坐車聽歌超 chill']],
+  [/電影|劇|動畫|番/, () => ['最近有什麼好看的嗎？', '我最近在追一部，超好看']],
+  [/mbti|[ei][ns][tf][jp]/i, n => [`我是 ${n.mb}！`, `${n.mb} 的我表示認同`]],
+  [/工作|上班|上學|學校|考試|報告/, () => ['辛苦了！坐車剛好放空一下', '加油加油！']],
+  [/累|想睡|睏/, () => ['我也是，火車晃晃的好好睡', '可以瞇一下，到站我叫你']],
+  [/哈哈|xd|笑死|lol/i, () => ['哈哈哈', 'XD', '笑死']]
+];
+const pickOne = a => a[(Math.random() * a.length) | 0];
+const npcQ = [];   // 排程好的 NPC 發言 {at, id, m}
+function npcSay(n, m, delay) { npcQ.push({ at: Date.now() + (delay || 0), id: n.id, m }); }
+function npcSpawn(t, max) {
+  const tr = TR[S.ride.key], size = S.ride.cs, ns = S.ride.npcs || (S.ride.npcs = []);
+  const want = size === 2 ? 1 : 2, pos = trainPos(tr, t), here = pos.kind === 'stop' ? pos.i : Math.max(pos.i, S.ride.from);
+  const taken = new Set([S.ride.seat, ...mates(t).map(m => m.st), ...ns.map(n => n.st)]);
+  const count = Math.min(max || 9, want - ns.length);
+  for (let k = 0; k < count; k++) {
+    let seat = 0; while (taken.has(seat) && seat < size) seat++;
+    if (seat >= size || here >= tr.stops.length - 1) break;
+    taken.add(seat);
+    const r = rng(hash(tr.key + S.ride.cp + seat + here + k));
+    const n = { id: 'npc' + Math.floor(r() * 1e6), n: pickOne(NPC_NAMES.filter(x => !ns.some(o => o.n === x))), npc: true, st: seat,
+      mb: MBTIS[Math.floor(r() * 16)], pc: r() < 0.6 ? 'talk' : 'quiet', tg: [...TAGS].sort(() => r() - 0.5).slice(0, 2),
+      c: COLORS[Math.floor(r() * COLORS.length)], h: HAIRS[Math.floor(r() * HAIRS.length)],
+      dest: here + 1 + Math.floor(r() * (tr.stops.length - 1 - here)) };
+    ns.push(n);
+    logChat('', `${n.n} 進到包廂了`);
+    const shared = tagArr(S.prof.tg).filter(x => n.tg.includes(x));
+    npcSay(n, n.pc === 'talk' ? `嗨！我是${n.n}，要去${stName(tr.stops[n.dest].c)}～你呢？` : '（點頭）你好', 1800 + k * 1500);
+    if (shared.length && n.pc === 'talk') npcSay(n, `欸你也喜歡${shared[0].split(' ')[1]}？`, 6000 + k * 1500);
+  }
+  save();
+}
+function npcReply(m) {
+  const ns = (S.ride && S.ride.npcs) || []; if (!ns.length) return;
+  const n = ns.length > 1 && Math.random() < 0.5 ? ns[1] : ns[0];
+  let a = null;
+  for (const [re, f] of NPC_KW) if (re.test(m)) { a = pickOne(f(n)); break; }
+  if (!a && /[?？]|嗎|呢|什麼|哪/.test(m)) a = pickOne(['嗯…我覺得是耶', '好問題！我想想', '應該吧？哈哈', '我也不知道欸，你覺得呢？']);
+  if (!a) a = pickOne(n.pc === 'talk' ? ['真的嗎！', '原來如此～', '好酷喔', '然後呢？', '我懂我懂', '哈哈對啊'] : ['嗯嗯', '這樣啊', '（點頭）', '哈哈']);
+  npcSay(n, a, 1200 + Math.random() * 1600);
+  if (ns.length > 1 && Math.random() < 0.3) npcSay(ns[ns.length - 1 - ns.indexOf(n)], pickOne(['+1', '我也這麼覺得', '哈哈哈']), 3500);
+}
+let lastTalk = Date.now();
+function npcTick(t) {
+  if (!S.ride || S.ride.cp == null) return;
+  const tr = TR[S.ride.key], ns = S.ride.npcs || (S.ride.npcs = []), real = mates(t).filter(m => !m.sleep);   // 睡著的玩家不會聊天，NPC 照樣陪
+  // 真人玩家進來：NPC 全部讓位（NPC 只存在自己的畫面，留著會讓兩邊看到的包廂不一樣）
+  for (const n of [...ns]) {
+    if (real.length) {
+      ns.splice(ns.indexOf(n), 1); logChat('', `${n.n} 去餐車了，把位子讓出來`); save();
+    }
+  }
+  // NPC 到站下車
+  for (const n of [...ns]) {
+    const a = tr.stops[n.dest].a;
+    if (!n.bye && t >= a - 45 && n.dest !== S.ride.dest) { n.bye = 1; npcSay(n, `我要在${stName(tr.stops[n.dest].c)}下車了，掰掰～很高興認識你！`); }
+    if (t >= a && n.dest !== S.ride.dest) { ns.splice(ns.indexOf(n), 1); logChat('', `${n.n} 在 ${stName(tr.stops[n.dest].c)} 下車了`); save(); }
+  }
+  if (!real.length) {
+    if (S.ride.npcAt && Date.now() >= S.ride.npcAt) { S.ride.npcAt = 0; npcSpawn(t); }
+    // 停靠站時，空位有機會上來新的 NPC
+    const pos = trainPos(tr, t);
+    if (!S.ride.npcAt && pos.kind === 'stop' && pos.i > S.ride.from && S.ride.lastStop !== pos.i) {
+      S.ride.lastStop = pos.i; if (ns.length < (S.ride.cs === 2 ? 1 : 2) && Math.random() < 0.7) npcSpawn(t, 1);
+    }
+  }
+  // 自己快下車：NPC 說再見
+  const left = tr.stops[S.ride.dest].a - t;
+  if (left <= BYE && !S.ride.npcBye) { S.ride.npcBye = 1; for (const n of ns) npcSay(n, pickOne(['你要下車啦？掰掰～', '很開心跟你聊天！路上小心', '下次再一起坐車！']), 800 + Math.random() * 1500); }
+  // 太久沒人說話：話多的 NPC 找話題
+  if (Date.now() - lastTalk > 30000 && ns.length) {
+    lastTalk = Date.now();
+    const n = ns.find(x => x.pc === 'talk') || (Math.random() < 0.3 ? ns[0] : null);
+    if (n) { const tag = pickOne([...n.tg, ...tagArr(S.prof.tg)]); npcSay(n, (NPC_ASK[tag] || (() => '你常坐火車嗎？'))(stName(tr.stops[S.ride.dest].c))); }
+  }
+  // 發送排程好的發言
+  for (let i = npcQ.length - 1; i >= 0; i--) {
+    const q = npcQ[i]; if (Date.now() < q.at) continue;
+    npcQ.splice(i, 1);
+    const n = ns.find(x => x.id === q.id); if (!n) continue;
+    n.m = q.m; n.mt = Date.now(); lastTalk = Date.now(); logChat(n.n, q.m);
+  }
+}
 
 // ---------- 聊天（只有包廂裡能聊） ----------
 let myMsg = { m: '', mt: 0 };
@@ -268,9 +372,10 @@ $('chatBar').addEventListener('submit', e => {
   const m = $('chatIn').value.trim().slice(0, 40);
   if (!m) return;
   $('chatIn').value = '';
-  myMsg = { m, mt: Date.now() };
+  myMsg = { m, mt: Date.now() }; lastTalk = Date.now();
   logChat(S.name || '我', m);
   Net.push();
+  if (!mates(now()).some(x => !x.sleep)) npcReply(m);
 });
 $('btnLog').onclick = () => { const el = $('chatLog'); el.hidden = !el.hidden; renderLog(); };
 
@@ -327,7 +432,19 @@ function drawTrain(g, x, y, cls, open) {
   }
 }
 
+function drawHallScene(t) {
+  const g = sg, W = SW, H = SH, h = hourOf(t);
+  sky(g, W, H, h);
+  g.fillStyle = '#cfc8b8'; g.fillRect(0, 0, W, H);
+  for (let x = 6; x < W; x += 30) { g.fillStyle = '#5a6b7f'; g.fillRect(x, 6, 22, H * 0.55); }   // 高窗
+  const gr = g.createLinearGradient(0, 0, 0, H * 0.6), night = h < 5 || h >= 19.5;
+  gr.addColorStop(0, night ? '#0b1430' : '#7fb2e8'); gr.addColorStop(1, night ? '#22305e' : '#cfe8ff');
+  g.fillStyle = gr; for (let x = 6; x < W; x += 30) g.fillRect(x + 2, 8, 18, H * 0.55 - 4);
+  g.fillStyle = '#9b927f'; g.fillRect(0, H * 0.62, W, H); g.fillStyle = '#b5ad9a'; g.fillRect(0, H * 0.62, W, 2);
+  g.fillStyle = '#7a7262'; g.fillRect(0, 0, W, 4);
+}
 function drawStationScene(t) {
+  if (S.area === 'hall') return drawHallScene(t);
   const g = sg, W = SW, H = SH, h = hourOf(t);
   sky(g, W, H, h);
   const r = rng(hash('sky' + S.station)), city = r() < 0.6;
@@ -432,7 +549,7 @@ function seatPos(size, i) {
 function people(t) {
   if (S.ride) {
     if (S.ride.cp == null) return [];
-    const list = mates(t).map(v => ({ id: v.id, n: v.n, c: v.c, h: v.h, s: v.st, m: v.m, mt: v.mt, mb: v.mb, player: true, sleep: v.sleep }));
+    const list = allMates(t).map(v => ({ id: v.id, n: v.n, c: v.c, h: v.h, s: v.st, m: v.m, mt: v.mt, mb: v.mb, player: true, sleep: v.sleep, isNpc: v.npc }));
     list.push({ id: S.id, n: S.name || '我', c: S.color, h: S.hair, s: S.ride.seat, m: myMsg.m, mt: myMsg.mt, mb: S.prof.mb, player: true, me: true });
     return list;
   }
@@ -442,9 +559,32 @@ function people(t) {
   return list;
 }
 
+// 大廳物件位置（邏輯座標）：閘門在上面、蓋章台左下、便利商店右下
+const HALL = { get stamp() { return [6, YH - 26, 30, 20]; }, get shop() { return [YW - 44, YH - 30, 40, 26]; } };
+function drawHall(g, W, H) {
+  g.fillStyle = '#e9e4d8'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#ded8ca'; for (let x = 0; x < W; x += 16) for (let y = 14; y < H; y += 16) if (((x + y) / 16) % 2) g.fillRect(x, y, 16, 16);   // 拋光地磚
+  g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 14, W, 2);
+  // 驗票閘門（往月台）
+  g.fillStyle = '#5b6b82'; g.fillRect(0, 0, W, 12);
+  for (let x = 10; x < W - 6; x += 18) { g.fillStyle = '#c9d2de'; g.fillRect(x, 3, 10, 9); g.fillStyle = '#2f6fed'; g.fillRect(x + 3, 5, 4, 2); g.fillStyle = '#3ad16b'; g.fillRect(x + 4, 9, 2, 2); }
+  // 長椅
+  for (const bx of [44, 94]) { g.fillStyle = '#8a5a32'; g.fillRect(bx, H * 0.5, 24, 5); g.fillStyle = '#5c3b20'; g.fillRect(bx + 2, H * 0.5 + 5, 2, 3); g.fillRect(bx + 20, H * 0.5 + 5, 2, 3); }
+  // 蓋章台
+  const [sx, sy, sw, sh] = HALL.stamp;
+  g.fillStyle = '#7a4b2a'; g.fillRect(sx, sy, sw, sh); g.fillStyle = '#a8703f'; g.fillRect(sx, sy, sw, 4);
+  g.fillStyle = '#d23a2e'; g.fillRect(sx + 6, sy + 7, 6, 6); g.fillStyle = '#2a5caa'; g.fillRect(sx + 16, sy + 8, 8, 5);
+  // 便利商店
+  const [cx, cy, cw, ch] = HALL.shop;
+  g.fillStyle = '#f4f4f0'; g.fillRect(cx, cy, cw, ch); g.fillStyle = '#2e9e5b'; g.fillRect(cx, cy, cw, 4); g.fillStyle = '#f08a20'; g.fillRect(cx, cy + 4, cw, 2);
+  g.fillStyle = '#9cc8ea'; g.fillRect(cx + 3, cy + 9, cw - 6, 10); g.fillStyle = '#e8453c'; g.fillRect(cx + 6, cy + 12, 4, 6); g.fillStyle = '#f1c40f'; g.fillRect(cx + 13, cy + 13, 4, 5);
+  // 盆栽
+  g.fillStyle = '#5e7d5e'; g.fillRect(W - 10, 20, 7, 8); g.fillStyle = '#8a5a32'; g.fillRect(W - 9, 28, 5, 4);
+}
 function drawYard(t, list) {
   const g = yg, W = YW, H = YH;
-  if (!S.ride) {
+  if (!S.ride && S.area === 'hall') drawHall(g, W, H);
+  else if (!S.ride) {
     g.fillStyle = '#c9c4b8'; g.fillRect(0, 0, W, H);
     g.fillStyle = '#bdb7aa'; for (let x = 0; x < W; x += 12) g.fillRect(x, 10, 1, H); for (let y = 10; y < H; y += 12) g.fillRect(0, y, W, 1);
     g.fillStyle = '#e8e4da'; g.fillRect(0, 0, W, 3);
@@ -477,7 +617,7 @@ function drawYard(t, list) {
   const ordered = list.map(p => {
     let tx = p.x, ty = p.y, sit = false;
     if (S.ride) { const q = seatPos(size, clamp(p.s | 0, 0, size - 1)); tx = q.x; ty = q.y - 4; sit = true; }
-    else { tx = clamp(tx, 6, W - 6); ty = clamp(ty, 18, H - 2); }
+    else { tx = clamp(tx, 6, W - 6); ty = clamp(ty, S.area === 'hall' ? 22 : 18, H - 2); }
     const r = rpos[p.id] || (rpos[p.id] = { x: tx, y: ty });
     const dx = tx - r.x, dy = ty - r.y, d = Math.hypot(dx, dy), step = 1.2;
     if (d > 60 || S.ride) { r.x = tx; r.y = ty; } else if (d > step) { r.x += dx / d * step; r.y += dy / d * step; } else { r.x = tx; r.y = ty; }
@@ -489,6 +629,12 @@ function drawYard(t, list) {
 
 function drawBubbles(ordered) {
   const k = yard.clientWidth / YW, html = [];
+  if (!S.ride && S.area === 'hall') {   // 大廳物件名字
+    const lab = (x, y, t) => html.push(`<div class="hallLab" style="left:${x * k}px;top:${y * k}px">${t}</div>`);
+    lab(YW / 2, 12.5, '▲ 驗票閘門・往月台');
+    lab(HALL.stamp[0] + HALL.stamp[2] / 2, HALL.stamp[1] - 6, '📮 蓋章台');
+    lab(HALL.shop[0] + HALL.shop[2] / 2, HALL.shop[1] - 6, '🏪 便利商店');
+  }
   if (S.ride && S.ride.cp != null) {   // 空位提示
     const size = S.ride.cs || 4, occ = new Set(ordered.map(o => o.p.s));
     for (let i = 0; i < size; i++) if (!occ.has(i)) { const q = seatPos(size, i); html.push(`<div class="seat-empty" style="left:${q.x * k}px;top:${(q.y - 13) * k}px">空位<br><small>等旅伴</small></div>`); }
@@ -497,7 +643,7 @@ function drawBubbles(ordered) {
     const p = o.p, x = o.x * k;
     const top = S.ride ? seatPos(S.ride.cs || 4, p.s | 0).top : false;
     if (p.player) {
-      const tag = p.me ? `▲ ${esc(p.n || '我')}` : esc(p.n || '旅人');
+      const tag = p.me ? `▲ ${esc(p.n || '我')}` : esc(p.n || '旅人') + (p.isNpc ? ' <span class="npcTag">NPC</span>' : '');
       const mb = S.ride && p.mb ? ` <span class="mbti">${esc(p.mb)}</span>` : '';
       html.push(`<div class="av-name" style="left:${x}px;top:${(o.y + (S.ride ? 4 : 1)) * k}px;color:${p.me ? '#ffe36a' : p.sleep ? '#ccc' : '#fff'}">${tag}${mb}</div>`);
     }
@@ -515,14 +661,21 @@ function drawBubbles(ordered) {
 yard.addEventListener('pointerdown', e => {
   const rect = yard.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width * YW, y = (e.clientY - rect.top) / rect.height * YH;
-  if (!S.ride) { S.x = clamp(x, 6, YW - 6); S.y = clamp(y + 4, 18, YH - 2); }
+  if (!S.ride) {
+    if (S.area === 'hall') {   // 大廳裡可以點的東西
+      if (y < 14) { goPlatform(); return; }
+      if (x > HALL.stamp[0] && x < HALL.stamp[0] + HALL.stamp[2] && y > HALL.stamp[1] && y < HALL.stamp[1] + HALL.stamp[3]) { openBook(); return; }
+      if (x > HALL.shop[0] && x < HALL.shop[0] + HALL.shop[2] && y > HALL.shop[1] && y < HALL.shop[1] + HALL.shop[3]) { toast('🏪 便利商店：之後可以買便當、飲料帶上車'); return; }
+    }
+    S.x = clamp(x, 6, YW - 6); S.y = clamp(y + 4, S.area === 'hall' ? 22 : 18, YH - 2);
+  }
   else {
     if (S.ride.cp == null) return;
     const size = S.ride.cs || 4;
     let best = -1, bd = 22;
     for (let i = 0; i < size; i++) { const q = seatPos(size, i), d = Math.hypot(q.x - x, q.y - 10 - y); if (d < bd) { bd = d; best = i; } }
     if (best < 0 || best === S.ride.seat) return;
-    if (mates(now()).some(p => p.st === best)) { toast('這個位子有人坐了'); return; }
+    if (allMates(now()).some(p => p.st === best)) { toast('這個位子有人坐了'); return; }
     S.ride.seat = best;
   }
   save(); Net.push();
@@ -558,17 +711,31 @@ function chooseCompartment() {
     const size = +b.dataset.size, found = assign(size);
     closeModal(true); listSig = '';
     const n = mates(now()).length;
-    toast(found && n ? `幫你排到 ${n} 位旅伴的包廂，打聲招呼吧！` : `你是 ${size} 人包廂第一位，之後上車的旅客會被排進來`, 3500);
+    if (!n) S.ride.npcAt = Date.now() + 1500;
+    toast(found && n ? `幫你排到 ${n} 位旅伴的包廂，打聲招呼吧！` : `目前沒有其他玩家，先安排旅客陪你聊；有玩家上車會排進來`, 3500);
   });
 }
 $('btnBoard').onclick = board;
+// 大廳 → 月台：要有車票，車進站前 10 分鐘才開放
+const PLATFORM_EARLY = 600;
+function canPlatform(t) { const si = selInfo(t); return si && t >= si.o - PLATFORM_EARLY ? si : null; }
+function goPlatform() {
+  const t = now(), si = selInfo(t);
+  if (!si) { toast('要先買票才能過閘門進月台'); return; }
+  if (t < si.o - PLATFORM_EARLY) { toast(`車進站前 10 分鐘才能進月台（還要 ${dur(si.o - PLATFORM_EARLY - t)}）`); return; }
+  S.area = 'platform'; S.x = 30 + Math.random() * 100; S.y = 40; save(); Net.join(roomName()); listSig = '';
+  toast('🎫 過閘門，來到月台了');
+}
+function goHall() { S.area = 'hall'; S.x = 80; S.y = 30; save(); Net.join(roomName()); listSig = ''; }
+$('btnPlatform').onclick = goPlatform;
+$('btnHall').onclick = goHall;
 scene.addEventListener('click', () => { if (!S.ride && selInfo(now())?.open) board(); });
 
 function arrive(i) {
   const tr = TR[S.ride.key], code = tr.stops[i].c, t = now();
   const st = S.stamps[code] || { d: dateStr(t), n: 0 }; st.n++; S.stamps[code] = st;
-  const met = mates(t).map(m => m.n);
-  S.station = code; S.ride = null; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
+  const met = allMates(t).map(m => m.n);
+  S.station = code; S.ride = null; S.area = 'hall'; npcQ.length = 0; openRow = null; S.x = 30 + Math.random() * 100; S.y = 50;
   myMsg = { m: '', mt: 0 }; $('chatLog').hidden = true;
   save(); Net.join(roomName()); dirty = true; listSig = '';
   openModal(`<h2>🚪 到站了！列車長請你下車</h2>
@@ -682,7 +849,7 @@ $('testbar').addEventListener('click', e => {
   else if (v === 'jump') {
     const si = selInfo(t);
     if (S.ride) { const tr = TR[S.ride.key]; if (tr) setGameTime(tr.stops[S.ride.dest].a - 50); }
-    else if (si) setGameTime(si.o + 3);
+    else if (si) { setGameTime(si.o + 3); if (S.area !== 'platform') { S.area = 'platform'; save(); Net.join(roomName()); } }
     else { const d = departures(S.station, t).find(d => boardWin(d.tr, d.i)[0] > t); if (d) setGameTime(boardWin(d.tr, d.i)[0] + 3); toast('先買一張車票，就會跳到那班'); }
   } else setGameTime(t + (+v));
 });
@@ -748,6 +915,7 @@ $('list').addEventListener('click', e => {
     const t = now(), tg = waitTarget(t); if (!tg) return;
     if (!S.test) { S.test = true; S.speed = 1; }
     setGameTime(boardWin(tg.tr, tg.i)[0] + 2); applyTest();
+    if (S.sel && S.area !== 'platform') { S.area = 'platform'; save(); Net.join(roomName()); }
     if (!S.sel) openRow = tg.tr.key;
     listSig = ''; $('list').scrollTop = 0;
     toast(S.sel ? '車進站了！快按「上車！」' : '車進站了！先點一個下車站買票，再按「上車！」', 3500);
@@ -768,8 +936,8 @@ $('list').addEventListener('click', e => {
 // 車上：包廂旅伴卡片＋停靠站（不能改下車站、不能提前下車）
 function renderRide(t) {
   const tr = TR[S.ride.key]; if (!tr) return;
-  const pos = trainPos(tr, t), ms = mates(t);
-  const sig = 'tr|' + tr.key + '|' + pos.kind + pos.i + '|' + S.ride.cp + '|' + S.ride.seat + '|' + ms.map(m => m.id + m.sleep + m.st).join(',');
+  const pos = trainPos(tr, t), ms = allMates(t);
+  const sig = 'tr|' + tr.key + '|' + pos.kind + pos.i + '|' + S.ride.cp + '|' + S.ride.seat + '|' + ms.map(m => m.id + m.sleep + m.st).join(',') + '|' + !!S.ride.npcAt;
   if (sig === listSig) return;
   if (!listSig.startsWith('tr|' + tr.key)) $('list').scrollTop = 0;
   listSig = sig;
@@ -780,11 +948,11 @@ function renderRide(t) {
     html += `<div class="mates"><div class="matesH">🛋 ${S.ride.cs} 人包廂 #${S.ride.cp}　${ms.length ? `旅伴 ${ms.length} 位` : '等旅伴上車中…'}</div>`;
     for (const m of ms) {
       const sc = compat(myProf(), m), mt = tagArr(m.tg), my = tagArr(S.prof.tg);
-      html += `<div class="mate"><i style="background:${esc(m.c || '#888')}"></i><div class="mI"><b>${esc(m.n || '旅人')}</b> <span class="mbti">${esc(m.mb || '?')}</span> ${m.sleep ? '💤' : ''}
+      html += `<div class="mate"><i style="background:${esc(m.c || '#888')}"></i><div class="mI"><b>${esc(m.n || '旅人')}</b> <span class="mbti">${esc(m.mb || '?')}</span>${m.npc ? ' <span class="npcTag">NPC</span>' : ''} ${m.sleep ? '💤' : ''}
         <div class="mT">${mt.map(x => `<span class="${my.includes(x) ? 'same' : ''}">${esc(x)}</span>`).join('')}</div>
-        <div class="mD">${m.pc ? (m.pc === 'talk' ? '話多' : '慢熱') : ''}${m.ds ? '・在 ' + esc(m.ds) + ' 下車' : ''}</div></div><div class="mS" title="契合度">${stars(sc)}</div></div>`;
+        <div class="mD">${m.pc ? (m.pc === 'talk' ? '話多' : '慢熱') : ''}${m.ds ? '・在 ' + esc(m.ds) + ' 下車' : m.npc ? '・在 ' + esc(stName(tr.stops[m.dest].c)) + ' 下車' : ''}</div></div><div class="mS" title="契合度">${stars(sc)}</div></div>`;
     }
-    if (!ms.length) html += `<div class="mate empty1">之後在其他站上車、跟你合得來的旅客會被排進這間包廂。</div>`;
+    if (!ms.length) html += `<div class="mate empty1">${S.ride.npcAt ? '旅客正在找位子…' : '之後在其他站上車、跟你合得來的旅客會被排進這間包廂。'}</div>`;
     html += '</div>';
   }
   html += tr.stops.map((s, i) => {
@@ -802,6 +970,7 @@ function renderRide(t) {
 // LED 看板
 function renderBoard(t) {
   let h = '';
+  if (!S.ride && S.area === 'hall') { if (renderBoard.last !== '') { $('board').innerHTML = ''; renderBoard.last = ''; } return; }
   if (S.ride) {
     const tr = TR[S.ride.key]; if (!tr) return;
     const pos = trainPos(tr, t), dst = tr.stops[S.ride.dest], left = dst.a - t;
@@ -820,6 +989,17 @@ function renderBoard(t) {
   }
   if (h !== renderBoard.last) { $('board').innerHTML = h; renderBoard.last = h; $('board').classList.toggle('bye', h.startsWith('⏰')); }
 }
+function renderHallBoard(t) {
+  const el = $('hallBoard');
+  if (S.ride || S.area !== 'hall') { if (!el.hidden) el.hidden = true; return; }
+  const deps = departures(S.station, t).filter(d => d.d >= t).slice(0, 3);
+  const h = `<div class="hbT">${esc(stName(S.station))} 車站　出發 Departures</div>` + (deps.length ? deps.map(d => {
+    const o = boardWin(d.tr, d.i)[0], st = t >= o ? '<span class="hbG">進站中</span>' : t >= o - PLATFORM_EARLY ? '<span class="hbY">可進月台</span>' : dur(o - t);
+    return `<div class="hbR${S.sel && S.sel.key === d.tr.key ? ' me' : ''}"><b>${hm(d.d)}</b><span>${esc(d.tr.cls)}</span><span class="hbD">${esc(destName(d.tr))}</span><span class="hbS">${st}</span></div>`;
+  }).join('') : '<div class="hbR">今日已無班次</div>');
+  el.hidden = false;
+  if (el.innerHTML !== h) el.innerHTML = h;
+}
 // 下方輸入列：大廳顯示車票，包廂才有聊天框
 function renderBars(t) {
   // 車上：LED 看板搬到窗外畫面右上角，不要擋住包廂座位
@@ -830,8 +1010,11 @@ function renderBars(t) {
   if (inCp) return;
   let h;
   if (S.ride) h = '🛋 選好包廂就能開始聊天';
-  else if (S.sel && TR[S.sel.key]) { const tr = TR[S.sel.key]; h = `🎫 ${tr.no} 次 ${esc(stName(S.station))} → ${esc(stName(tr.stops[S.sel.dest].c))}<small>大廳不能聊天，上車進包廂才能聊</small>`; }
-  else h = `🎫 還沒有車票<small>大廳不能聊天，買票上車、進包廂才能聊</small>`;
+  else if (S.sel && TR[S.sel.key]) {
+    const tr = TR[S.sel.key], si = selInfo(t);
+    const hint = S.area === 'platform' ? '在月台等車，車進站就按「上車！」' : si && t < si.o - PLATFORM_EARLY ? `車進站前 10 分鐘可以進月台（還要 ${dur(si.o - PLATFORM_EARLY - t)}）` : '可以進月台了！';
+    h = `🎫 ${tr.no} 次 ${esc(stName(S.station))} → ${esc(stName(tr.stops[S.sel.dest].c))}<small>${hint}</small>`;
+  } else h = `🎫 還沒有車票<small>大廳不能聊天，買票上車、進包廂才能聊</small>`;
   if ($('ticketBar').innerHTML !== h) $('ticketBar').innerHTML = h;
 }
 
@@ -852,16 +1035,24 @@ function logic(t) {
       else if (t > si.e) { toast(`😢 錯過了！${tr.no} 次已經開走，車票作廢`, 3500); S.sel = null; save(); listSig = ''; }
     } else if (DAY[S.sel.key.slice(0, 8)]) { S.sel = null; save(); }
   }
-  const si = !S.ride && selInfo(t);
+  if (!S.ride && S.area === 'platform' && !S.sel) { goHall(); toast('沒有車票，回到大廳'); }
+  if (S.ride) npcTick(t);
+  const si = !S.ride && S.area === 'platform' && selInfo(t);
+  const cp = !S.ride && S.area === 'hall' && canPlatform(t);
+  $('btnPlatform').hidden = !cp;
+  if (cp) { $('btnPlatform').textContent = cp.open ? '🚪 車進站了！快去月台' : '🚶 前往月台'; $('btnPlatform').classList.toggle('hot', !!cp.open); }
+  $('btnHall').hidden = !(!S.ride && S.area === 'platform');
+  renderHallBoard(t);
   $('btnBoard').hidden = !(si && si.open);
   if (si && si.open) $('btnBoard').textContent = `🚪 上車！ ${dur(si.e - t)}`;
-  $('stName').textContent = S.ride ? '🚆 ' + (TR[S.ride.key] ? TR[S.ride.key].no + ' 次' : '車上') : stName(S.station);
+  $('stName').textContent = S.ride ? '🚆 ' + (TR[S.ride.key] ? TR[S.ride.key].no + ' 次' : '車上') : stName(S.station) + (S.area === 'platform' ? ' 月台' : ' 大廳');
   $('stampCount').textContent = Object.keys(S.stamps).length;
   $('clock').textContent = hms(t);
   renderBoard(t); renderList(t); renderBars(t);
   let label = '';
   if (S.ride) { const tr = TR[S.ride.key]; if (tr) { const p = trainPos(tr, t); label = p.kind === 'stop' ? `🚉 ${stName(tr.stops[p.i].c)} ${stEn(tr.stops[p.i].c)}` : p.kind === 'move' ? `→ ${stName(tr.stops[p.i + 1].c)}` : ''; } }
-  else label = sceneTrain ? `${sceneTrain.tr.no} 次 ${sceneTrain.tr.cls} 往${destName(sceneTrain.tr)}` : `🚉 ${stName(S.station)} ${stEn(S.station)}`;
+  else if (S.area === 'hall') label = '';
+  else label = sceneTrain ? `${sceneTrain.tr.no} 次 ${sceneTrain.tr.cls} 往${destName(sceneTrain.tr)}` : `🚉 ${stName(S.station)} 月台`;
   if ($('sceneLabel').textContent !== label) $('sceneLabel').textContent = label;
   if (S.ride && MV.el && MV.el.isConnected && Date.now() - (logic.mapAt || 0) > 1000) { logic.mapAt = Date.now(); drawMap(); }
   if (Date.now() - Net.hb > 20000) Net.push();
@@ -881,12 +1072,15 @@ function frame() {
 (async function start() {
   resize(); applyTest();
   try {
-    [ST, DATES] = await Promise.all([fetch('data/stations.json').then(r => r.json()), fetch('data/index.json').then(r => r.json())]);
+    let g;
+    [ST, DATES, g] = await Promise.all([fetch('data/stations.json').then(r => r.json()), fetch('data/index.json').then(r => r.json()), fetch('data/game.json').then(r => r.json())]);
+    GAME = new Set(g);
     await loadMap();
   } catch (e) { toast('時刻表載入失敗，請重新整理', 5000); }
   // 舊存檔：沒有個性資料就重填；所在車站沒有開放班次就回臺北
   if (MAP && !MAP.count[S.station] && !S.ride) { S.station = 1000; S.sel = null; }
   if (!ST[S.station]) S.station = 1000;
+  if (!S.ride && S.area === 'platform' && !S.sel) S.area = 'hall';
   await ensureDays();
   if (S.ride) await loadDay(S.ride.key.slice(0, 8));
   Net.join(roomName());
