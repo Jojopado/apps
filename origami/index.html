@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="description" content="在手機上一步一步摺真正的摺紙：基本功、小狗、南瓜燈、天鵝、企鵝。">
+<meta name="theme-color" content="#2D5A4A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="摺紙動物園">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232D5A4A'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232D5A4A'/%3E%3Cpath d='M12 44 32 12 52 44Z' fill='%23F4C93A'/%3E%3Cpath d='M32 12 52 44 32 36Z' fill='%23FBF8F0'/%3E%3C/svg%3E">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+body{margin:0;font-size:14px;font-family:system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>摺紙動物園</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* layout: one-screen app — animal picker (圖鑑) over a workbench: header strip, cutting mat, tool tray */
+:root{
+  --desk:#E4E2DA; --tray:#F3F1EA; --ink:#26292A; --ink-2:#646A68; --line:#CFCBC0;
+  --chip:#FFFFFF; --press:#E9E6DC; --good:#2F7D4F; --mat:#2D5A4A; --gold:#D9A21B;
+  --font-d:"Klee One","Noto Sans TC",system-ui,sans-serif;
+  --font-b:"Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --desk:#171B1A; --tray:#212625; --ink:#E9E8E2; --ink-2:#9EA5A2; --line:#363D3B;
+  --chip:#2A302F; --press:#333A38; --good:#6CC08E; --gold:#E9B935; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --desk:#171B1A; --tray:#212625; --ink:#E9E8E2; --ink-2:#9EA5A2; --line:#363D3B;
+  --chip:#2A302F; --press:#333A38; --good:#6CC08E; --gold:#E9B935; color-scheme:dark }
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--desk);color:var(--ink);font-family:var(--font-b);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 8px;gap:10px;box-sizing:border-box}
+.top{display:flex;align-items:center;gap:10px}
+.back{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:10px;height:40px;padding:0 10px;font:500 13px var(--font-b);cursor:pointer;display:flex;align-items:center;gap:2px;flex:none}
+.title{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.title b{font-family:var(--font-d);font-weight:600;font-size:21px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title span{font-size:12px;color:var(--ink-2);letter-spacing:.02em}
+.target{display:flex;align-items:center;gap:8px}
+.target canvas{width:54px;height:54px;border-radius:8px;background:var(--mat);display:block}
+.meter{display:flex;flex-direction:column;align-items:flex-end;min-width:56px}
+.meter small{font-size:11px;color:var(--ink-2);letter-spacing:.06em}
+.meter strong{font-size:22px;font-variant-numeric:tabular-nums;line-height:1.1}
+.meter strong.ok{color:var(--good)}
+.stage{flex:1;position:relative;min-height:0;border-radius:14px;overflow:hidden;background:var(--mat)}
+#mat{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.coach{position:absolute;left:12px;right:12px;top:10px;color:#F2EFE4;font-size:13px;line-height:1.5;
+  background:rgba(14,30,24,.6);padding:8px 10px;border-radius:8px;pointer-events:none}
+.hud{position:absolute;left:10px;right:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.hud span{background:rgba(14,30,24,.72);color:#F2EFE4;font-size:12px;padding:4px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
+.hud span.fine{background:#FF7A59;color:#2A1208;font-weight:700}
+.readout{position:absolute;left:10px;bottom:8px;color:rgba(242,239,228,.75);font-size:11.5px;font-variant-numeric:tabular-nums;pointer-events:none;letter-spacing:.03em}
+.cry{position:absolute;left:50%;top:18%;transform:translateX(-50%);font-family:var(--font-d);font-weight:600;font-size:30px;color:#FFF7E0;
+  text-shadow:0 2px 0 rgba(0,0,0,.25);pointer-events:none;animation:cry 1.4s ease-out forwards}
+@keyframes cry{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}20%{opacity:1;transform:translate(-50%,0) scale(1.08)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}
+.toast{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(14,22,20,.88);color:#F4F1E8;
+  padding:8px 12px;border-radius:8px;font-size:13px;max-width:86%;text-align:center;pointer-events:none}
+.tray{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.step{position:absolute;left:10px;right:10px;top:10px;background:rgba(250,248,240,.95);color:#26292A;border-radius:10px;padding:8px 10px;
+  font-size:13px;line-height:1.55;box-shadow:0 2px 10px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:5px}
+.step .chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.step .chip{font-size:11.5px;padding:2px 8px;border-radius:999px;background:#E8E4D8;color:#3C3F3D;border:0;font-family:inherit;cursor:default}
+.step .chip.no{background:#FF7A59;color:#2A1208;font-weight:700;cursor:pointer}
+.step .n{font-weight:700;font-variant-numeric:tabular-nums}
+.step .x{margin-left:auto;border:0;background:none;color:#646A68;font-size:12px;cursor:pointer;padding:2px 4px}
+.typelist{display:flex;flex-direction:column;gap:8px}
+.typeopt{display:flex;gap:12px;align-items:center;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;font:inherit}
+.typeopt.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.typeopt svg{width:64px;height:28px;flex:none}
+.typeopt b{font-size:15px}
+.typeopt span{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.src{font-size:12.5px;color:var(--ink-2)}
+.src a{color:var(--ink)}
+.lessons{display:grid;grid-template-columns:repeat(5,minmax(128px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.secthead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:6px}
+.secthead h2{margin:0;font-size:16px;font-weight:700}
+.secthead span{font-size:12px;color:var(--ink-2)}
+.tool{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:10px;padding:7px 2px 6px;min-width:0;
+  display:flex;flex-direction:column;align-items:center;gap:3px;font:500 12px var(--font-b);cursor:pointer}
+.tool svg{width:20px;height:20px}
+.tool:active{background:var(--press)}
+.tool[disabled]{opacity:.4}
+.tool.on{background:var(--ink);color:var(--desk);border-color:var(--ink)}
+.tool.go{background:var(--good);color:#fff;border-color:var(--good)}
+.tool .stk{width:22px;height:22px;display:block}
+button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-offset:2px}
+
+/* 圖鑑首頁 */
+.home{position:fixed;inset:0;background:var(--desk);z-index:4;overflow:auto}
+.home-in{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 28px;display:flex;flex-direction:column;gap:14px}
+.home h1{margin:0;font-family:var(--font-d);font-weight:600;font-size:30px;line-height:1.15;text-wrap:balance}
+.home .lead{margin:0;color:var(--ink-2);font-size:14px;line-height:1.6;max-width:36em}
+.dex{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-2)}
+.dex b{font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{border:1px solid var(--line);background:var(--chip);border-radius:14px;padding:8px 8px 10px;display:flex;flex-direction:column;gap:6px;cursor:pointer;color:inherit;font:inherit;text-align:left;position:relative}
+.card canvas{width:100%;max-width:100%;aspect-ratio:1;border-radius:10px;background:var(--mat);display:block}
+.card .nm{display:flex;align-items:baseline;justify-content:space-between;gap:6px;padding:0 2px}
+.card .nm b{font-family:var(--font-d);font-weight:600;font-size:18px}
+.card .meta{font-size:11.5px;color:var(--ink-2);padding:0 2px;display:flex;justify-content:space-between;gap:6px}
+.card .tag{position:absolute;top:14px;left:14px;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(14,30,24,.65);color:#F2EFE4}
+.card .tag.got{background:var(--gold);color:#3A2A00;font-weight:700}
+.card.free{border-style:dashed}
+.stars{color:var(--gold);letter-spacing:1px;font-size:13px;white-space:nowrap}
+.stars .off{color:var(--line)}
+.mine{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.mine figure{margin:0;flex:none;width:96px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.mine canvas{width:96px;height:96px;border-radius:10px;background:var(--mat)}
+.mine figcaption{font-size:12px;color:var(--ink-2);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home h2{margin:6px 0 0;font-size:15px;font-weight:700}
+
+.sheet{position:fixed;inset:0;background:rgba(10,16,14,.5);display:flex;align-items:flex-end;justify-content:center;z-index:6}
+.panel{background:var(--tray);color:var(--ink);width:100%;max-width:720px;border-radius:18px 18px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:14px;max-height:90%;overflow:auto}
+.panel h2{margin:0;font-family:var(--font-d);font-weight:600;font-size:24px}
+.panel p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.6}
+.pick-top{display:flex;gap:14px;align-items:center}
+.pick-top canvas{width:132px;height:132px;border-radius:12px;background:var(--mat);flex:none}
+.pick-top div{min-width:0;display:flex;flex-direction:column;gap:6px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:38px;height:38px;border-radius:50%;border:2px solid var(--tray);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--ink)}
+.label{font-size:12px;letter-spacing:.08em;color:var(--ink-2)}
+.row{display:flex;gap:10px}
+.btn{flex:1;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:12px;padding:12px;font:500 15px var(--font-b);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--desk);border-color:var(--ink)}
+.done-top{display:flex;gap:14px;align-items:center;min-width:0}
+.done-top canvas{width:150px;height:150px;border-radius:12px;background:var(--mat);flex:none}
+.big{font-size:38px;font-variant-numeric:tabular-nums;font-weight:700;line-height:1}
+.field{display:flex;flex-direction:column;gap:6px}
+.field input{width:100%;min-width:0;box-sizing:border-box;font:500 16px var(--font-b);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
+@media (max-width:380px){.title b{font-size:18px}.tool{font-size:10.5px}.tool svg{width:18px;height:18px}.pick-top canvas{width:110px;height:110px}.done-top canvas{width:120px;height:120px}}
+@media (prefers-reduced-motion: reduce){.cry{animation:none;opacity:0}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <button class="back" id="homeBtn" type="button" aria-label="回到圖鑑"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>圖鑑</button>
+    <div class="title"><b id="lvName">小狗</b><span id="lvSub">範例 4 摺 · 普通</span></div>
+    <div class="target" id="targetBox">
+      <canvas id="thumb" width="108" height="108" aria-label="目標形狀"></canvas>
+      <div class="meter"><small>相似度</small><strong id="score">–</strong></div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="mat"></canvas>
+    <div class="coach" id="coach" hidden></div>
+    <div class="step" id="stepCard" hidden></div>
+    <div class="hud" id="hud" hidden></div>
+    <div class="readout" id="readout">150 × 150 mm 標準紙</div>
+    <div class="toast" id="toast" hidden></div>
+  </div>
+
+  <div class="tray" id="foldTray">
+    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>復原</button>
+    <button class="tool" id="typeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path id="typeIcon" d="M2 12h20" stroke-dasharray="4 3"/><path d="M7 7l5-4 5 4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="typeLbl">谷摺</span></button>
+    <button class="tool" id="scopeBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 9h16v10H4z" opacity=".4"/><path d="M4 5h16v10H4z"/></svg><span id="scopeLbl">全部層</span></button>
+    <button class="tool" id="flip" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5"/><path d="m16 7 5 5-5 5"/></svg>翻面</button>
+    <button class="tool" id="rot" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg>旋轉</button>
+    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><span id="hintLbl">提示</span></button>
+  </div>
+  <div class="tray" id="stickerTray" hidden></div>
+</div>
+
+<div class="home" id="home">
+  <div class="home-in">
+    <h1>今天摺哪一隻？</h1>
+    <p class="lead">先學基本功，再照真正的摺紙教學摺動物。摺好牠會長出臉跟你打招呼，然後住進你的圖鑑。</p>
+    <div class="secthead"><h2>基本功</h2><span id="lessonCount">0 / 5 學會</span></div>
+    <div class="lessons" id="lessonGrid"></div>
+    <div class="secthead"><h2>動物</h2><span>圖鑑 <b id="dexCount">0 / 7</b></span></div>
+    <div class="grid" id="animalGrid"></div>
+    <h2 id="mineTitle" hidden>我自己創作的</h2>
+    <div class="mine" id="mineList" hidden></div>
+  </div>
+</div>
+
+<div class="sheet" id="pick" hidden>
+  <div class="panel">
+    <div class="pick-top">
+      <canvas id="pickCanvas" width="264" height="264"></canvas>
+      <div>
+        <h2 id="pickName">小狗</h2>
+        <span class="stars" id="pickStars"></span>
+        <p id="pickInfo">範例 4 摺 · 普通</p>
+      </div>
+    </div>
+    <p id="pickTip"></p>
+    <p class="src" id="pickSrc" hidden></p>
+    <div class="label">選紙的顏色（正面）</div>
+    <div class="swatches" id="swatches"></div>
+    <div class="row">
+      <button class="btn" id="pickCancel" type="button">再看看</button>
+      <button class="btn primary" id="pickGo" type="button">開始摺</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="done" hidden>
+  <div class="panel">
+    <div class="done-top">
+      <canvas id="doneCanvas" width="300" height="300"></canvas>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <h2 id="doneTitle">小狗摺好了</h2>
+        <div class="big" id="donePct">96%</div>
+        <span class="stars" id="doneStars"></span>
+        <p id="doneInfo">用了 4 摺（範例 4 摺）</p>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="keep" type="button">繼續修</button>
+      <button class="btn primary" id="collect" type="button">收進圖鑑</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="typeSheet" hidden>
+  <div class="panel">
+    <h2>選摺法</h2>
+    <p>摺紙圖用不同的線代表不同摺法：谷線是虛線、山線是一長兩點的點虛線。拖曳時紙上的預覽線也照這個畫。</p>
+    <div class="typelist" id="typeList"></div>
+    <div class="row"><button class="btn" id="typeClose" type="button">關閉</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="nameSheet" hidden>
+  <div class="panel">
+    <div class="done-top">
+      <canvas id="nameCanvas" width="300" height="300"></canvas>
+      <div class="field" style="flex:1;min-width:0">
+        <h2>幫牠取名字</h2>
+        <label class="label" for="petName">名字</label>
+        <input id="petName" maxlength="12" autocomplete="off">
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="nameBack" type="button">再貼一下</button>
+      <button class="btn primary" id="nameSave" type="button">收進圖鑑</button>
+    </div>
+  </div>
+</div>
+
+<script id="engine">
+/* ---------- 摺紙引擎 v2：摺痕圖＋層序求解 ----------
+   每一片紙（facet）記住它在原始正方形上的形狀 sh，以及目前的仿射變換 T（只會是旋轉／平移／鏡射）。
+   world 位置 = T(sh)；翻了奇數次（det(T)<0）就看到另一面。
+   paper.order 記錄每一對重疊的片誰在上面；每次摺完用求解器重新算，規則：
+     ① 平的摺痕兩邊算同一張紙：跨過摺痕的別層，不能一上一下夾住它（對兩邊的上下關係一樣）
+     ② 摺起來的摺痕像夾餅：跨過摺痕的別層不能插到夾餅中間
+     ③ 三片有共同重疊區時，上下關係不能繞成一圈
+   決定不了的，照谷摺／山摺的意圖猜，猜錯就回溯。 */
+const R2 = Math.SQRT2;
+let FID = 1;
+const EPS = 1e-9;
+
+/* ---- 仿射變換 [a,b,c,d,e,f]：x' = a x + c y + e、y' = b x + d y + f ---- */
+const I2 = [1,0,0,1,0,0];
+function aff(T,p){ return [T[0]*p[0]+T[2]*p[1]+T[4], T[1]*p[0]+T[3]*p[1]+T[5]]; }
+function mul(A,B){ return [A[0]*B[0]+A[2]*B[1], A[1]*B[0]+A[3]*B[1], A[0]*B[2]+A[2]*B[3], A[1]*B[2]+A[3]*B[3], A[0]*B[4]+A[2]*B[5]+A[4], A[1]*B[4]+A[3]*B[5]+A[5]]; }
+function inv(T){ const D=T[0]*T[3]-T[1]*T[2], a=T[3]/D, b=-T[1]/D, c=-T[2]/D, d=T[0]/D; return [a,b,c,d,-(a*T[4]+c*T[5]),-(b*T[4]+d*T[5])]; }
+function reflM(P,n){ const a=1-2*n[0]*n[0], b=-2*n[0]*n[1], d=1-2*n[1]*n[1], k=2*(P[0]*n[0]+P[1]*n[1]); return [a,b,b,d,k*n[0],k*n[1]]; }
+const det=T=>T[0]*T[3]-T[1]*T[2];
+const ROTT=[0,1,-1,0,0,0], FLIPT=[-1,0,0,1,0,0];
+
+function sd(q,P,n){ return (q[0]-P[0])*n[0] + (q[1]-P[1])*n[1]; }
+function reflect(q,P,n){ const d = sd(q,P,n); return [q[0]-2*d*n[0], q[1]-2*d*n[1]]; }
+function polyArea(p){ let a=0; for(let i=0;i<p.length;i++){ const u=p[i], v=p[(i+1)%p.length]; a += u[0]*v[1]-v[0]*u[1]; } return a/2; }
+function foldLine(s,t){
+  const dx=s[0]-t[0], dy=s[1]-t[1], L=Math.hypot(dx,dy);
+  return {P:[(s[0]+t[0])/2, (s[1]+t[1])/2], n:[dx/L, dy/L]};
+}
+
+/* ---- 紙 ---- */
+function newPaper(kind, colorUp=false){
+  const sh = kind === 'diamond' ? [[0,R2],[-R2,0],[0,-R2],[R2,0]] : [[-1,1],[-1,-1],[1,-1],[1,1]];
+  return derive({facets:[{id:FID++, sh, nb:[-1,-1,-1,-1], T:I2.slice()}], order:new Map(), colorUp, refs:[]});
+}
+// 由 sh/T 算出畫圖與評分用的欄位：pts（world）、c（朝上是不是彩色面）、z（由 order 拓樸排序）
+function derive(p){
+  for(const f of p.facets){ f.pts=f.sh.map(q=>aff(f.T,q)); if(det(f.T)<0) f.pts.reverse(); f.c = p.colorUp ? det(f.T)>0 : det(f.T)<0; }
+  assignZ(p);
+  return p;
+}
+const pkey=(a,b)=>a<b?a+'|'+b:b+'|'+a;
+// order 的值：+1 表示 id 小的那片在上面
+function above(p,a,b){ const v=p.order.get(pkey(a,b)); if(v===undefined) return 0; return a<b ? v : -v; }
+function assignZ(p){
+  const ids=p.facets.map(f=>f.id), idx=new Map(ids.map((id,i)=>[id,i])), indeg=ids.map(()=>0), out=ids.map(()=>[]);
+  for(const [k,v] of p.order){ const [a,b]=k.split('|').map(Number); if(!idx.has(a)||!idx.has(b)) continue;
+    const lo = v>0 ? b : a, hi = v>0 ? a : b; out[idx.get(lo)].push(idx.get(hi)); indeg[idx.get(hi)]++; }
+  const q=[]; indeg.forEach((d,i)=>{ if(!d) q.push(i); });
+  let z=0; const seen=new Set();
+  while(q.length || seen.size<ids.length){
+    if(!q.length){ // 有環：挑一個沒處理的硬放（理論上不該發生）
+      for(let i=0;i<ids.length;i++) if(!seen.has(i)){ q.push(i); break; } }
+    const i=q.shift(); if(seen.has(i)) continue; seen.add(i); p.facets[i].z=z++;
+    for(const j of out[i]) if(--indeg[j]===0) q.push(j);
+  }
+}
+function copyPaper(p){ return {facets:p.facets.map(f=>({id:f.id, sh:f.sh, nb:f.nb.slice(), T:f.T.slice(), pts:f.pts, c:f.c, z:f.z})), order:new Map(p.order), colorUp:p.colorUp, refs:p.refs}; }
+
+/* ---- 切開：沿 world 直線切一片，邊的鄰居一起記好（切口 = CUT） ---- */
+function reversePoly(pts,nb){ const L=pts.length; return {pts:pts.slice().reverse(), nb:pts.map((_,j)=>nb[((L-2-j)%L+L)%L])}; }
+const CUT=-2;
+function cleanLabeled(list){
+  let o=[];
+  for(const e of list){ const l=o[o.length-1]; if(l && Math.hypot(l.p[0]-e.p[0], l.p[1]-e.p[1]) <= 1e-9) o[o.length-1]=e; else o.push(e); }
+  while(o.length>1){ const a=o[0], b=o[o.length-1]; if(Math.hypot(a.p[0]-b.p[0], a.p[1]-b.p[1]) <= 1e-9){ o[0]={p:a.p, nb:a.nb}; o.pop(); } else break; }
+  if(o.length<3) return null;
+  const pts=o.map(e=>e.p); if(Math.abs(polyArea(pts)) <= 1e-7) return null;
+  return {pts, nb:o.map(e=>e.nb)};
+}
+function splitPoly(pts,nb,P,n){
+  const pos=[], neg=[], E=1e-9;
+  for(let i=0;i<pts.length;i++){
+    const a=pts[i], b=pts[(i+1)%pts.length], e=nb[i], da=sd(a,P,n), db=sd(b,P,n);
+    const sa=da>E?1:da<-E?-1:0, sb=db>E?1:db<-E?-1:0;
+    const m = (sa*sb<0) ? (()=>{ const t=da/(da-db); return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]; })() : null;
+    for(const [side,out] of [[1,pos],[-1,neg]]){
+      const A=sa*side, B=sb*side;
+      if(A>=0){
+        if(B>=0) out.push({p:a, nb:e});
+        else if(A>0){ out.push({p:a, nb:e}); out.push({p:m, nb:CUT}); }
+        else out.push({p:a, nb:CUT});
+      } else if(B>0) out.push({p:m, nb:e});
+    }
+  }
+  return [cleanLabeled(pos), cleanLabeled(neg)];
+}
+// 在 world 直線上切開 sel 裡的片（sel=null 表示全部），回傳新紙＋每片新片的來源與在線的哪一側
+function cutPaper(paper,P,n,sel){
+  const pieces=[], map=new Map();
+  for(const f of paper.facets){
+    const w=f.sh.map(q=>aff(f.T,q));
+    if(sel && !sel.has(f.id)){ const side=sideOf(w,P,n); const q={id:FID++, sh:f.sh, nb:f.nb.slice(), T:f.T, src:f.id, side}; pieces.push(q); map.set(f.id,{[side>0?'pos':'neg']:q, only:q}); continue; }
+    const [pos,neg]=splitPoly(w,f.nb,P,n), ent={}, Ti=inv(f.T);
+    if(pos){ const q={id:FID++, sh:pos.pts.map(x=>aff(Ti,x)), nb:pos.nb, T:f.T, src:f.id, side:1}; pieces.push(q); ent.pos=q; }
+    if(neg){ const q={id:FID++, sh:neg.pts.map(x=>aff(Ti,x)), nb:neg.nb, T:f.T, src:f.id, side:-1}; pieces.push(q); ent.neg=q; }
+    map.set(f.id, ent);
+  }
+  for(const q of pieces){
+    const ent0=map.get(q.src), other = q.side>0 ? ent0.neg : ent0.pos;
+    q.nb = q.nb.map((x,i)=>{
+      if(x===CUT) return other ? other.id : -1;
+      if(x<0) return -1;
+      const ent=map.get(x); if(!ent) return -1;
+      if(ent.pos && ent.neg){ const a=aff(q.T,q.sh[i]), b=aff(q.T,q.sh[(i+1)%q.sh.length]), d=sd([(a[0]+b[0])/2,(a[1]+b[1])/2],P,n);
+        return (d>1e-9 ? ent.pos : d<-1e-9 ? ent.neg : (q.side>0?ent.neg:ent.pos)).id; }
+      return (ent.pos||ent.neg).id;
+    });
+  }
+  // 舊的上下關係搬到新片上
+  const order=new Map();
+  for(let i=0;i<pieces.length;i++) for(let j=i+1;j<pieces.length;j++){
+    const a=pieces[i], b=pieces[j]; if(a.src===b.src) continue;
+    const v=above(paper,a.src,b.src); if(v) order.set(pkey(a.id,b.id), a.id<b.id ? v : -v);
+  }
+  return {facets:pieces, order, colorUp:paper.colorUp, refs:paper.refs};
+}
+function sideOf(w,P,n){ let s=0; for(const q of w){ const d=sd(q,P,n); if(Math.abs(d)>Math.abs(s)) s=d; } return s>0?1:-1; }
+
+/* ---- 幾何：凸多邊形交集 ---- */
+function clipPoly(subj,clip){
+  let out=subj; const ccw=polyArea(clip)>0;
+  for(let i=0;i<clip.length && out.length;i++){
+    const A=clip[i], B=clip[(i+1)%clip.length], inp=out; out=[];
+    const side=q=>{ const v=(B[0]-A[0])*(q[1]-A[1])-(B[1]-A[1])*(q[0]-A[0]); return ccw?v:-v; };
+    for(let k=0;k<inp.length;k++){
+      const P=inp[k], Q=inp[(k+1)%inp.length], sp=side(P), sq=side(Q);
+      if(sp>=-1e-12) out.push(P);
+      if((sp>1e-12&&sq<-1e-12)||(sp<-1e-12&&sq>1e-12)){ const t=sp/(sp-sq); out.push([P[0]+(Q[0]-P[0])*t, P[1]+(Q[1]-P[1])*t]); }
+    }
+  }
+  return out;
+}
+const overlapArea=(a,b)=>{ const c=clipPoly(a,b); return c.length>=3 ? Math.abs(polyArea(c)) : 0; };
+// 線段有沒有穿過多邊形內部（不算只碰到邊）
+function segCrossesInterior(poly,a,b){
+  const ccw=polyArea(poly)>0; let t0=0, t1=1;
+  for(let i=0;i<poly.length;i++){
+    const A=poly[i], B=poly[(i+1)%poly.length];
+    const f=q=>{ const v=(B[0]-A[0])*(q[1]-A[1])-(B[1]-A[1])*(q[0]-A[0]); return ccw?v:-v; };
+    const fa=f(a), fb=f(b);
+    if(fa<=1e-9 && fb<=1e-9) return false;
+    if(fa<=1e-9 || fb<=1e-9){ const t=fa/(fa-fb); if(fa<=1e-9) t0=Math.max(t0,t); else t1=Math.min(t1,t); }
+  }
+  return t1-t0>1e-6;
+}
+
+/* ---- 層序求解 ----
+   hints：Map(pairKey → 建議值)；hard：Map(pairKey → 必須值)。回傳完整的 order。 */
+function solveLayers(p, hard, hints){
+  const F=p.facets, n=F.length, W=F.map(f=>f.sh.map(q=>aff(f.T,q)));
+  W.forEach((w,i)=>{ if(polyArea(w)<0) W[i]=w.slice().reverse(); });
+  const pairs=[], pidx=new Map();
+  const ov=[]; for(let i=0;i<n;i++) ov.push(new Set());
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    if(overlapArea(W[i],W[j])>1e-6){ const a=F[i].id, b=F[j].id, k=pkey(a,b); pidx.set(k,pairs.length); pairs.push([a,b]); ov[i].add(j); ov[j].add(i); }
+  }
+  const iOf=new Map(F.map((f,i)=>[f.id,i]));
+  // 變數 v[k]：+1 = 小 id 在上
+  const val=new Int8Array(pairs.length);
+  const varOf=(a,b)=>{ const k=pidx.get(pkey(a,b)); return k===undefined ? null : {k, s: a<b?1:-1}; };
+  // 等式限制：o(A,X) == o(B,X)
+  const eqs=pairs.map(()=>[]);
+  const addEq=(x,y)=>{ if(!x||!y||x.k===y.k) return; eqs[x.k].push([x.s, y.k, y.s]); eqs[y.k].push([y.s, x.k, x.s]); };
+  for(let i=0;i<n;i++){ const f=F[i];
+    for(let e=0;e<f.sh.length;e++){ const nbId=f.nb[e]; if(nbId<0 || nbId<f.id) continue; const j=iOf.get(nbId); if(j===undefined) continue;
+      const a=aff(f.T,f.sh[e]), b=aff(f.T,f.sh[(e+1)%f.sh.length]);
+      for(const x of ov[i]){ if(x===j || !ov[j].has(x)) continue;
+        if(segCrossesInterior(W[x],a,b)) addEq(varOf(f.id,F[x].id), varOf(nbId,F[x].id)); } } }
+  // 三片共同重疊：遞移
+  const tris=[];
+  for(const [a,b] of pairs){ const ia=iOf.get(a), ib=iOf.get(b); const ab=clipPoly(W[ia],W[ib]); if(ab.length<3) continue;
+    for(const ic of ov[ia]){ if(ic<=ib || !ov[ib].has(ic)) continue; if(F[ic].id<b) continue;
+      if(overlapArea(ab,W[ic])>1e-6) tris.push([a,b,F[ic].id]); } }
+  const triOf=pairs.map(()=>[]); tris.forEach((t,ti)=>{ for(const [x,y] of [[t[0],t[1]],[t[1],t[2]],[t[0],t[2]]]) triOf[pidx.get(pkey(x,y))].push(ti); });
+  const get=(a,b)=>{ const v=varOf(a,b); return v ? val[v.k]*v.s : 0; };
+  const trail=[];
+  function set(k,v,queue){ if(val[k]===v) return true; if(val[k]!==0) return false; val[k]=v; trail.push(k); queue.push(k); return true; }
+  function propagate(queue){
+    while(queue.length){ const k=queue.pop(), v=val[k];
+      for(const [s1,k2,s2] of eqs[k]){ if(!set(k2, v*s1*s2, queue)) return false; }
+      for(const ti of triOf[k]){ const t=tris[ti];
+        // 遞移：x 在 y 上、y 在 z 上 ⇒ x 在 z 上（六種排列都檢查）
+        for(const [x,y,z] of [[t[0],t[1],t[2]],[t[0],t[2],t[1]],[t[1],t[0],t[2]],[t[1],t[2],t[0]],[t[2],t[0],t[1]],[t[2],t[1],t[0]]]){
+          if(get(x,y)===1 && get(y,z)===1){ const w=varOf(x,z); if(!set(w.k, w.s, queue)) return false; } }
+      }
+    }
+    return true;
+  }
+  function undoTo(len){ while(trail.length>len) val[trail.pop()]=0; }
+  // 先放必須的
+  const q0=[];
+  for(const [k,v] of hard){ const i=pidx.get(k); if(i===undefined) continue; if(!set(i,v,q0)) return null; }
+  if(!propagate(q0)) return null;
+  // 回溯搜尋：先照提示猜
+  const orderVars=pairs.map((_,i)=>i).sort((x,y)=>(hints.has(pkey(...pairs[y]))?1:0)-(hints.has(pkey(...pairs[x]))?1:0));
+  let steps=0;
+  function dfs(pos){
+    while(pos<orderVars.length && val[orderVars[pos]]!==0) pos++;
+    if(pos>=orderVars.length) return true;
+    if(++steps>20000) return false;
+    const k=orderVars[pos], h=hints.get(pkey(...pairs[k]))||1;
+    for(const v of [h,-h]){ const mark=trail.length, q=[]; if(set(k,v,q) && propagate(q) && dfs(pos+1)) return true; undoTo(mark); }
+    return false;
+  }
+  if(!dfs(0)) return null;
+  const order=new Map(); pairs.forEach(([a,b],i)=>order.set(pkey(a,b), val[i]));
+  return order;
+}
+
+/* ---- 選片：flap = 手指下最上面那片在線那一側所連著的那一團 ---- */
+function pickTop(list,s,P){
+  const dx=P[0]-s[0], dy=P[1]-s[1], L=Math.hypot(dx,dy)||1; let best=null;
+  for(const a of [0,.5,-.5,1,-1]) for(const r of [.02,.05]){
+    const cs=Math.cos(a), sn=Math.sin(a), q=[s[0]+(dx*cs-dy*sn)/L*r, s[1]+(dx*sn+dy*cs)/L*r];
+    for(const f of list) if((!best || f.z>best.z) && pip(f.pts,q[0],q[1])) best=f;
+  }
+  return best;
+}
+// 沿相鄰關係找連著的一團；剛好落在摺線上的邊是「鉸鏈」，不跨過去（這樣才能把一片沿舊摺痕打開）
+function component(list,seed,P,n){
+  const byId=new Map(list.map(q=>[q.id,q])), seen=new Set([seed.id]), st=[seed];
+  while(st.length){ const q=st.pop();
+    q.nb.forEach((x,i)=>{ const r=byId.get(x); if(!r || seen.has(x)) return;
+      if(P){ const a=aff(q.T,q.sh[i]), b=aff(q.T,q.sh[(i+1)%q.sh.length]); if(Math.abs(sd(a,P,n))<1e-7 && Math.abs(sd(b,P,n))<1e-7) return; }
+      seen.add(x); st.push(r); }); }
+  return seen;
+}
+
+/* ---- 一次摺：沿 world 直線，把 positive 側（全部或那一團）翻過去 ----
+   type：valley 谷摺、mountain 山摺、crease 摺痕、outside 外翻、inside 內翻 */
+function foldByPoints(paper,s,t,opt){
+  if(Math.hypot(s[0]-t[0], s[1]-t[1]) < 1e-6) return null;
+  const o = opt && typeof opt==='object' ? opt : {type: opt?'mountain':'valley'};
+  const type=o.type||'valley', {P,n}=foldLine(s,t);
+  // 先全部切開（為了找一團），之後沒動到的片不需要留下切痕，但留著也只是平的摺痕
+  const cut=derive(cutPaper(paper,P,n,null));
+  const posList=cut.facets.filter(f=>f.side>0);
+  let moveSet;
+  if(o.scope==='flap'){ const seed=pickTop(posList,s,P); if(!seed) return null; moveSet=component(posList,seed,P,n); }
+  else moveSet=new Set(posList.map(f=>f.id));
+  if(!moveSet.size || moveSet.size===cut.facets.length) return null;
+  // 只有真的被摺到的層才留下摺痕：重新切一次，只切到動到的那些原始片
+  const srcs=new Set(cut.facets.filter(f=>moveSet.has(f.id)).map(f=>f.src));
+  const cut2=derive(cutPaper(paper,P,n,srcs)), mv2=new Set();
+  const key=f=>f.src+':'+f.side, want=new Set(cut.facets.filter(f=>moveSet.has(f.id)).map(key));
+  for(const f of cut2.facets) if(srcs.has(f.src) && want.has(key(f))) mv2.add(f.id);
+  const before=copyPaper(cut2); moveSet=mv2;
+  return applyMove(before, [{ids:moveSet, M:reflM(P,n)}], type, {P,n,preview:o.preview, orig:paper});
+}
+/* 套用一組剛體移動（每組 ids 乘上 M），再求層序。type 決定新摺痕（鉸鏈）上誰在上面。 */
+function applyMove(before, groups, type, info={}){
+  const p=copyPaper(before), moved=new Map(), touched=new Set();
+  for(const g of groups) for(const id of g.ids) touched.add(id);
+  if(type!=='crease') for(const g of groups) for(const f of p.facets) if(g.ids.has(f.id)){ f.T=mul(g.M,f.T); moved.set(f.id,g); }
+  derive(p);
+  const hard=new Map(), hints=new Map();
+  const zOf=new Map(before.facets.map(f=>[f.id,f.z]));
+  const movedZ=[...moved.keys()].map(id=>zOf.get(id)).sort((a,b)=>a-b);
+  const split=movedZ.length ? movedZ[Math.floor(movedZ.length/2)] : 0;
+  const isFront=id=>zOf.get(id)>=split;
+  // 每一片移動的，跟原本相鄰、現在疊起來的（鉸鏈）：依摺法決定上下
+  const hingeWant=(m,st)=>{ // 回傳 +1 = m 在 st 上面
+    if(type==='valley') return 1; if(type==='mountain') return -1;
+    if(type==='outside') return isFront(m)?1:-1;
+    if(type==='inside') return isFront(m)?-1:1;
+    return 1; };
+  const byId=new Map(p.facets.map(f=>[f.id,f]));
+  for(const f of p.facets){
+    const fm=moved.get(f.id);
+    for(const x of f.nb){ if(x<0) continue; const g=byId.get(x); if(!g) continue;
+      const gm=moved.get(x); if(fm===gm) continue;
+      if(Math.sign(det(f.T))===Math.sign(det(g.T))) continue; // 攤平的不用管
+      if(fm && !gm){ const v=hingeWant(f.id,x); hard.set(pkey(f.id,x), f.id<x?v:-v); }
+    } }
+  // 沒動的兩片：維持原樣；同一組動的兩片：鏡射就上下顛倒
+  for(const a of p.facets) for(const b of p.facets){ if(a.id>=b.id) continue;
+    const v=above(before,a.id,b.id); const ga=moved.get(a.id), gb=moved.get(b.id);
+    if(!ga && !gb){ if(v) hard.set(pkey(a.id,b.id), a.id<b.id?v:-v); }
+    else if(ga && ga===gb){ if(v){
+      // 內外翻摺：前半疊、後半疊各自翻，同一半內上下顛倒，兩半之間維持原樣
+      const rev = (type==='outside'||type==='inside') ? (isFront(a.id)===isFront(b.id)) : det(ga.M)<0;
+      const r = rev ? -v : v; hard.set(pkey(a.id,b.id), a.id<b.id?r:-r); } }
+    else { const m = ga ? a : b, want = (type==='mountain'||(type==='inside'))?-1:1; const w = m===a ? want : -want; hints.set(pkey(a.id,b.id), a.id<b.id?w:-w); }
+  }
+  if(info.preview){ // 拖曳預覽：不求解，直接用提示
+    for(const [k,v] of hints) if(!hard.has(k)) hard.set(k,v);
+    p.order=hard; assignZ(p);
+  } else {
+    let order=solveLayers(p,hard,hints);
+    if(!order && typeof SOLVE_LOG!=='undefined') SOLVE_LOG.push('fallback');
+    if(!order){ // 解不出來：放掉「維持原樣」以外的硬限制再試
+      const h2=new Map(); for(const [k,v] of hard){ const [a,b]=k.split('|').map(Number); if(!moved.has(a)&&!moved.has(b)) h2.set(k,v); }
+      order=solveLayers(p,h2,new Map([...hints,...hard]));
+    }
+    p.order=order||hard; assignZ(p);
+  }
+  for(const f of p.facets) if(moved.has(f.id)) f.moved=true;
+  p.refs=carryRefs(info.orig||before,p);
+  const stay=before.facets.filter(f=>!touched.has(f.id)).map(f=>({pts:f.pts,c:f.c,z:f.z})), move=before.facets.filter(f=>touched.has(f.id)).map(f=>({pts:f.pts,c:f.c,z:f.z}));
+  return {res:p, parts:{stay,move}, P:info.P, n:info.n, groups:groups.length};
+}
+// 記號點存在「原始紙」座標上，跟著紙走（就算摺痕又打開也找得到）
+function carryRefs(before,after){
+  const out=(before.refs||[]).slice(), seen=new Set(out.map(e=>e.k));
+  for(const f of before.facets){ const Ti=inv(f.T), L=f.sh.length;
+    for(let i=0;i<L;i++){ const a=f.sh[i], b=f.sh[(i+1)%L];
+      for(const [u,major] of [[0,1],[.5,1],[.25,0],[.75,0]]){ const q=[a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u], k=Math.round(q[0]*1e5)+','+Math.round(q[1]*1e5);
+        if(!seen.has(k)){ seen.add(k); out.push({k, sh:q, major:!!major}); } } } }
+  return out;
+}
+function flipPaper(p){ const q=copyPaper(p); for(const f of q.facets) f.T=mul(FLIPT,f.T); const o=new Map(); for(const [k,v] of q.order) o.set(k,-v); q.order=o; return derive(q); }
+function rotPaper(p){ const q=copyPaper(p); for(const f of q.facets) f.T=mul(ROTT,f.T); return derive(q); }
+
+/* 吸附點：每片的頂點、邊中點（主要）＋四分點（次要），加上留在紙上的記號 */
+function snapPoints(paper){
+  const map=new Map(), out=[];
+  const add=(q,major)=>{ const k=Math.round(q[0]*1e5)+','+Math.round(q[1]*1e5);
+    const o=map.get(k); if(o){ if(major) o.major=true; return; } const e={p:q, major}; map.set(k,e); out.push(e); };
+  for(const f of paper.facets){ for(let i=0;i<f.pts.length;i++){
+    const a=f.pts[i], b=f.pts[(i+1)%f.pts.length], L=(u)=>[a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u];
+    add(a,true); add(L(.5),true); add(L(.25),false); add(L(.75),false);
+  }}
+  for(const e of (paper.refs||[])){ // 找出記號點現在在哪（落在哪一片紙上就用那片的變換）
+    for(const f of paper.facets){ if(pipInc(f.sh,e.sh)){ add(aff(f.T,e.sh), e.major); break; } } }
+  return out;
+}
+function pipInc(poly,q){ // 含邊界
+  const ccw=polyArea(poly)>0;
+  for(let i=0;i<poly.length;i++){ const A=poly[i], B=poly[(i+1)%poly.length], v=(B[0]-A[0])*(q[1]-A[1])-(B[1]-A[1])*(q[0]-A[0]); if((ccw?v:-v)<-1e-9) return false; }
+  return true;
+}
+
+/* ---- 多條摺痕一起動（擠壓摺、旋轉摺、兔耳摺這類複合動作） ----
+   rules：[{P,n, fold:true|false, keep?(f,g)}]：目前畫面上落在這條直線上的摺痕，要摺起來（true）或攤平（false）
+   其他摺痕維持現狀。從 root 那片（不動）開始，沿相鄰關係一路推算每片的變換；推出矛盾（紙會撕破）就回傳 null。 */
+function creaseMove(paper, rules, rootPt, type='valley'){
+  const byId=new Map(paper.facets.map(f=>[f.id,f]));
+  const root=pickTop(paper.facets, rootPt, [rootPt[0]+1e-3, rootPt[1]+1e-3]) || paper.facets.find(f=>pip(f.pts,rootPt[0],rootPt[1]));
+  if(!root) return null;
+  const Tn=new Map([[root.id, root.T]]), q=[root];
+  const close=(A,B)=>A.every((v,i)=>Math.abs(v-B[i])<1e-6);
+  while(q.length){ const f=q.shift(), Tf=Tn.get(f.id);
+    for(let i=0;i<f.sh.length;i++){ const g=byId.get(f.nb[i]); if(!g) continue;
+      const a=f.sh[i], b=f.sh[(i+1)%f.sh.length], wa=aff(f.T,a), wb=aff(f.T,b);
+      let folded = Math.sign(det(f.T))!==Math.sign(det(g.T));
+      for(const r of rules) if(Math.abs(sd(wa,r.P,r.n))<1e-6 && Math.abs(sd(wb,r.P,r.n))<1e-6 && (!r.keep || r.keep(f,g,wa,wb))) folded=r.fold;
+      const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy), Rs=reflM(a,[-dy/L,dx/L]);
+      const Tg = folded ? mul(Tf,Rs) : Tf;
+      if(Tn.has(g.id)){ if(!close(Tn.get(g.id),Tg)){ creaseMove.conflict={f:f.id,g:g.id,at:[(wa[0]+wb[0])/2,(wa[1]+wb[1])/2]}; return null; } }
+      else { Tn.set(g.id,Tg); q.push(g); }
+    } }
+  if(Tn.size!==paper.facets.length) return null;
+  const groups=new Map();
+  for(const f of paper.facets){ const T2=Tn.get(f.id); if(close(T2,f.T)) continue;
+    const M=mul(T2,inv(f.T)), k=M.map(v=>v.toFixed(5)).join(',');
+    if(!groups.has(k)) groups.set(k,{ids:new Set(), M}); groups.get(k).ids.add(f.id); }
+  if(!groups.size) return null;
+  return applyMove(copyPaper(paper), [...groups.values()], type, {orig:paper});
+}
+
+/* 從起點出發的「精準目標」：吸附點本身，加上起點對任兩個吸附點連線的鏡射（摺線正好通過那兩點） */
+function lineTargets(points,s,edges){
+  const out=[], seen=new Set();
+  // 邊對摺痕：以某個點為軸心轉過去，起點落在某條邊或摺痕上（圓與線段的交點）
+  if(edges) for(const V of points){ if(!V.major) continue;
+    const r=Math.hypot(s[0]-V.p[0], s[1]-V.p[1]); if(r<1e-6) continue;
+    for(const [a,b] of edges){ const dx=b[0]-a[0], dy=b[1]-a[1], A=dx*dx+dy*dy; if(A<1e-12) continue;
+      const fx=a[0]-V.p[0], fy=a[1]-V.p[1], B=2*(fx*dx+fy*dy), C=fx*fx+fy*fy-r*r, D=B*B-4*A*C; if(D<0) continue;
+      for(const sg of [-1,1]){ const u=(-B+sg*Math.sqrt(D))/(2*A); if(u<-1e-6||u>1+1e-6) continue;
+        const t=[a[0]+dx*u, a[1]+dy*u]; if(Math.hypot(t[0]-s[0],t[1]-s[1])<1e-6) continue;
+        const k=Math.round(t[0]*1e4)+','+Math.round(t[1]*1e4); if(!seen.has(k)){ seen.add(k); out.push(t); } } } }
+  if(points.length>140) points=points.filter(e=>e.major);   // 摺很多次以後只用主要點，避免到處都在吸
+  for(let i=0;i<points.length;i++) for(let j=i+1;j<points.length;j++){
+    const a=points[i].p, b=points[j].p, dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy);
+    if(L<1e-6) continue;
+    const n=[-dy/L, dx/L], d=sd(s,a,n);
+    if(Math.abs(d)<1e-5) continue;
+    const t=reflect(s,a,n), k=Math.round(t[0]*1e4)+','+Math.round(t[1]*1e4);
+    if(!seen.has(k)){ seen.add(k); out.push(t); }
+  }
+  return out;
+}
+function pip(pts,x,y){ let ins=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const a=pts[i], b=pts[j];
+    if((a[1]>y)!==(b[1]>y) && x < (b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]) ins=!ins; }
+  return ins; }
+function topAt(paper,x,y){ let best=null;
+  for(const f of paper.facets) if((!best || f.z>best.z) && pip(f.pts,x,y)) best=f;
+  return best ? (best.c?2:1) : 0; }
+function bbox(paper){ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const f of paper.facets) for(const q of f.pts){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); }
+  return {x0,y0,x1,y1}; }
+function centroid(p){ const b=bbox(p), N=48; let sx=0, sy=0, c=0;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const x=b.x0+(i+.5)*(b.x1-b.x0)/N, y=b.y0+(j+.5)*(b.y1-b.y0)/N;
+    if(topAt(p,x,y)){ sx+=x; sy+=y; c++; } }
+  return c ? [sx/c, sy/c] : [0,0]; }
+function radiusFrom(p,c){ let r=0; for(const f of p.facets) for(const q of f.pts) r=Math.max(r, Math.hypot(q[0]-c[0], q[1]-c[1])); return r; }
+const ROT=[[1,0],[0,1],[-1,0],[0,-1]];
+/* 相似度：對齊重心、試四個方向，看「最上層顏色」逐點一致的比例（交集/聯集） */
+function matchInfo(user,target,N=64){
+  const cu=centroid(user), ct=centroid(target), r=Math.max(radiusFrom(user,cu), radiusFrom(target,ct))*1.02, st=2*r/N;
+  const tv=new Uint8Array(N*N);
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++) tv[i*N+j]=topAt(target, ct[0]-r+(i+.5)*st, ct[1]-r+(j+.5)*st);
+  let best={score:0, k:0, cu, ct};
+  ROT.forEach(([cs,sn],k)=>{ let inter=0, uni=0;
+    for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const px=-r+(i+.5)*st, py=-r+(j+.5)*st, a=tv[i*N+j];
+      const b=topAt(user, cu[0]+px*cs-py*sn, cu[1]+px*sn+py*cs);
+      if(a||b){ uni++; if(a===b) inter++; } }
+    if(uni && inter/uni>best.score) best={score:inter/uni, k, cu, ct}; });
+  return best; }
+function similarity(user,target,N){ return matchInfo(user,target,N).score; }
+// 目標座標 → 使用者紙上的座標（五官跟著使用者摺的方向與位置）
+function mapFromTarget(m,q){ const [cs,sn]=ROT[m.k], x=q[0]-m.ct[0], y=q[1]-m.ct[1]; return [m.cu[0]+x*cs-y*sn, m.cu[1]+x*sn+y*cs]; }
+/* 使用者目前的紙是不是範例第 k 步旋轉 r 次的樣子（不對齊重心，位置也要一樣） */
+function stageRotation(user,stage,N=40,thr=.985){
+  const r=Math.max(radiusFrom(user,[0,0]), radiusFrom(stage,[0,0]))*1.02, st=2*r/N;
+  for(let k=0;k<4;k++){ const [cs,sn]=ROT[k]; let inter=0, uni=0;
+    for(let i=0;i<N;i++) for(let j=0;j<N;j++){ const x=-r+(i+.5)*st, y=-r+(j+.5)*st;
+      const a=topAt(stage,x,y), b=topAt(user, x*cs-y*sn, x*sn+y*cs);
+      if(a||b){ uni++; if(a===b) inter++; } }
+    if(uni && inter/uni > thr) return k; }
+  return -1; }
+const rotPt=(q,k)=>{ const [cs,sn]=ROT[k]; return [q[0]*cs-q[1]*sn, q[0]*sn+q[1]*cs]; };
+
+
+const R=R2;
+/* 步驟資料：s 拖到 t；type 谷摺/山摺/摺痕/外翻/內翻；scope all 全部層、flap 只摺手指下那一片；flip 翻面；rot 逆時針轉 90°；free = 沒有精確對齊點
+   基本功與小狗/天鵝/企鵝的步驟由模擬產生（照下面標的教學網站摺法），座標精確到吸附點 */
+const PRO={"l1":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"谷摺：把上面的角拖到下面的角。摺線在手指和目標的正中間，翻過去的那半疊在上面。"},{"s":[1.414213562373,0],"t":[0,-1.414213562373],"type":"mountain","scope":"all","text":"山摺：切成「山摺」，把右邊的角摺到紙的背後，對齊下面的角。"}],"l2":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"摺了再打開：切成「摺痕」，左角對右角摺一下再打開，留下一條直的中線。"},{"s":[-1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"邊對摺痕：把左下的邊摺到中線上。拖左邊的角，會吸到中線上剛好的位置。"},{"s":[1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"右邊也一樣。這就是「風箏基本型」，天鵝和很多動物都從這裡開始。"}],"l3":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"先摺成三角形，現在下面的角有兩層。"},{"s":[0,-1.414213562373],"t":[0,0],"type":"valley","scope":"flap","text":"只摺一片：切成「這一片」，把最上面那層的角摺到上緣中點，下面那層不動，所以會露出兩種顏色。"}],"l4":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"摺成三角形。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"valley","scope":"all","text":"左角對右角對摺，前後兩半疊在一起。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"outside","scope":"all","text":"外翻摺：切成「外翻摺」，把下面的尖角往上翻。前後兩半各自往外包住身體，翻上來的尖角看得到，露出紙的內側顏色。鳥頭、企鵝頭常用。"}],"l5":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"摺成三角形。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"valley","scope":"all","text":"左角對右角對摺。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"inside","scope":"all","text":"內翻摺：切成「內翻摺」，同一條線，這次尖角往前後兩半的中間塞進去，從外面看尖角消失了。尾巴、腳、鳥嘴常用。"}],"dog":[{"s":[0,1.414213562373],"t":[0,-1.414213562373],"type":"valley","scope":"all","text":"上角摺到下角，摺成三角形（長邊在上）。"},{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"左角對右角輕輕摺一下再打開，這條中線是耳朵的對齊線。"},{"s":[-1.414213562373,0],"t":[-0.989949493661,-0.848528137424],"type":"valley","scope":"all","text":"左耳：把左上角往下摺，摺線從離中線約 1/4 的地方開始，讓耳朵垂到臉外面。"},{"s":[1.414213562373,0],"t":[0.989949493661,-0.848528137424],"type":"valley","scope":"all","text":"右耳：照左耳對稱地摺下來。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"valley","scope":"flap","text":"口鼻：只把最上面那層的下角往上摺，露出白色的口鼻。"},{"s":[0,-1.414213562373],"t":[0,-0.707106781187],"type":"mountain","scope":"all","text":"下巴：剩下的下角往後摺進去，下巴就平了。"}],"swan":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"白色面朝上擺成菱形，左右對摺再打開，留下直的中線。"},{"s":[-1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"左下的邊摺到中線。"},{"s":[1.414213562373,0],"t":[0,0.585786437627],"type":"valley","scope":"all","text":"右下的邊也摺到中線，完成風箏基本型。"},{"flip":true,"text":"整張翻面。"},{"s":[-0.828427124746,0.585786437627],"t":[0,0.750570838212],"type":"valley","scope":"all","text":"下面的左邊再摺到中線一次（壓住下層，別讓它滑開）。"},{"s":[0.828427124746,0.585786437627],"t":[0,0.750570838212],"type":"valley","scope":"all","text":"右邊也再摺到中線，變成細長的尖角。"},{"s":[0,-1.414213562373],"t":[0,1.414213562373],"type":"valley","scope":"all","text":"下面的尖角往上摺到上面的角，這是脖子。"},{"rot":true,"text":"逆時針轉 90°。"},{"s":[-1.414213562373,0],"t":[-1.0,0],"type":"valley","scope":"flap","text":"頭：只把最上面那片（脖子）的尖角往右摺一小段。"},{"s":[-0.944947291833,0.46926627054],"t":[-0.944947291833,-0.46926627054],"type":"mountain","scope":"all","text":"上半往後摺，整隻對摺。"},{"s":[-1.414213562373,0],"t":[-0.338136511972,1.120407228335],"type":"outside","scope":"flap","text":"把脖子往上拉出來壓平（外翻摺，只動脖子那一片）。"}],"penguin":[{"s":[-1.414213562373,0],"t":[1.414213562373,0],"type":"crease","scope":"all","text":"彩色面朝上擺成菱形，左右對摺再打開。"},{"flip":true,"text":"翻面，白色朝上。"},{"s":[-1.414213562373,0],"t":[-0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"左上的邊往中線摺，但不要摺到中線，留一點空隙（位置可以自己決定）。","free":true},{"s":[1.414213562373,0],"t":[0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"右上的邊也一樣，跟左邊留一樣寬的空隙。","free":true},{"flip":true,"text":"再翻面。"},{"s":[-0.92554138225,-0.488672180123],"t":[-0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"左邊的角往內摺。"},{"s":[0.92554138225,-0.488672180123],"t":[0.239424414578,-0.571403709335],"type":"valley","scope":"all","text":"右邊的角往內摺。"},{"s":[0,-1.414213562373],"t":[0.0,-0.491793990436],"type":"valley","scope":"all","text":"下面的角往上摺，對齊兩邊摺片的下緣。"},{"s":[0.614946381291,-0.799267181082],"t":[-0.614946381291,-0.799267181082],"type":"mountain","scope":"all","text":"沿著第 1 步的中線往後對摺。"},{"s":[-0.0,1.414213562373],"t":[0.434074746199,0.840141261516],"type":"outside","scope":"all","text":"頭：把上面的尖角用外翻摺往前彎下來。"}]};
+PRO.pumpkin=[{"s":[-1,0],"t":[1,0],"type":"crease","scope":"all","text":"白色面朝上，左右對摺再打開，留下中線。"},{"s":[-1,1],"t":[0,0],"type":"valley","scope":"all","text":"左上角摺到正中央，上緣的左半邊會貼齊中線。"},{"s":[1,1],"t":[0,0],"type":"valley","scope":"all","text":"右上角也摺到正中央。"},{"s":[-1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"左邊的斜邊再摺到中線一次（拖左邊的角，會吸到中線上剛好的位置）。"},{"s":[1,0],"t":[0,-0.414213562373],"type":"valley","scope":"all","text":"右邊的斜邊也摺到中線。"},{"s":[-0.707106781187,-1.12132034356],"t":[-0.707106781187,-0.87867965644],"type":"valley","scope":"all","text":"底下凸出來的兩個小角往上摺（同一條線，一次摺兩個）。"},{"s":[0,-1],"t":[-0.165685424949,-0.502943725152],"type":"valley","scope":"all","text":"右半邊的下緣往上摺，對齊橘色和白色的交界線。"},{"s":[0.232233047034,-0.646446609407],"t":[-0.232233047034,-0.646446609407],"type":"crease","scope":"flap","text":"只在剛摺上來的那片壓一條直的摺痕：切成「摺痕」和「這一片」，沿中線對摺再打開。"},{"s":[-0.165685424949,-0.502943725152],"t":[-0.0,-1.0],"type":"valley","scope":"flap","text":"把第 5 步打開：切成「這一片」，把那片拖回原位。"},{"s":[0,-1],"t":[0.165685424949,-0.502943725152],"type":"valley","scope":"all","text":"左邊重複第 5 步：左半邊的下緣往上摺，對齊交界線。"},{"s":[-0.232233047034,-0.646446609407],"t":[0.232233047034,-0.646446609407],"type":"crease","scope":"flap","text":"重複第 6 步：在左邊這片也壓一條中線摺痕。"}];
+const LESSONS=[
+  {id:'l1', name:'谷摺與山摺', start:'diamond', color:'#F4C93A', sym:'valley', steps:PRO.l1,
+    learn:'谷摺：紙往你這邊摺，摺痕凹下去像山谷，圖上畫虛線。山摺：往背後摺，摺痕凸起來像山，圖上畫點虛線。'},
+  {id:'l2', name:'摺痕與風箏基本型', start:'diamond', color:'#7FB27A', sym:'crease', steps:PRO.l2,
+    learn:'摺了再打開會留下摺痕，之後可以拿來對齊。把兩條邊摺到中線就是風箏基本型。'},
+  {id:'l3', name:'只摺一片', start:'diamond', color:'#EC8A3C', sym:'flap', steps:PRO.l3,
+    learn:'紙疊了好幾層時，可以只摺最上面那一片。下面的層不動，就會露出兩種顏色。'},
+  {id:'l4', name:'外翻摺', start:'diamond', color:'#5FA3C9', sym:'outside', steps:PRO.l4,
+    learn:'對摺過的模型，前後兩半一起反過來往外包。常用來做頭。'},
+  {id:'l5', name:'內翻摺', start:'diamond', color:'#C4AEDD', sym:'inside', steps:PRO.l5,
+    learn:'跟外翻摺同一條線，但尖角往兩半中間塞進去。常用來做尾巴、腳、鳥嘴。'},
+];
+const ANIMALS=[
+  {id:'rdog', name:'小狗', start:'diamond', color:'#C9955F', level:'入門', cry:'汪！', steps:PRO.dog,
+    tip:'用到：摺痕當對齊線、只摺上層做出白色口鼻。',
+    src:{label:'Red Ted Art〈Easy Origami Dog〉', url:'https://www.redtedart.com/easy-origami-dog-puppy/'},
+    face:[{t:'eye',p:[-.28,-.4]},{t:'eye',p:[.28,-.4]},{t:'nose',p:[0,-.84]},{t:'mouth',p:[0,-.95]},{t:'blush',p:[-.46,-.62]},{t:'blush',p:[.46,-.62]}]},
+  {id:'pumpkin', name:'南瓜燈（前 9 步）', start:'square', color:'#F26A3D', level:'進階', cry:'嘿嘿～', steps:PRO.pumpkin,
+    tip:'Nicolas Terry 設計。這裡先做到第 9 步：用到「邊對摺痕」「只在一片上壓摺痕」「把摺過的打開」。第 10～12 步的擠壓摺還在做。',
+    src:{label:'origami.me〈How to Fold an Origami Jack O’ Lantern〉（設計 Nicolas Terry）', url:'https://origami.me/jack-o-lantern/'},
+    face:[]},
+  {id:'swan', name:'天鵝', start:'diamond', color:'#5FA3C9', level:'進階', cry:'嘎～', steps:PRO.swan,
+    tip:'傳統摺法。用到：風箏基本型、翻面、旋轉、只摺一片、對摺、拉出脖子（外翻摺）。',
+    src:{label:'origami.me〈How to Fold an Easy Origami Swan〉（傳統摺法）', url:'https://origami.me/swan/'},
+    face:[{t:'eye',p:[-.15,.86]},{t:'blush',p:[-.06,.74]}]},
+  {id:'rpenguin', name:'企鵝', start:'diamond', colorUp:true, color:'#34507E', level:'進階', cry:'嘎嘎！', steps:PRO.penguin, pass:.9,
+    tip:'彩色面朝上開始。用到：摺痕、留空隙的摺、兩次翻面、對摺、外翻摺做頭。第 3、4 步沒有精確位置，相似度 90% 就算過。',
+    src:{label:'origami.me〈How to Fold a Very Easy Origami Penguin〉', url:'https://origami.me/penguin/'},
+    face:[{t:'eye',p:[.03,.77]},{t:'blush',p:[-.1,.6]}]},
+  {id:'chick', name:'小雞', start:'diamond', color:'#F4C93A', level:'暖身', cry:'啾啾！',
+    tip:'上下兩個角摺到正中央，右邊的尖角往後摺，最後翻面。',
+    steps:[{s:[0,R],t:[0,0]},{s:[0,-R],t:[0,0]},{s:[R,0],t:[R/2,0],m:true},{flip:true}],
+    face:[{t:'eye',p:[-.5,.2]},{t:'beak',p:[-.97,0],dir:Math.PI},{t:'blush',p:[-.55,-.12]}]},
+  {id:'fox', name:'小狐狸', start:'diamond', color:'#EC8A3C', level:'暖身', cry:'嗷嗚～',
+    tip:'先摺成三角形，左右兩角從頂邊 1/4 處往上摺成尖耳朵。',
+    steps:[{s:[0,R],t:[0,-R]},{s:[-R,0],t:[-.1*R,.3*R]},{s:[R,0],t:[.1*R,.3*R]}],
+    face:[{t:'eye',p:[-.19,-.42]},{t:'eye',p:[.19,-.42]},{t:'nose',p:[0,-1.24]},{t:'blush',p:[-.36,-.66]},{t:'blush',p:[.36,-.66]}]},
+  {id:'bunny', name:'小兔', start:'diamond', color:'#C4AEDD', level:'暖身', cry:'噗嚕嚕～',
+    tip:'三角形之後，兩邊的角往上摺成長耳朵，下巴往後摺。',
+    steps:[{s:[0,R],t:[0,-R]},{s:[-R,0],t:[-.1*R,.3*R]},{s:[R,0],t:[.1*R,.3*R]},{s:[0,-R],t:[0,-R/2],m:true}],
+    face:[{t:'eye',p:[-.19,-.38]},{t:'eye',p:[.19,-.38]},{t:'nose',p:[0,-.58]},{t:'mouth',p:[0,-.66]},{t:'blush',p:[-.3,-.7]},{t:'blush',p:[.3,-.7]}]},
+  {id:'pig', name:'小豬', start:'square', color:'#F2A6B8', level:'暖身', cry:'噗噗～',
+    tip:'四個角都摺到 1/4 的位置變成八角形，最後翻面。',
+    steps:[{s:[-1,1],t:[-.5,.5]},{s:[1,1],t:[.5,.5]},{s:[1,-1],t:[.5,-.5]},{s:[-1,-1],t:[-.5,-.5]},{flip:true}],
+    face:[{t:'ear',p:[-.58,.66],dir:Math.PI*.75},{t:'ear',p:[.58,.66],dir:Math.PI*.25},{t:'eye',p:[-.3,.2]},{t:'eye',p:[.3,.2]},{t:'snout',p:[0,-.22]},{t:'blush',p:[-.6,-.2]},{t:'blush',p:[.6,-.2]}]},
+];
+ANIMALS.forEach(a=>{ if(a.level==='暖身') a.mine=true; });
+const FREE={id:'free', name:'自由創作', start:'square', color:'#7FB27A', free:true, tip:'想摺什麼就摺什麼，摺好按「完成」幫牠貼上五官。'};
+// 舊格式（m=往後摺）轉成新格式
+function normSteps(steps){ return (steps||[]).map(s=> s.flip||s.rot ? s : {...s, type:s.type||(s.m?'mountain':'valley'), scope:s.scope||'all'}); }
+[...LESSONS,...ANIMALS].forEach(a=>{ a.steps=normSteps(a.steps); });
+function startPaper(lv){ return newPaper(lv.start, !!lv.colorUp); }
+function buildStages(lv){
+  const st=[startPaper(lv)];
+  for(const s of normSteps(lv.steps)){
+    const cur=st[st.length-1];
+    st.push(s.flip ? flipPaper(cur) : s.rot ? rotPaper(cur) : foldByPoints(cur, s.s, s.t, {type:s.type, scope:s.scope}).res);
+  }
+  return st; }
+if(typeof module!=='undefined') module.exports={newPaper,foldByPoints,snapPoints,lineTargets,similarity,matchInfo,stageRotation,buildStages,ANIMALS,LESSONS,flipPaper,rotPaper,topAt,startPaper,bbox};
+
+</script>
+
+<script>
+/* ---------- 畫面與操作 ---------- */
+const $=id=>document.getElementById(id);
+const cv=$('mat'), ctx=cv.getContext('2d');
+const BACK='#FBF8F0', BACK_EDGE='rgba(70,70,50,.30)', FRONT_EDGE='rgba(0,0,0,.30)';
+const MAT={bg:'#2D5A4A', fine:'rgba(235,245,238,.07)', bold:'rgba(235,245,238,.16)'};
+const GUIDE='#FF7A59', HINT='#8FDBFF', INK='#2B2420';
+// 摺紙圖的線：谷線＝虛線、山線＝一長兩點的點虛線、摺痕＝細短虛線（Origami Resource Center 的符號慣例）
+const TYPES={
+  valley:{name:'谷摺', dash:[9,6], desc:'往你這邊摺，翻過去的部分疊在最上面。'},
+  mountain:{name:'山摺', dash:[10,4,2,4,2,4], desc:'往背後摺，翻過去的部分塞到紙的後面。'},
+  crease:{name:'摺痕', dash:[3,4], desc:'摺了再打開：紙不會變，只留下一條摺痕，之後可以拿來對齊。'},
+  outside:{name:'外翻摺', dash:[9,6], desc:'對摺過的模型，前後兩半一起往外包。翻出來的部分露出內側顏色，常用來做頭。'},
+  inside:{name:'內翻摺', dash:[10,4,2,4,2,4], desc:'對摺過的模型，尖角往前後兩半中間塞進去。常用來做尾巴、腳、鳥嘴。'},
+};
+const behind=t=>t==='mountain'||t==='inside';
+const CM = 2/15, MM = CM/10; // 紙邊 2 單位 = 150 mm
+const fmm = w => (w/MM).toFixed(1);
+const COLORS=[['#F4C93A','山吹黃'],['#EC8A3C','柿子橘'],['#C9955F','奶茶'],['#C4AEDD','薰衣草'],['#F2A6B8','櫻花粉'],['#7FB27A','抹茶'],['#5FA3C9','水藍'],['#34507E','藏青'],['#9AA3AE','雲灰']];
+
+let W=0, H=0, DPR=1;
+let lv=ANIMALS[0], stages=[], target=null, paperColor=lv.color;
+let paper=null, history=[], histFold=[], foldType='valley', scope='all', drag=null, anim=null, hintOn=false, foldCount=0;
+let view={s:100, cx:0, cy:0}, viewT={s:100, cx:0, cy:0};
+let raf=0, lastMatch=null, doneShown=false, alive=null, stickerMode=false, stickers=[], stickerType='eye';
+let book={animals:{}, mine:[]};
+try{ const b=JSON.parse(localStorage.getItem('origami.zoo')||'null'); if(b&&b.animals) book=b; }catch(e){}
+function saveBook(){ try{ localStorage.setItem('origami.zoo',JSON.stringify(book)); }catch(e){} }
+
+const noise=(()=>{ const c=document.createElement('canvas'); c.width=c.height=96; const x=c.getContext('2d');
+  for(let i=0;i<900;i++){ x.fillStyle=`rgba(${Math.random()<.5?0:255},${Math.random()<.5?0:255},${Math.random()<.5?0:255},${Math.random()*.06})`;
+    const a=Math.random()*Math.PI, l=1+Math.random()*4; x.save(); x.translate(Math.random()*96,Math.random()*96); x.rotate(a); x.fillRect(0,0,l,.7); x.restore(); }
+  return ctx.createPattern(c,'repeat'); })();
+function luma(hex){ const n=parseInt(hex.slice(1),16); return ((n>>16&255)*.299+(n>>8&255)*.587+(n&255)*.114)/255; }
+
+function resize(){
+  const r=cv.getBoundingClientRect(); DPR=Math.min(window.devicePixelRatio||1, 3);
+  W=r.width; H=r.height; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  if(paper){ fitView(true); draw(); }
+}
+new ResizeObserver(resize).observe(cv);
+
+function baseScale(){ return Math.min(W, H)/3.2; }
+function fitView(snap){
+  if(!W) return;
+  const b=bbox(paper), pad=48, w=Math.max(b.x1-b.x0,.2), h=Math.max(b.y1-b.y0,.2);
+  const s=Math.min((W-pad*2)/w, (H-pad*2)/h, baseScale()*2.2);
+  viewT={s, cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2};
+  if(snap) view={...viewT};
+  kick();
+}
+const toScreen=(q,V=view)=>[W/2+(q[0]-V.cx)*V.s, H/2-(q[1]-V.cy)*V.s];
+const toWorld=(X,Y,V=view)=>[(X-W/2)/V.s+V.cx, -(Y-H/2)/V.s+V.cy];
+
+function kick(){ if(!raf) raf=requestAnimationFrame(frame); }
+function frame(t){
+  raf=0; let more=false;
+  for(const key of ['s','cx','cy']){ const d=viewT[key]-view[key];
+    if(Math.abs(d) > (key==='s'?.05:1e-4)){ view[key]+=d*.2; more=true; } else view[key]=viewT[key]; }
+  if(anim){ const u=Math.min(1,(t-anim.t0)/anim.dur); anim.u=u; if(u>=1) commitFold(); else more=true; }
+  if(alive && t-alive.t0 < 1400) more=true;
+  draw(t);
+  if(more) kick();
+}
+
+/* ---- 繪圖 ---- */
+function pathPoly(c,pts,V){ c.beginPath(); pts.forEach((q,i)=>{ const [X,Y]=toScreen(q,V); i?c.lineTo(X,Y):c.moveTo(X,Y); }); c.closePath(); }
+function drawFacet(c,f,V,o={}){
+  pathPoly(c,f.pts,V);
+  c.save(); c.globalAlpha=o.alpha??1;
+  c.shadowColor='rgba(0,0,0,.28)'; c.shadowBlur=o.lift?14:3; c.shadowOffsetY=o.lift?7:1.2;
+  c.fillStyle=f.c?paperColor:BACK; c.fill();
+  c.shadowColor='transparent'; c.fillStyle=noise; c.fill();
+  if(o.shade){ c.globalAlpha=(o.alpha??1)*o.shade; c.fillStyle='#000'; c.fill(); }
+  c.restore();
+  c.lineWidth=1; c.strokeStyle=f.c?FRONT_EDGE:BACK_EDGE; c.stroke();
+  if(o.outline){ c.save(); c.lineWidth=1.6; c.strokeStyle=GUIDE; if(o.dashed) c.setLineDash([5,4]); c.stroke(); c.restore(); }
+}
+function drawMat(c,V){
+  c.fillStyle=MAT.bg; c.fillRect(0,0,W,H);
+  const [wx0,wy1]=toWorld(0,0,V), [wx1,wy0]=toWorld(W,H,V);
+  const step=CM, i0=Math.floor(wx0/step), i1=Math.ceil(wx1/step), j0=Math.floor(wy0/step), j1=Math.ceil(wy1/step);
+  if((i1-i0) > 400) return;
+  c.lineWidth=1;
+  if(V.s*MM >= 7){ // 放大到看得清楚時畫出 1 mm 細格
+    const m0=Math.floor(wx0/MM), m1=Math.ceil(wx1/MM), n0=Math.floor(wy0/MM), n1=Math.ceil(wy1/MM);
+    c.strokeStyle='rgba(235,245,238,.045)';
+    for(let i=m0;i<=m1;i++){ if(i%10===0) continue; const [X]=toScreen([i*MM,0],V); c.beginPath(); c.moveTo(X,0); c.lineTo(X,H); c.stroke(); }
+    for(let j=n0;j<=n1;j++){ if(j%10===0) continue; const [,Y]=toScreen([0,j*MM],V); c.beginPath(); c.moveTo(0,Y); c.lineTo(W,Y); c.stroke(); }
+  }
+  for(let i=i0;i<=i1;i++){ const [X]=toScreen([i*step,0],V); c.strokeStyle=i%5===0?MAT.bold:MAT.fine; c.beginPath(); c.moveTo(X,0); c.lineTo(X,H); c.stroke(); }
+  for(let j=j0;j<=j1;j++){ const [,Y]=toScreen([0,j*step],V); c.strokeStyle=j%5===0?MAT.bold:MAT.fine; c.beginPath(); c.moveTo(0,Y); c.lineTo(W,Y); c.stroke(); }
+}
+function sorted(fs){ return fs.slice().sort((a,b)=>a.z-b.z); }
+
+/* 五官：世界座標的位置＋朝向，畫的時候以紙的單位縮放 */
+function drawFace(c,items,map,s,opt={}){
+  const t=opt.t??Infinity, dark=luma(paperOf(opt))<.42;
+  items.forEach((it,i)=>{
+    const u=Math.max(0,Math.min(1,(t-i*90)/320)); if(u<=0) return;
+    const k=u<1 ? 1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2) : 1; // easeOutBack
+    const [X,Y]=map(it.p), d=-(it.dir||0);
+    c.save(); c.translate(X,Y); c.rotate(d); c.scale(s*k,s*k); c.lineCap='round'; c.lineJoin='round';
+    switch(it.t){
+      case 'eye':
+        if(dark){ c.beginPath(); c.arc(0,0,.085,0,7); c.fillStyle='rgba(255,255,255,.9)'; c.fill(); }
+        c.beginPath(); c.arc(0,0,.068,0,7); c.fillStyle=INK; c.fill();
+        c.beginPath(); c.arc(-.022,-.026,.022,0,7); c.fillStyle='#fff'; c.fill(); break;
+      case 'nose':
+        c.beginPath(); c.moveTo(-.055,-.03); c.quadraticCurveTo(0,-.05,.055,-.03); c.quadraticCurveTo(.03,.04,0,.045); c.quadraticCurveTo(-.03,.04,-.055,-.03);
+        c.fillStyle=INK; c.fill(); break;
+      case 'mouth':
+        c.beginPath(); c.arc(-.04,0,.04,0,Math.PI); c.moveTo(.08,0); c.arc(.04,0,.04,0,Math.PI);
+        c.strokeStyle=INK; c.lineWidth=.018; c.stroke(); break;
+      case 'blush':
+        c.beginPath(); c.ellipse(0,0,.085,.05,0,0,7); c.fillStyle='rgba(255,112,138,.5)'; c.fill(); break;
+      case 'beak':
+        c.beginPath(); c.moveTo(0,-.07); c.lineTo(.15,0); c.lineTo(0,.07); c.closePath(); c.fillStyle='#F08A24'; c.fill();
+        c.strokeStyle='rgba(120,50,0,.5)'; c.lineWidth=.012; c.stroke(); break;
+      case 'feet':
+        c.beginPath(); c.ellipse(0,0,.085,.045,0,0,7); c.fillStyle='#F08A24'; c.fill(); break;
+      case 'ear':
+        c.beginPath(); c.moveTo(.11,0); c.quadraticCurveTo(0,.1,-.06,.07); c.quadraticCurveTo(-.08,0,-.06,-.07); c.quadraticCurveTo(0,-.1,.11,0);
+        c.fillStyle='rgba(200,70,105,.45)'; c.fill(); break;
+      case 'snout':
+        c.beginPath(); c.ellipse(0,0,.2,.13,0,0,7); c.fillStyle='rgba(226,104,136,.6)'; c.fill();
+        c.fillStyle='rgba(110,30,55,.75)'; c.beginPath(); c.ellipse(-.07,0,.028,.045,0,0,7); c.fill(); c.beginPath(); c.ellipse(.07,0,.028,.045,0,0,7); c.fill(); break;
+      case 'whisk':
+        c.strokeStyle=INK; c.lineWidth=.014;
+        for(const a of [-.25,0,.25]){ c.beginPath(); c.moveTo(0,0); c.lineTo(Math.cos(a)*.2, Math.sin(a)*.2); c.stroke(); } break;
+    }
+    c.restore();
+  });
+}
+function paperOf(opt){ return opt.color||paperColor; }
+
+function drawScene(c,V,t){
+  drawMat(c,V);
+  if(anim){
+    const th=anim.type==='crease' ? Math.sin(anim.u*Math.PI)*Math.PI*.45 : easeInOut(anim.u)*Math.PI, cs=Math.cos(th), P=anim.P, n=anim.n, past=th>Math.PI/2;
+    const mv=sorted(anim.parts.move); if(past) mv.reverse();
+    const pose=mv.map(f=>({c:past?!f.c:f.c, pts:f.pts.map(q=>{ const d=sd(q,P,n); return [q[0]-n[0]*d*(1-cs), q[1]-n[1]*d*(1-cs)]; })}));
+    const shade=(1-Math.abs(cs))*.35, lift=Math.sin(th)>.15;
+    if(behind(anim.type)) pose.forEach(f=>drawFacet(c,f,V,{shade,lift}));
+    sorted(anim.parts.stay).forEach(f=>drawFacet(c,f,V));
+    if(!behind(anim.type)) pose.forEach(f=>drawFacet(c,f,V,{shade,lift}));
+    return;
+  }
+  if(drag && drag.fold){
+    const fs=sorted(drag.fold.res.facets);
+    fs.forEach(f=>drawFacet(c,f,V, f.moved ? (behind(foldType)?{alpha:.55}:{alpha:.92,lift:true,outline:true}) : {}));
+    if(behind(foldType)) fs.filter(f=>f.moved).forEach(f=>{ pathPoly(c,f.pts,V); c.save(); c.setLineDash([5,4]); c.lineWidth=1.6; c.strokeStyle=GUIDE; c.stroke(); c.restore(); });
+    return;
+  }
+  // 活過來：跳一下
+  let hop=0; const at=alive?(t||performance.now())-alive.t0:Infinity;
+  if(alive && at>=0 && at<700) hop=Math.abs(Math.sin(at/700*Math.PI*2))*14*(1-at/700);
+  c.save(); c.translate(0,-hop);
+  sorted(paper.facets).forEach(f=>drawFacet(c,f,V));
+  const map=q=>toScreen(q,V);
+  if(alive) drawFace(c,alive.face,map,V.s,{t:at-150});
+  if(stickerMode) drawFace(c,stickers,map,V.s);
+  c.restore();
+}
+function drawLineAcross(c,P,n,V,color,dash){
+  const d=[-n[1],n[0]], L=40, a=toScreen([P[0]-d[0]*L,P[1]-d[1]*L],V), b=toScreen([P[0]+d[0]*L,P[1]+d[1]*L],V);
+  c.save(); c.strokeStyle=color; c.lineWidth=2; c.setLineDash(dash); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.restore();
+}
+function drawArrow(c,s,t,V,color){
+  const A=toScreen(s,V), B=toScreen(t,V), dx=B[0]-A[0], dy=B[1]-A[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L;
+  const mx=(A[0]+B[0])/2-uy*L*.18, my=(A[1]+B[1])/2+ux*L*.18;
+  c.save(); c.strokeStyle=color; c.fillStyle=color; c.lineWidth=2.4;
+  c.beginPath(); c.moveTo(A[0],A[1]); c.quadraticCurveTo(mx,my,B[0],B[1]); c.stroke();
+  const ex=B[0]-mx, ey=B[1]-my, el=Math.hypot(ex,ey)||1, hx=ex/el, hy=ey/el;
+  c.beginPath(); c.moveTo(B[0],B[1]); c.lineTo(B[0]-hx*11-hy*6, B[1]-hy*11+hx*6); c.lineTo(B[0]-hx*11+hy*6, B[1]-hy*11-hx*6); c.closePath(); c.fill();
+  c.beginPath(); c.arc(A[0],A[1],6,0,Math.PI*2); c.lineWidth=2; c.stroke();
+  c.restore();
+}
+function drawOverlays(c,V){
+  const h=hintCache;
+  if(h && h.s && hintOn && !anim && !alive){
+    const fl=foldLine(h.s,h.t); drawLineAcross(c,fl.P,fl.n,V,HINT,TYPES[h.type].dash); drawArrow(c,h.s,h.t,V,HINT);
+    if(h.type==='crease') drawArrow(c,h.t,h.s,V,'rgba(143,219,255,.55)');
+  }
+  if(drag){
+    for(const sp of drag.points){ const [X,Y]=toScreen(sp.p,V); c.beginPath(); c.arc(X,Y,sp.major?3:1.8,0,Math.PI*2); c.fillStyle=sp.major?'rgba(255,255,255,.85)':'rgba(255,255,255,.5)'; c.fill(); }
+    const [sx,sy]=toScreen(drag.s,V); c.beginPath(); c.arc(sx,sy,9,0,Math.PI*2); c.strokeStyle=GUIDE; c.lineWidth=2; c.stroke();
+    if(drag.fold){
+      drawLineAcross(c,drag.fold.P,drag.fold.n,V,GUIDE,TYPES[foldType].dash);
+      const [tx,ty]=toScreen(drag.t,V); c.beginPath(); c.arc(tx,ty,drag.kind==='free'?5:8,0,Math.PI*2);
+      c.fillStyle=drag.kind==='free'?'rgba(255,122,89,.5)':GUIDE; c.fill();
+      if(drag.kind!=='free'){ c.beginPath(); c.arc(tx,ty,13,0,Math.PI*2); c.strokeStyle='rgba(255,255,255,.8)'; c.lineWidth=1.5; c.stroke(); }
+    }
+    if(drag.gain<1){ const [vx,vy]=toScreen(drag.f,V); c.save(); c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=1;
+      c.beginPath(); c.moveTo(vx-7,vy); c.lineTo(vx+7,vy); c.moveTo(vx,vy-7); c.lineTo(vx,vy+7); c.stroke(); c.restore(); }
+  }
+}
+function drawLoupe(){
+  if(!drag) return;
+  const R=Math.min(62, W*.16), off=R+46;
+  let lx=drag.hx, ly=drag.hy-off; if(ly<R+6) ly=drag.hy+off;
+  lx=Math.max(R+6, Math.min(W-R-6, lx));
+  const focus=drag.fold?drag.t:drag.f, z=drag.gain<1?5:2.6;
+  const V={s:view.s*z, cx:focus[0]-(lx-W/2)/(view.s*z), cy:focus[1]+(ly-H/2)/(view.s*z)};
+  ctx.save(); ctx.beginPath(); ctx.arc(lx,ly,R,0,Math.PI*2); ctx.clip();
+  drawScene(ctx,V); drawOverlays(ctx,V);
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(lx,ly,R,0,Math.PI*2); ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.stroke();
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.arc(lx,ly,R+1.5,0,Math.PI*2); ctx.stroke();
+}
+function draw(t){
+  if(!W||!paper) return;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  drawScene(ctx,view,t); drawOverlays(ctx,view); drawLoupe();
+}
+const easeInOut=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+
+/* 小圖：紙＋五官，置中縮放 */
+function drawPet(canvas,facets,color,face){
+  const c=canvas.getContext('2d'), w=canvas.width, h=canvas.height, b=bbox({facets});
+  const s=Math.min(w/(b.x1-b.x0), h/(b.y1-b.y0))*.78, cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2;
+  const map=q=>[w/2+(q[0]-cx)*s, h/2-(q[1]-cy)*s];
+  c.setTransform(1,0,0,1,0,0); c.fillStyle=MAT.bg; c.fillRect(0,0,w,h);
+  for(const f of sorted(facets)){ c.beginPath(); f.pts.forEach((q,i)=>{ const [X,Y]=map(q); i?c.lineTo(X,Y):c.moveTo(X,Y); }); c.closePath();
+    c.fillStyle=f.c?color:BACK; c.fill(); c.lineWidth=1; c.strokeStyle=f.c?FRONT_EDGE:BACK_EDGE; c.stroke(); }
+  if(face) drawFace(c,face,map,s,{color});
+}
+
+/* ---- 摺紙操作 ---- */
+function evPos(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+cv.addEventListener('pointerdown',e=>{
+  if(anim || !paper) return;
+  const [X,Y]=evPos(e), f=toWorld(X,Y);
+  if(stickerMode){ placeSticker(f); return; }
+  const points=snapPoints(paper);
+  let s=null, bd=30/view.s;
+  for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
+  if(!s){ if(topAt(paper,f[0],f[1])) s=f; else return; }
+  cv.setPointerCapture(e.pointerId);
+  const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
+  drag={s, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free'};
+  $('coach').hidden=true; hideToast();
+  updateDrag(X,Y);
+});
+// 微調：手指移動得慢時，游標只跟著走 1/5，可以推到 0.1 mm 等級（放大鏡也會拉到 5 倍）
+cv.addEventListener('pointermove',e=>{ if(!drag) return;
+  const [X,Y]=evPos(e), dx=X-drag.hx, dy=Y-drag.hy, dt=Math.max(1,e.timeStamp-drag.lt), sp=Math.hypot(dx,dy)/dt;
+  const g = sp<.08 ? .2 : sp<.25 ? .5 : 1;
+  drag.gain = drag.gain*.6 + g*.4;
+  if(drag.gain>.9) drag.gain=1;
+  drag.vx=Math.max(0,Math.min(W, drag.vx+dx*drag.gain)); drag.vy=Math.max(0,Math.min(H, drag.vy+dy*drag.gain));
+  drag.hx=X; drag.hy=Y; drag.lt=e.timeStamp;
+  updateDrag(drag.vx,drag.vy); });
+cv.addEventListener('pointerup',()=>{ if(!drag) return; const d=drag; drag=null; $('hud').hidden=true;
+  if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, {type:foldType, scope}); startAnim(fin||d.fold); } else draw(); });
+cv.addEventListener('pointercancel',()=>{ drag=null; $('hud').hidden=true; draw(); });
+
+function updateDrag(X,Y){
+  const f=toWorld(X,Y), s=view.s/Math.max(drag.gain,.35); drag.f=f;   // 微調時吸附範圍跟著變小
+  let t=null, kind='free', bd=Infinity, major=false;
+  const dist=q=>Math.hypot(q[0]-f[0], q[1]-f[1]);
+  for(const sp of drag.points){ const d=dist(sp.p)-(sp.major?5/s:0); if(d<24/s && d<bd){ bd=d; t=sp.p; kind='pt'; major=sp.major; } }
+  if(!t) for(const q of drag.lines){ const d=dist(q); if(d<15/s && d<bd){ bd=d; t=q; kind='line'; } }
+  if(!t) for(const [a,b] of drag.edges){ const dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy; if(L2<1e-12) continue;
+    const u=Math.max(0,Math.min(1,((f[0]-a[0])*dx+(f[1]-a[1])*dy)/L2)), q=[a[0]+dx*u, a[1]+dy*u], d=dist(q);
+    if(d<12/s && d<bd){ bd=d; t=q; kind='edge'; } }
+  if(!t) t=f;
+  drag.t=t; drag.kind=kind;
+  drag.fold = Math.hypot(t[0]-drag.s[0], t[1]-drag.s[1])*view.s > 6 ? foldByPoints(paper, drag.s, t, {type:foldType, scope, preview:true}) : null;
+  updateHud(kind, major);
+  draw();
+}
+// 量測：拖曳距離、摺線角度、摺線到起點的距離（＝拖曳距離的一半），全部到 0.1 mm
+function updateHud(kind,major){
+  const hud=$('hud'), sn={pt:major?'吸附：角／中點':'吸附：1/4 點', line:'吸附：摺線過兩點', edge:'吸附：邊上', free:'自由位置'}[kind];
+  const items=[`<span>${sn}</span>`];
+  if(drag.fold){
+    const d=Math.hypot(drag.t[0]-drag.s[0], drag.t[1]-drag.s[1]), n=drag.fold.n;
+    let ang=Math.atan2(n[0],-n[1])*180/Math.PI; ang=((ang%180)+180)%180;
+    items.push(`<span>拖 ${fmm(d)} mm</span>`, `<span>摺線距起點 ${fmm(d/2)} mm</span>`, `<span>角度 ${ang.toFixed(1)}°</span>`);
+  }
+  if(drag.gain<1) items.push(`<span class="fine">微調 ×${drag.gain<.35?'1/5':'1/2'}</span>`);
+  hud.innerHTML=items.join(''); hud.hidden=false;
+}
+function startAnim(fold){ alive=null; anim={...fold, type:foldType, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:(foldType==='crease'?560:420), u:0}; kick(); }
+function commitFold(){
+  const res=anim.res; anim=null;
+  history.push(paper); histFold.push(true);
+  paper=res;
+  foldCount++; afterChange();
+}
+function afterChange(){
+  alive=null; doneShown=false;
+  fitView(false); updateUndo(); updateReadout(); computeHint(); computeScore(); renderStepCard(); draw();
+}
+function updateUndo(){ $('undo').disabled=!history.length; }
+function updateReadout(){ const b=bbox(paper);
+  $('readout').textContent=`${fmm(b.x1-b.x0)} × ${fmm(b.y1-b.y0)} mm · 已摺 ${foldCount} 次`; }
+
+/* ---- 評分與活過來 ---- */
+function computeScore(){
+  const el=$('score');
+  if(lv.free){ el.textContent='–'; el.className=''; return; }
+  lastMatch=matchInfo(paper,target); const sc=lastMatch.score;
+  el.textContent=Math.floor(sc*100)+'%'; el.className=sc>=passOf()?'ok':'';
+  if(sc>=passOf() && foldCount>0 && (!hintCache || hintCache.done)) comeAlive();
+}
+// 把範例上的五官搬到使用者摺的紙上（跟著位置與方向）
+const passOf=()=>lv.pass||.94;
+const parOf=l=>l.steps.filter(s=>!s.flip&&!s.rot).length;
+const isLesson=()=>!!lv.learn;
+function mappedFace(){ return (lv.face||[]).map(it=>({...it, p:mapFromTarget(lastMatch,it.p), dir:(it.dir||0)+lastMatch.k*Math.PI/2})); }
+function comeAlive(){
+  if(doneShown) return; doneShown=true;
+  alive={t0:performance.now()+260, face:mappedFace()};
+  const st=$('stage'), cry=document.createElement('div'); cry.className='cry'; cry.textContent=isLesson()?'學會了！':lv.cry;
+  $('stepCard').hidden=true;
+  setTimeout(()=>{ st.append(cry); setTimeout(()=>cry.remove(),1500); },420);
+  kick();
+  setTimeout(showDone,1500);
+}
+function starCount(sc){ const par=parOf(lv), d=.94-passOf(); return sc>=.985-d&&foldCount<=par?3:sc>=.97-d?2:sc>=passOf()?1:0; }
+function starHtml(n){ return '★'.repeat(n)+`<span class="off">${'★'.repeat(3-n)}</span>`; }
+function showDone(){
+  if(!alive) return;
+  const sc=lastMatch.score, n=starCount(sc), par=parOf(lv);
+  $('doneTitle').textContent=isLesson()?`學會「${lv.name}」`:`${lv.name}摺好了`;
+  $('collect').textContent=isLesson()?'回到首頁':'收進圖鑑';
+  $('donePct').textContent=Math.floor(sc*100)+'%';
+  $('doneStars').innerHTML=starHtml(n);
+  $('doneInfo').textContent=`用了 ${foldCount} 摺（範例 ${par} 摺）`+(n<3?(foldCount>par?'。少摺幾次可以拿三星':'。再摺準一點可以拿三星'):'');
+  drawPet($('doneCanvas'), paper.facets, paperColor, alive.face);
+  $('done').hidden=false;
+}
+$('keep').onclick=()=>{ $('done').hidden=true; };
+$('collect').onclick=()=>{
+  const n=starCount(lastMatch.score);
+  if(isLesson()){ book.lessons=book.lessons||{}; book.lessons[lv.id]=Math.max(n, book.lessons[lv.id]||0); saveBook(); $('done').hidden=true; openHome(); return; }
+  const old=book.animals[lv.id];
+  if(!old || n>=old.stars) book.animals[lv.id]={stars:n, score:lastMatch.score, color:paperColor, facets:paper.facets.map(f=>({pts:f.pts,z:f.z,c:f.c})), face:alive.face};
+  saveBook(); $('done').hidden=true; openHome(lv.id);
+};
+
+/* ---- 提示 ---- */
+let hintCache=null;
+function computeHint(){
+  hintCache=null;
+  if(lv.free) return;
+  // 有「位置自己決定」的步驟之後，比對放寬一點
+  const freeBefore=i=>lv.steps.slice(0,i).some(s=>s.free);
+  // 全部步驟都做完了（最後一步可能只是壓摺痕，形狀不變，所以用步數判斷）
+  const last=stages.length-1;
+  if(history.length>=last && stageRotation(paper, stages[last], 40, freeBefore(last)?.9:.985)>=0){ hintCache={done:true, i:last}; return; }
+  for(let i=Math.min(stages.length-2, history.length); i>=0; i--){
+    const r=stageRotation(paper, stages[i], 40, freeBefore(i)?.9:.985);
+    if(r>=0){ const st=lv.steps[i]; hintCache=st.flip?{flip:true,i}:st.rot?{rot:true,i}:{s:rotPt(st.s,r), t:rotPt(st.t,r), type:st.type, scope:st.scope, free:st.free, i}; return; }
+  }
+}
+// 教學卡：目前第幾步、要用的摺法與範圍；跟目前設定不一樣就標橘色，點一下切換
+let stepCollapsed=false;
+function renderStepCard(){
+  const el=$('stepCard');
+  if(!lv || lv.free || stickerMode || alive || (hintCache && hintCache.done)){ el.hidden=true; return; }
+  const h=hintCache, N=lv.steps.length;
+  if(!h){ el.innerHTML=`<div class="chips"><span class="chip no">對不上範例</span><button class="x" type="button" id="stepX">${stepCollapsed?'展開':'收起'}</button></div>`+(stepCollapsed?'':`<div>目前的形狀跟教學的任何一步都對不上。按「復原」退回上一步再試試。</div>`); }
+  else{
+    const st=lv.steps[h.i];
+    let chips=`<span class="n">第 ${h.i+1} / ${N} 步</span>`;
+    if(h.flip) chips+=`<span class="chip">按「翻面」</span>`;
+    else if(h.rot) chips+=`<span class="chip">按「旋轉」</span>`;
+    else{
+      chips+=`<button type="button" class="chip${h.type!==foldType?' no':''}" data-set-type="${h.type}">${TYPES[h.type].name}${h.type!==foldType?'（點我切換）':''}</button>`;
+      chips+=`<button type="button" class="chip${h.scope!==scope?' no':''}" data-set-scope="${h.scope}">${h.scope==='flap'?'只摺這一片':'全部層'}${h.scope!==scope?'（點我切換）':''}</button>`;
+      if(h.free) chips+=`<span class="chip">位置自己決定</span>`;
+    }
+    chips+=`<button class="x" type="button" id="stepX">${stepCollapsed?'展開':'收起'}</button>`;
+    el.innerHTML=`<div class="chips">${chips}</div>`+(stepCollapsed?'':`<div>${st.text}</div>`);
+  }
+  el.hidden=false;
+  el.querySelectorAll('[data-set-type]').forEach(b=>b.onclick=()=>setType(b.dataset.setType));
+  el.querySelectorAll('[data-set-scope]').forEach(b=>b.onclick=()=>setScope(b.dataset.setScope));
+  const x=$('stepX'); if(x) x.onclick=()=>{ stepCollapsed=!stepCollapsed; renderStepCard(); };
+}
+$('hint').onclick=()=>{
+  if(lv.free){ enterStickers(); return; }
+  const h=hintCache;
+  if(!h){ showToast(lastMatch&&lastMatch.score>=.94?'已經摺好了':'目前的形狀跟範例對不上，先按「復原」退回去'); hintOn=false; draw(); return; }
+  if(h.done){ showToast('步驟都做完了'); return; }
+  if(h.flip){ showToast(`第 ${h.i+1} 步：按「翻面」把紙翻過來`); return; }
+  if(h.rot){ showToast(`第 ${h.i+1} 步：按「旋轉」轉 90°`); return; }
+  hintOn=!hintOn;
+  if(hintOn) showToast(`第 ${h.i+1} 步：從圓圈拖到箭頭（${TYPES[h.type].name}・${h.scope==='flap'?'只摺這一片':'全部層'}）`);
+  draw();
+};
+
+/* ---- 工具列 ---- */
+$('undo').onclick=()=>{ if(anim||!history.length) return; paper=history.pop(); if(histFold.pop()) foldCount=Math.max(0,foldCount-1); afterChange(); };
+function setType(t){ foldType=t; $('typeLbl').textContent=TYPES[t].name; $('typeBtn').classList.toggle('on',t!=='valley');
+  $('typeIcon').setAttribute('stroke-dasharray', TYPES[t].dash.map(x=>(x/2.2).toFixed(1)).join(' ')); renderStepCard(); }
+function setScope(v){ scope=v; $('scopeLbl').textContent=v==='flap'?'這一片':'全部層'; $('scopeBtn').classList.toggle('on',v==='flap'); renderStepCard(); }
+function lineSvg(t){ return `<svg viewBox="0 0 64 28"><line x1="4" y1="16" x2="60" y2="16" stroke="currentColor" stroke-width="2.4" stroke-dasharray="${TYPES[t].dash.join(' ')}"/>`
+  +(t==='crease'?'<path d="M22 9l10-5 10 5M22 23l10 4 10-4" fill="none" stroke="currentColor" stroke-width="1.6"/>':'')
+  +(t==='outside'||t==='inside'?`<text x="32" y="8" font-size="8" text-anchor="middle" fill="currentColor">${t==='outside'?'往外包':'往內塞'}</text>`:'')+'</svg>'; }
+function openTypeSheet(){
+  const box=$('typeList'); box.innerHTML='';
+  for(const t of Object.keys(TYPES)){
+    const b=document.createElement('button'); b.type='button'; b.className='typeopt'+(t===foldType?' on':'');
+    b.innerHTML=lineSvg(t)+`<div><b>${TYPES[t].name}</b><span>${TYPES[t].desc}</span></div>`;
+    b.onclick=()=>{ setType(t); $('typeSheet').hidden=true; };
+    box.append(b);
+  }
+  $('typeSheet').hidden=false;
+}
+$('typeBtn').onclick=openTypeSheet;
+$('typeClose').onclick=()=>{ $('typeSheet').hidden=true; };
+$('scopeBtn').onclick=()=>{ setScope(scope==='all'?'flap':'all'); showToast(scope==='flap'?'只摺這一片：只翻手指下最上面那片，和跟它連著的部分':'全部層：摺線那一側的所有層一起摺'); };
+$('flip').onclick=()=>{ if(anim) return; history.push(paper); histFold.push(false); paper=flipPaper(paper); afterChange(); };
+$('rot').onclick=()=>{ if(anim) return; history.push(paper); histFold.push(false); paper=rotPaper(paper); afterChange(); };
+let toastT=0;
+function showToast(m){ const t=$('toast'); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(hideToast,2600); }
+function hideToast(){ $('toast').hidden=true; }
+
+/* ---- 自由創作：貼五官 ---- */
+const STICKERS=[['eye','眼睛'],['nose','鼻子'],['mouth','嘴巴'],['blush','腮紅'],['whisk','鬍鬚'],['beak','嘴喙'],['ear','耳朵']];
+function buildStickerTray(){
+  const tr=$('stickerTray'); tr.innerHTML=''; tr.style.gridTemplateColumns='repeat(4,1fr)';
+  for(const [t,label] of STICKERS){
+    const b=document.createElement('button'); b.type='button'; b.className='tool'+(t===stickerType?' on':'');
+    const c=document.createElement('canvas'); c.width=c.height=44; c.className='stk';
+    const x=c.getContext('2d'); drawFace(x,[{t,p:[0,0]}],()=>[22,22],t==='snout'?90:120,{color:'#F4C93A'});
+    b.append(c, document.createTextNode(label));
+    b.onclick=()=>{ stickerType=t; buildStickerTray(); };
+    tr.append(b);
+  }
+  const done=document.createElement('button'); done.type='button'; done.className='tool go'; done.textContent='完成';
+  done.onclick=()=>{ if(!stickers.length){ showToast('先在紙上點一下，貼上眼睛'); return; } openNameSheet(); };
+  tr.append(done);
+}
+function enterStickers(){
+  if(!foldCount){ showToast('先摺幾下再來貼五官'); return; }
+  stickerMode=true; $('foldTray').hidden=true; $('stickerTray').hidden=false; buildStickerTray(); $('stepCard').hidden=true;
+  $('coach').textContent='點紙上的位置貼五官，再點一次貼好的會拿掉。鬍鬚和嘴喙會朝外。'; $('coach').hidden=false;
+  draw();
+}
+function exitStickers(){ stickerMode=false; $('foldTray').hidden=false; $('stickerTray').hidden=true; $('coach').hidden=true; draw(); }
+function placeSticker(f){
+  const i=stickers.findIndex(s=>Math.hypot(s.p[0]-f[0], s.p[1]-f[1])<.09);
+  if(i>=0){ stickers.splice(i,1); draw(); return; }
+  if(!topAt(paper,f[0],f[1])){ showToast('要貼在紙上喔'); return; }
+  const b=bbox(paper), cx=(b.x0+b.x1)/2;
+  stickers.push({t:stickerType, p:f, dir:f[0]<cx?Math.PI:0});
+  $('coach').hidden=true; draw();
+}
+function openNameSheet(){
+  $('petName').value=`我的動物 ${book.mine.length+1} 號`;
+  drawPet($('nameCanvas'), paper.facets, paperColor, stickers);
+  $('nameSheet').hidden=false;
+}
+$('nameBack').onclick=()=>{ $('nameSheet').hidden=true; };
+$('nameSave').onclick=()=>{
+  const name=($('petName').value||'').trim()||'無名小動物';
+  book.mine.unshift({name, color:paperColor, facets:paper.facets.map(f=>({pts:f.pts,z:f.z,c:f.c})), face:stickers.slice()});
+  book.mine=book.mine.slice(0,12); saveBook();
+  $('nameSheet').hidden=true; exitStickers(); openHome();
+};
+
+/* ---- 圖鑑首頁與選紙 ---- */
+function openHome(justGot){
+  const lg=$('lessonGrid'); lg.innerHTML=''; const learned=book.lessons||{};
+  $('lessonCount').textContent=`${LESSONS.filter(l=>learned[l.id]).length} / ${LESSONS.length} 學會`;
+  LESSONS.forEach((l,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.className='card';
+    const c=document.createElement('canvas'); c.width=c.height=200;
+    drawPet(c, buildStages(l).pop().facets, l.color, null);
+    b.append(c);
+    b.insertAdjacentHTML('beforeend',`<span class="tag${learned[l.id]?' got':''}">${learned[l.id]?'學會了':'第 '+(i+1)+' 課'}</span><div class="nm"><b style="font-size:15px">${l.name}</b></div><div class="meta"><span>${parOf(l)} 摺</span></div>`);
+    b.onclick=()=>openPick(l);
+    lg.append(b);
+  });
+  const g=$('animalGrid'); g.innerHTML='';
+  const got=ANIMALS.filter(a=>book.animals[a.id]).length;
+  $('dexCount').textContent=`${got} / ${ANIMALS.length}`;
+  for(const a of ANIMALS.concat([FREE])){
+    const b=document.createElement('button'); b.type='button'; b.className='card'+(a.free?' free':'');
+    const c=document.createElement('canvas'); c.width=c.height=240;
+    const rec=book.animals[a.id];
+    if(rec) drawPet(c, rec.facets, rec.color, rec.face);
+    else if(a.free) drawPet(c, startPaper(a).facets, a.color, null);
+    else drawPet(c, buildStages(a).pop().facets, a.color, a.face);
+    const folds=a.free?'':`${parOf(a)} 摺`;
+    b.append(c);
+    b.insertAdjacentHTML('beforeend', a.free
+      ? `<span class="tag">自由</span><div class="nm"><b>${a.name}</b></div><div class="meta"><span>摺好再貼五官、取名字</span></div>`
+      : `<span class="tag${rec?' got':''}">${rec?'已收集':'未收集'}</span><div class="nm"><b>${a.name}</b><span class="stars">${starHtml(rec?rec.stars:0)}</span></div><div class="meta"><span>${folds} · ${a.level}</span><span>${a.cry}</span></div>`);
+    b.onclick=()=>openPick(a);
+    g.append(b);
+  }
+  const ml=$('mineList'); ml.innerHTML='';
+  $('mineTitle').hidden=$('mineList').hidden=!book.mine.length;
+  for(const m of book.mine){
+    const fig=document.createElement('figure'), c=document.createElement('canvas'); c.width=c.height=192;
+    drawPet(c,m.facets,m.color,m.face);
+    const cap=document.createElement('figcaption'); cap.textContent=m.name;
+    fig.append(c,cap); ml.append(fig);
+  }
+  $('home').hidden=false;
+}
+let pickAnimal=null, pickColor=null;
+function openPick(a){
+  pickAnimal=a; pickColor=(book.animals[a.id]&&book.animals[a.id].color)||a.color;
+  $('pickName').textContent=a.name;
+  const rec=book.animals[a.id], learned=(book.lessons||{})[a.id];
+  $('pickStars').innerHTML=a.free?'':starHtml(a.learn?(learned||0):(rec?rec.stars:0));
+  const extra=a.steps?[a.steps.some(s=>s.flip)?'翻面':'', a.steps.some(s=>s.rot)?'旋轉':''].filter(Boolean).join('、'):'';
+  $('pickInfo').textContent=a.free?'沒有目標形狀':`${a.learn?'基本功':a.level} · ${parOf(a)} 摺${extra?'＋'+extra:''}${a.colorUp?' · 彩色面朝上開始':''}`;
+  $('pickTip').textContent=a.learn||a.tip;
+  $('pickSrc').hidden=!(a.src||a.mine);
+  if(a.src) $('pickSrc').innerHTML=`摺法參考：<a href="${a.src.url}" target="_blank" rel="noopener">${a.src.label}</a>`;
+  else if(a.mine) $('pickSrc').textContent='暖身關：我自己設計的簡化摺法，不是傳統作品。';
+  renderSwatches(); drawPickPreview();
+  $('pick').hidden=false;
+}
+function drawPickPreview(){
+  const a=pickAnimal;
+  drawPet($('pickCanvas'), a.free?startPaper(a).facets:buildStages(a).pop().facets, pickColor, a.free?null:a.face);
+}
+function renderSwatches(){
+  const box=$('swatches'); box.innerHTML='';
+  for(const [hex,name] of COLORS){
+    const b=document.createElement('button'); b.type='button'; b.className='sw'+(hex===pickColor?' on':''); b.style.background=hex;
+    b.title=name; b.setAttribute('aria-label',name);
+    b.onclick=()=>{ pickColor=hex; renderSwatches(); drawPickPreview(); };
+    box.append(b);
+  }
+}
+$('pickCancel').onclick=()=>{ $('pick').hidden=true; };
+$('pickGo').onclick=()=>{ $('pick').hidden=true; $('home').hidden=true; loadAnimal(pickAnimal, pickColor); };
+$('homeBtn').onclick=()=>{ if(stickerMode) exitStickers(); openHome(); };
+
+function loadAnimal(a,color){
+  lv=a; paperColor=color; stages=a.free?[startPaper(a)]:buildStages(a); target=stages[stages.length-1];
+  paper=startPaper(a); history=[]; histFold=[]; foldCount=0; doneShown=false; alive=null; hintOn=false; lastMatch=null; stickers=[];
+  $('lvName').textContent=a.name;
+  $('lvSub').textContent=a.free?'自由創作 · 摺好按「完成」':`${a.learn?'基本功':a.level} · ${parOf(a)} 摺`;
+  $('targetBox').style.visibility=a.free?'hidden':'visible';
+  if(!a.free) drawPet($('thumb'), target.facets, color, null);
+  $('hintLbl').textContent=a.free?'完成':'提示';
+  $('hint').classList.toggle('go',!!a.free);
+  setType('valley'); setScope('all'); hideToast(); exitStickers(); stepCollapsed=false;
+  if(a.free){ $('coach').textContent=a.tip; $('coach').hidden=false; }
+  fitView(true); updateUndo(); updateReadout(); computeHint(); computeScore(); renderStepCard(); draw();
+}
+
+loadAnimal(LESSONS[0], LESSONS[0].color);
+openHome();
+</script>
+
+</body>
+</html>
