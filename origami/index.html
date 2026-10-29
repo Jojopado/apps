@@ -180,7 +180,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--good);outline-o
     <div class="coach" id="coach" hidden></div>
     <div class="step" id="stepCard" hidden></div>
     <div class="hud" id="hud" hidden></div>
-    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button><button id="pinBtn" type="button" aria-label="按住（另一隻手）" title="按住：點紙上一點當作另一隻手按住（電腦也可以按住空白鍵或滑鼠右鍵）">📌</button><button id="redo" type="button" aria-label="重做" title="重做"><span>重做</span></button><button id="cpBtn" type="button" aria-label="摺痕圖" title="攤開看山線谷線"><span>摺痕</span></button><button id="v3Btn" type="button" aria-label="3D 檢視" title="3D 檢視：可以轉來轉去看，還能用物理塑形"><span>3D</span></button></div>
+    <div class="zoom"><button id="zIn" type="button" aria-label="放大">＋</button><button id="zOut" type="button" aria-label="縮小">－</button><button id="zFit" type="button" aria-label="看全部"><span>全部</span></button><button id="zTop" type="button" aria-label="俯視／斜看" title="切換：正上方看（摺細節最準）／斜著看"><span>俯視</span></button><button id="pinBtn" type="button" aria-label="按住（另一隻手）" title="按住：點紙上一點當作另一隻手按住（電腦也可以按住空白鍵或滑鼠右鍵）">📌</button><button id="redo" type="button" aria-label="重做" title="重做"><span>重做</span></button><button id="cpBtn" type="button" aria-label="摺痕圖" title="攤開看山線谷線"><span>摺痕</span></button><button id="v3Btn" type="button" aria-label="塑形" title="塑形：用物理把紙拉開、調摺痕角度（例如把翅膀打開）"><span>塑形</span></button></div>
     <div class="v3p" id="v3p" hidden>
       <div class="r"><span>摺疊程度</span><input type="range" id="v3fold" min="0" max="100" value="100"><b id="v3foldV">100%</b></div>
       <div class="r" id="v3crow" hidden><span>這條摺痕</span><input type="range" id="v3ang" min="0" max="180" value="180"><b id="v3angV">180°</b></div>
@@ -930,14 +930,14 @@ function dihedral(x,h){ // 有正負的摺角：攤平 0；谷摺（從紙原本
 function cross3(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
 function dot3(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
 const wrapPi=t=>{ while(t>Math.PI) t-=2*Math.PI; while(t<-Math.PI) t+=2*Math.PI; return t; };
-function hingeTarget(sim,i,h){ const o=sim.over.get(i); if(o!=null) return o; return h.full*0.985*sim.p; }
+function hingeTarget(sim,i,h){ const o=sim.over.get(i); if(o!=null) return o; if(sim.anim) return h.t0+(h.t1-h.t0)*sim.u; return h.full*0.985*sim.p; }
 function simStep(sim, iters=20){
   const x=sim.x, H=1e-5, x0=x.map(q=>q.slice());
   for(let it=0; it<iters; it++){
     // 摺痕：用數值微分算角度對 4 個點的梯度（穩、不會搞錯正負）
     sim.hinges.forEach((h,hi)=>{
       // 正在被調的摺痕最硬；有人在調的時候其他摺痕放軟（像用手掰紙，旁邊會跟著讓）
-      const k=h.kind==='facet'?1:sim.over.has(hi)?1:h.kind==='flat'?0.04:(sim.over.size||sim.pins.size?0.15:0.5), tgt=hingeTarget(sim,hi,h);
+      const k=h.kind==='facet'?1:sim.over.has(hi)?1:sim.anim&&h.t0!==h.t1?0.9:h.kind==='flat'&&!sim.anim?0.04:(sim.soft?0.15:0.5), tgt=hingeTarget(sim,hi,h);
       const C=wrapPi(dihedral(x,h)-tgt); if(Math.abs(C)<1e-6) return;
       const ids=[h.a,h.b,h.c,h.d], g=[]; let sum=0;
       for(const id of ids){ const gi=[0,0,0]; for(let k2=0;k2<3;k2++){ const o=x[id][k2]; x[id][k2]=o+H; const p1=dihedral(x,h); x[id][k2]=o-H; const p2=dihedral(x,h); x[id][k2]=o; gi[k2]=wrapPi(p1-p2)/(2*H); }
@@ -953,6 +953,35 @@ function simStep(sim, iters=20){
   }
   let mv=0; x.forEach((q,i)=>{ mv=Math.max(mv, Math.hypot(q[0]-x0[i][0],q[1]-x0[i][1],q[2]-x0[i][2])); }); return mv;
 }
+
+/* ---- 摺的過程用物理：從 before（摺之前）到 after（摺好）----
+   網格用 after 的摺痕（含新摺痕），起點位置＝before 的樣子；每條摺痕的角度從 before 的角度轉到 after 的角度；
+   沒動到的點釘在桌上。u（sim.u）從 0 到 1。 */
+const SHEET_THICK=0.0045;
+function levelsOf(p){ // 每片紙在它那個位置疊在第幾層
+  const ids=p.facets.slice().sort((a,b)=>a.z-b.z).map(f=>f.id), lv=new Map();
+  for(const a of ids){ let m=0; for(const b of ids){ if(b===a) break; if(above(p,a,b)>0) m=Math.max(m,(lv.get(b)||0)+1); } lv.set(a,m); }
+  return lv; }
+function posOnPaper(p,lv,q){ let xy=null, zs=0, n=0;
+  for(const f of p.facets) if(pipInc(f.sh,q)){ if(!xy) xy=aff(f.T,q); zs+=lv.get(f.id)*SHEET_THICK; n++; }
+  return xy?[xy[0],xy[1],n?zs/n:0]:null; }
+function hingeKindIn(p,sim,h){ // 這條摺痕在 p 這個狀態是攤平、谷摺還是山摺
+  const A=sim.V[h.a], B=sim.V[h.b], m=[(A[0]+B[0])/2,(A[1]+B[1])/2], d=[B[0]-A[0],B[1]-A[1]], L=Math.hypot(...d), nL=[-d[1]/L*1e-4,d[0]/L*1e-4];
+  const fa=p.facets.find(f=>pip(f.sh,m[0]+nL[0],m[1]+nL[1])), fb=p.facets.find(f=>pip(f.sh,m[0]-nL[0],m[1]-nL[1]));
+  if(!fa||!fb||fa===fb||Math.sign(det(fa.T))===Math.sign(det(fb.T))) return 0;
+  const gA=above(p,fb.id,fa.id); return ((det(fa.T)>0)===(gA>0)) ? -1 : 1; }   // 谷 −、山 +
+function foldSim(before, after){
+  const sim=buildSim(after), lvB=levelsOf(before), lvA=levelsOf(after);
+  sim.x=sim.V.map(q=>posOnPaper(before,lvB,q)||[q[0],q[1],0]);
+  sim.xEnd=sim.V.map(q=>posOnPaper(after,lvA,q)||[q[0],q[1],0]);
+  sim.V.forEach((q,i)=>{ const a=sim.x[i], b=sim.xEnd[i]; if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-6) sim.pins.set(i,a.slice()); });
+  for(const h of sim.hinges){ h.t0=hingeKindIn(before,sim,h)*Math.PI*0.995; h.t1=hingeKindIn(after,sim,h)*Math.PI*0.995; }
+  sim.anim=true; sim.u=0;
+  return sim;
+}
+// 畫的時候：快結束時往精確結果靠（物理沒有碰撞，最後對齊到正確的層序）
+function simPose(sim,u){ const w=u<.8?0:Math.min(1,(u-.8)/.2), e=w*w*(3-2*w);
+  return e<=0 ? sim.x : sim.x.map((q,i)=>{ const b=sim.xEnd[i]; return [q[0]+(b[0]-q[0])*e, q[1]+(b[1]-q[1])*e, q[2]+(b[2]-q[2])*e]; }); }
 
 /* 從起點出發的「精準目標」：吸附點本身，加上起點對任兩個吸附點連線的鏡射（摺線正好通過那兩點） */
 function lineTargets(points,s,edges){
@@ -1102,7 +1131,8 @@ let W=0, H=0, DPR=1;
 let lv=ANIMALS[0], stages=[], target=null, paperColor=lv.color;
 let paper=null, history=[], histFold=[], foldType='valley', scope='all', drag=null, anim=null, hintOn=false, foldCount=0;
 let layerN=2, pin=null, pinSrc=null, pinPid=null, pinMode=false, redoStack=[], mouseW=null, duo=null;
-let view={s:100, cx:0, cy:0}, viewT={s:100, cx:0, cy:0};
+let view={s:100, cx:0, cy:0, yaw:0, pitch:.5}, viewT={s:100, cx:0, cy:0, yaw:0, pitch:.5};
+const CAMF=6;   // 透視強度（越小越明顯）
 let raf=0, lastMatch=null, doneShown=false, alive=null, stickerMode=false, stickers=[], stickerType='eye';
 let book={animals:{}, mine:[]};
 try{ const b=JSON.parse(localStorage.getItem('origami.zoo')||'null'); if(b&&b.animals) book=b; }catch(e){}
@@ -1128,23 +1158,39 @@ function fitView(snap){
   if(userZoom && !snap) return;
   const b=bbox(paper), pad=48, w=Math.max(b.x1-b.x0,.2), h=Math.max(b.y1-b.y0,.2);
   const s=Math.min((W-pad*2)/w, (H-pad*2)/h, baseScale()*2.2);
-  viewT={s, cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2};
+  viewT={...viewT, s:s*(1-.3*Math.abs(Math.sin(viewT.pitch))), cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2};
   if(snap) view={...viewT};
   kick();
 }
 function zoomAt(factor,X,Y){
-  const w=toWorld(X,Y), s2=Math.max(baseScale()*.5, Math.min(baseScale()*16, view.s*factor));
-  view={s:s2, cx:w[0]-(X-W/2)/s2, cy:w[1]+(Y-H/2)/s2}; viewT={...view}; userZoom=true; draw();
+  const w=toWorld(X,Y); view.s=Math.max(baseScale()*.5, Math.min(baseScale()*16, view.s*factor));
+  anchorView(view,w,X,Y); viewT={...view}; userZoom=true; draw();
 }
-const toScreen=(q,V=view)=>[W/2+(q[0]-V.cx)*V.s, H/2-(q[1]-V.cy)*V.s];
-const toWorld=(X,Y,V=view)=>[(X-W/2)/V.s+V.cx, -(Y-H/2)/V.s+V.cy];
+// 3D 投影：先繞 z 轉 yaw，再往後仰 pitch；深度越大越靠近你
+function camXf(q,z,V){ const dx=q[0]-V.cx, dy=q[1]-V.cy, cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0), cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0);
+  const x1=dx*cy-dy*sy, y1=dx*sy+dy*cy, y2=y1*cp+z*sp, z2=-y1*sp+z*cp, k=CAMF/(CAMF-z2); return [x1*k, y2*k, z2]; }   // 從南邊上方看：北邊比較遠、往上的東西在畫面上往上
+const toScreen=(q,V=view,z=0)=>{ const r=camXf(q,z,V); return [W/2+(V.ox||0)+r[0]*V.s, H/2+(V.oy||0)-r[1]*V.s, r[2]]; };
+// 螢幕 → 桌面（z=0）上的點
+const toWorld=(X,Y,V=view)=>{ const a=(X-W/2-(V.ox||0))/V.s, b=-(Y-H/2-(V.oy||0))/V.s, cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0), cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0);
+  const den=cp*CAMF-b*sp, y1=Math.abs(den)<1e-6?0:b*CAMF/den, k=CAMF/(CAMF+y1*sp), x1=a/k;
+  return [x1*cy+y1*sy+V.cx, -x1*sy+y1*cy+V.cy]; };
+function anchorView(V,w,X,Y){ const w2=toWorld(X,Y,V); V.cx+=w[0]-w2[0]; V.cy+=w[1]-w2[1]; }   // 讓世界點 w 留在螢幕 (X,Y)
+const fromBelow=(V=view)=>Math.cos(V.pitch||0)<0;
 
 function kick(){ if(!raf) raf=requestAnimationFrame(frame); }
 function frame(t){
   raf=0; let more=false;
-  for(const key of ['s','cx','cy']){ const d=viewT[key]-view[key];
+  for(const key of ['s','cx','cy','yaw','pitch']){ const d=viewT[key]-view[key];
     if(Math.abs(d) > (key==='s'?.05:1e-4)){ view[key]+=d*.2; more=true; } else view[key]=viewT[key]; }
-  if(anim){ const u=Math.min(1,(t-anim.t0)/anim.dur); anim.u=u; if(u>=1) commitFold(); else more=true; }
+  if(anim){ const u=Math.min(1,(t-anim.t0)/anim.dur); anim.u=u;
+    if(anim.sim){ // 物理：摺痕角度跟著時間走
+      const e=easeInOut(u);
+      if(anim.crease){ anim.sim.u=Math.sin(Math.PI*u)*.85; anim.su=0; }
+      else if(anim.morph){ anim.sim.u=anim.u0+(1-anim.u0)*e; anim.su=anim.sim.u; }
+      else { anim.sim.u=e; anim.su=e; }
+      simStep(anim.sim, 8); }
+    if(u>=1) commitFold(); else more=true; }
+  if(drag && drag.sim){ drag.sim.u=drag.u; if(simStep(drag.sim,6)>1e-5) more=true; }
   if(alive && t-alive.t0 < 1400) more=true;
   if(v3 && v3.mode==='phys'){ const mv=simStep(v3.sim, 6); if(mv>2e-5 || v3.grab) more=true; }
   draw(t);
@@ -1152,9 +1198,13 @@ function frame(t){
 }
 
 /* ---- 繪圖 ---- */
-function pathPoly(c,pts,V){ c.beginPath(); pts.forEach((q,i)=>{ const [X,Y]=toScreen(q,V); i?c.lineTo(X,Y):c.moveTo(X,Y); }); c.closePath(); }
+function pathPoly(c,pts,V,z=0){ c.beginPath(); pts.forEach((q,i)=>{ const [X,Y]=toScreen(q,V,z); i?c.lineTo(X,Y):c.moveTo(X,Y); }); c.closePath(); }
+const lvCache=new WeakMap();
+function withLevels(p){ if(!p||lvCache.has(p)) return p; const lv=levelsOf(p); for(const f of p.facets) f.zl=lv.get(f.id)*SHEET_THICK; lvCache.set(p,1); return p; }
+function drawOrder(fs,V){ const a=sorted(fs); return fromBelow(V)?a.reverse():a; }
 function drawFacet(c,f,V,o={}){
-  pathPoly(c,f.pts,V);
+  if(fromBelow(V) && !o.keepSide) f={...f, c:!f.c};
+  pathPoly(c,f.pts,V,f.zl||0);
   c.save(); c.globalAlpha=o.alpha??1;
   c.shadowColor='rgba(0,0,0,.28)'; c.shadowBlur=o.lift?14:3; c.shadowOffsetY=o.lift?7:1.2;
   c.fillStyle=f.c?paperColor:BACK; c.fill();
@@ -1166,7 +1216,14 @@ function drawFacet(c,f,V,o={}){
 }
 function drawMat(c,V){
   c.fillStyle=MAT.bg; c.fillRect(0,0,W,H);
-  const [wx0,wy1]=toWorld(0,0,V), [wx1,wy0]=toWorld(W,H,V);
+  const cs=[[0,0],[W,0],[0,H],[W,H]].map(([X,Y])=>toWorld(X,Y,V)), lim=q=>Math.max(-9,Math.min(9,q));
+  const wx0=lim(Math.min(...cs.map(q=>q[0]))), wx1=lim(Math.max(...cs.map(q=>q[0]))), wy0=lim(Math.min(...cs.map(q=>q[1]))), wy1=lim(Math.max(...cs.map(q=>q[1])));
+  if(V.yaw||V.pitch){ // 斜著看：畫成透視的格線
+    const step=CM, i0=Math.floor(wx0/step), i1=Math.ceil(wx1/step), j0=Math.floor(wy0/step), j1=Math.ceil(wy1/step); if((i1-i0)>300||(j1-j0)>300) return;
+    c.lineWidth=1;
+    for(let i=i0;i<=i1;i++){ const A=toScreen([i*step,wy0],V), B=toScreen([i*step,wy1],V); c.strokeStyle=i%5===0?MAT.bold:MAT.fine; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); }
+    for(let j=j0;j<=j1;j++){ const A=toScreen([wx0,j*step],V), B=toScreen([wx1,j*step],V); c.strokeStyle=j%5===0?MAT.bold:MAT.fine; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); }
+    return; }
   const step=CM, i0=Math.floor(wx0/step), i1=Math.ceil(wx1/step), j0=Math.floor(wy0/step), j1=Math.ceil(wy1/step);
   if((i1-i0) > 400) return;
   c.lineWidth=1;
@@ -1275,8 +1332,26 @@ function morphFacets(from,to,u){
     const pts=f.sh.map(q=>{ const a=aff(o.T,q), b=aff(f.T,q); return [a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u]; });
     return {pts, c:u<.5?o.c:f.c, z:u<.5?(o.z??0):f.z}; }));
 }
+// 物理網格的三角形：依深度由遠到近畫；朝你的是哪一面看投影後的轉向
+function drawSim(c,V,sim,xs){
+  const f0=paper.facets[0], upC=(det(f0.T)>0)===!!f0.c, L=[.35,.45,.82];
+  const tri=sim.tris.map(t=>{ const P3=t.v.map(i=>xs[i]), sc=P3.map(q=>toScreen(q,V,q[2]));
+    const ar=(sc[1][0]-sc[0][0])*(sc[2][1]-sc[0][1])-(sc[1][1]-sc[0][1])*(sc[2][0]-sc[0][0]);
+    const n=cross3([P3[1][0]-P3[0][0],P3[1][1]-P3[0][1],P3[1][2]-P3[0][2]],[P3[2][0]-P3[0][0],P3[2][1]-P3[0][1],P3[2][2]-P3[0][2]]), l=Math.hypot(...n)||1;
+    return {sc, d:(sc[0][2]+sc[1][2]+sc[2][2])/3, up:ar<0, lit:.66+.34*Math.abs((n[0]*L[0]+n[1]*L[1]+n[2]*L[2])/l), ek:t.ek}; }).sort((a,b)=>a.d-b.d);
+  for(const p of tri){ const col=(p.up?upC:!upC)?paperColor:BACK;
+    c.beginPath(); p.sc.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])); c.closePath();
+    c.fillStyle=col; c.fill(); c.fillStyle=`rgba(0,0,0,${(1-p.lit).toFixed(3)})`; c.fill();
+    c.strokeStyle=col===paperColor?FRONT_EDGE:BACK_EDGE; c.lineWidth=.8;
+    for(let e=0;e<3;e++){ const k=p.ek&&p.ek[e]; if(k==='facet') continue; if(k==='flat'){ c.globalAlpha=.25; } const A=p.sc[e], B=p.sc[(e+1)%3]; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); c.globalAlpha=1; } }
+}
+function tagEdges(sim){ const kindOf=new Map(sim.hinges.map(h=>[Math.min(h.a,h.b)+'|'+Math.max(h.a,h.b), h.kind]));
+  for(const t of sim.tris) t.ek=[0,1,2].map(e=>{ const a=t.v[e], b=t.v[(e+1)%3]; return kindOf.get(Math.min(a,b)+'|'+Math.max(a,b))||'edge'; }); return sim; }
+function makeSim(before,after){ try{ return tagEdges(foldSim(before,after)); }catch(e){ return null; } }
 function drawScene(c,V,t){
   drawMat(c,V);
+  if(anim && anim.sim){ drawSim(c,V,anim.sim,simPose(anim.sim,anim.su)); return; }
+  if(drag && drag.sim){ drawSim(c,V,drag.sim,drag.sim.x); return; }
   if(anim && anim.morph){ const u=anim.u0+(1-anim.u0)*anim.u;
     if(anim.m3===undefined) anim.m3=build3D(paper,anim.res);
     if(anim.m3) frame3D(anim.m3,u).forEach(f=>drawFacet(c,f,V,{lift:f.lift,shade:f.shade}));
@@ -1297,9 +1372,9 @@ function drawScene(c,V,t){
     if(!behind(anim.type)) pose.forEach(f=>drawFacet(c,f,V,{shade,lift}));
     return;
   }
-  if(drag && drag.fold && drag.smart && !drag.fold.ok){ sorted(paper.facets).forEach(f=>drawFacet(c,f,V)); return; }
+  if(drag && drag.fold && drag.smart && !drag.fold.ok){ drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V)); return; }
   if(drag && drag.fold){
-    const fs=sorted(drag.fold.res.facets);
+    const fs=drawOrder(withLevels(drag.fold.res).facets,V);
     fs.forEach(f=>drawFacet(c,f,V, f.moved ? (behind(foldType)?{alpha:.55}:{alpha:.92,lift:true,outline:true}) : {}));
     if(behind(foldType)) fs.filter(f=>f.moved).forEach(f=>{ pathPoly(c,f.pts,V); c.save(); c.setLineDash([5,4]); c.lineWidth=1.6; c.strokeStyle=GUIDE; c.stroke(); c.restore(); });
     return;
@@ -1308,7 +1383,7 @@ function drawScene(c,V,t){
   let hop=0; const at=alive?(t||performance.now())-alive.t0:Infinity;
   if(alive && at>=0 && at<700) hop=Math.abs(Math.sin(at/700*Math.PI*2))*14*(1-at/700);
   c.save(); c.translate(0,-hop);
-  sorted(paper.facets).forEach(f=>drawFacet(c,f,V));
+  drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V));
   if(!stickerMode && !alive) drawSnapDots(c,V);
   const map=q=>toScreen(q,V);
   if(alive) drawFace(c,alive.face,map,V.s,{t:at-150});
@@ -1318,10 +1393,10 @@ function drawScene(c,V,t){
 // 平常就在紙上顯示主要吸附點（角、邊中點、摺痕交點），方便對準
 const dotCache=new WeakMap();
 function drawSnapDots(c,V){
-  let pts=dotCache.get(paper); if(!pts){ pts=snapPoints(paper).filter(e=>e.major).map(e=>e.p); dotCache.set(paper,pts); }
+  let pts=dotCache.get(paper); if(!pts){ withLevels(paper); pts=snapPoints(paper).filter(e=>e.major).map(e=>{ let z=0; for(const f of paper.facets) if(pipInc(f.pts,e.p)) z=Math.max(z,f.zl||0); return [e.p[0],e.p[1],z]; }); dotCache.set(paper,pts); }
   const r=Math.max(1.6, Math.min(2.6, V.s/150));
   c.save();
-  for(const q of pts){ const [X,Y]=toScreen(q,V); c.beginPath(); c.arc(X,Y,r+1,0,Math.PI*2); c.fillStyle='rgba(20,30,26,.45)'; c.fill(); c.beginPath(); c.arc(X,Y,r,0,Math.PI*2); c.fillStyle='rgba(255,255,255,.9)'; c.fill(); }
+  for(const q of pts){ const [X,Y]=toScreen(q,V,q[2]||0); c.beginPath(); c.arc(X,Y,r+1,0,Math.PI*2); c.fillStyle='rgba(20,30,26,.45)'; c.fill(); c.beginPath(); c.arc(X,Y,r,0,Math.PI*2); c.fillStyle='rgba(255,255,255,.9)'; c.fill(); }
   c.restore();
 }
 function drawLineAcross(c,P,n,V,color,dash){
@@ -1371,7 +1446,7 @@ function drawLoupe(){
   let lx=drag.hx, ly=drag.hy-off; if(ly<R+6) ly=drag.hy+off;
   lx=Math.max(R+6, Math.min(W-R-6, lx));
   const focus=drag.fold?drag.t:drag.f, z=drag.gain<1?5:2.6;
-  const V={s:view.s*z, cx:focus[0]-(lx-W/2)/(view.s*z), cy:focus[1]+(ly-H/2)/(view.s*z)};
+  const V={...view, s:view.s*z, cx:focus[0], cy:focus[1], ox:lx-W/2, oy:ly-H/2};
   ctx.save(); ctx.beginPath(); ctx.arc(lx,ly,R,0,Math.PI*2); ctx.clip();
   drawScene(ctx,V); drawOverlays(ctx,V);
   ctx.restore();
@@ -1400,6 +1475,7 @@ function drawPet(canvas,facets,color,face){
 /* ---- 摺紙操作 ---- */
 function evPos(e){ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
 const ptrs=new Map(); let pinch=null;
+function pinchAng(){ const [a,b]=[...ptrs.values()]; return Math.atan2(b[1]-a[1],b[0]-a[0]); }
 function pinchInfo(){ const [a,b]=[...ptrs.values()]; return {d:Math.hypot(a[0]-b[0],a[1]-b[1])||1, m:[(a[0]+b[0])/2,(a[1]+b[1])/2]}; }
 cv.addEventListener('wheel',e=>{ if(v3) return; e.preventDefault();
   if(drag && !drag.pan && !drag.compound){ setLayerN((scope==='layers'?layerN:1)+(e.deltaY>0?1:-1)); renderLayers(); return; }
@@ -1415,7 +1491,7 @@ cv.addEventListener('pointerdown',e=>{
     e.stopImmediatePropagation(); duo={first:drag.pid, second:e.pointerId, hold:toWorld(drag.x0,drag.y0), p1:[drag.hx,drag.hy], p2:evPos(e), ev:{clientX:e.clientX, clientY:e.clientY, pointerId:e.pointerId, timeStamp:e.timeStamp}};
     if(foldType==='squash') duoConfirm(); else { drag.paused=true; draw(); }
     return; }
-  if(ptrs.size===2){ drag=null; $('hud').hidden=true; const pi=pinchInfo(); pinch={d0:pi.d, s0:view.s, w:toWorld(pi.m[0],pi.m[1])}; try{ try{ cv.setPointerCapture(e.pointerId); }catch(_){} }catch(_){} draw(); return; }
+  if(ptrs.size===2){ drag=null; $('hud').hidden=true; const pi=pinchInfo(); pinch={d0:pi.d, s0:view.s, w:toWorld(pi.m[0],pi.m[1]), a0:pinchAng(), yaw0:view.yaw}; try{ try{ cv.setPointerCapture(e.pointerId); }catch(_){} }catch(_){} draw(); return; }
   if(ptrs.size>2) return;
 },true);
 cv.addEventListener('pointermove',e=>{
@@ -1431,7 +1507,7 @@ cv.addEventListener('pointermove',e=>{
     if(e.pointerId===duo.second && Math.hypot(P[0]-duo.p2[0],P[1]-duo.p2[1])>8){ duoConfirm(); }
     return; }
   if(pinch && ptrs.size>=2){ e.stopImmediatePropagation(); const pi=pinchInfo(), s2=Math.max(baseScale()*.5, Math.min(baseScale()*16, pinch.s0*pi.d/pinch.d0));
-    view={s:s2, cx:pinch.w[0]-(pi.m[0]-W/2)/s2, cy:pinch.w[1]+(pi.m[1]-H/2)/s2}; viewT={...view}; userZoom=true; draw(); }
+    view.s=s2; view.yaw=pinch.yaw0+(pinchAng()-pinch.a0); anchorView(view,pinch.w,pi.m[0],pi.m[1]); viewT={...view}; userZoom=true; draw(); }
 },true);
 const endPtr=e=>{ if(v3) return; ptrs.delete(e.pointerId);
   if(e.pointerType==='mouse' && e.button===2){ e.stopImmediatePropagation(); if(pinSrc==='rmb') setPin(null); return; }
@@ -1444,7 +1520,7 @@ function duoConfirm(){ // 第一隻手指＝按住，第二隻手指重新開始
   duo.on=true; setPin(duo.hold,'touch'); pinPid=duo.first; drag=null; startDrag(duo.ev); if(drag){ drag.pid=duo.second; drag.hold=pin; } draw(); }
 function setPin(q,src){ pin=q; pinSrc=q?src:null; $('pinBtn').classList.toggle('on',!!pin||pinMode);
   if(drag && !drag.pan && !drag.compound){ drag.hold=pin; drag.smartKey=null; if(drag.t) updateDrag(drag.vx,drag.vy); } draw(); }
-function startPan(e){ const [X,Y]=evPos(e); drag={pan:true, x0:X, y0:Y, v0:{...view}, pid:e.pointerId, hx:X, hy:Y}; try{ cv.setPointerCapture(e.pointerId); }catch(_){} }
+function startPan(e,orbit){ const [X,Y]=evPos(e); drag={pan:true, orbit:!!orbit, x0:X, y0:Y, v0:{...view}, w0:toWorld(X,Y), pid:e.pointerId, hx:X, hy:Y}; try{ cv.setPointerCapture(e.pointerId); }catch(_){} }
 // 電腦的「另一隻手」：按住空白鍵或 Shift＝按住滑鼠游標那一點
 addEventListener('keydown',e=>{ if(e.target.closest&&e.target.closest('input,textarea')) return;
   if((e.code==='Space'||e.key==='Shift') && !e.repeat && !v3 && mouseW && $('home').hidden && $('cpSheet').hidden && !drag){ e.preventDefault(); if(!pin) setPin(mouseW,'key'); }
@@ -1456,6 +1532,7 @@ cv.addEventListener('pointerup',endPtr,true); cv.addEventListener('pointercancel
 $('zIn').onclick=()=>zoomAt(1.6,W/2,H/2);
 $('zOut').onclick=()=>zoomAt(1/1.6,W/2,H/2);
 $('zFit').onclick=()=>{ userZoom=false; fitView(false); };
+$('zTop').onclick=()=>{ const top=Math.abs(viewT.pitch)<.02&&Math.abs(viewT.yaw)<.02; viewT.pitch=top?.5:0; viewT.yaw=top?viewT.yaw:0; $('zTop').firstChild.textContent=top?'俯視':'斜看'; userZoom=false; fitView(false); kick(); };
 cv.addEventListener('pointerdown',e=>{
   if(anim || !paper || pinch || ptrs.size>1) return;
   startDrag(e);
@@ -1468,7 +1545,7 @@ function startDrag(e){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
     let out=compoundStep(paper, lv.steps[h.i]);
     if(!out){ out=compoundStep(stages[h.i], lv.steps[h.i]); if(out) paper=stages[h.i]; }
-    if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1};
+    if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1, sim:matchMedia('(prefers-reduced-motion: reduce)').matches?null:makeSim(paper,out.res)};
       $('coach').hidden=true; hideToast(); draw(); return; }
   }
   const points=snapPoints(paper);
@@ -1480,7 +1557,7 @@ function startDrag(e){
   let s=follow?follow.s:null, bd=30/view.s;
   if(!follow) for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
   if(pinMode){ setPin(topAt(paper,f[0],f[1])?f:null,'sticky'); pinMode=false; $('pinBtn').classList.toggle('on',!!pin); showToast(pin?'釘住了：這幾層不會動。再按一次 📌 取消':'沒有點在紙上'); return; }
-  if(!s){ if(topAt(paper,f[0],f[1])) s=f; else { startPan(e); return; } }
+  if(!s){ if(topAt(paper,f[0],f[1])) s=f; else { startPan(e,true); return; } }
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
   drag={s, follow, points, lines:lineTargets(points,s,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, x0:X, y0:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free', pid:e.pointerId, hold:pin};
@@ -1491,9 +1568,12 @@ function startDrag(e){
 cv.addEventListener('pointermove',e=>{ if(!drag) return;
   if(drag.pid!=null && e.pointerId!==drag.pid) return;   // 按住的那隻手指不算
   if(drag.paused) return;
-  if(drag.pan){ const [X,Y]=evPos(e); view={s:view.s, cx:drag.v0.cx-(X-drag.x0)/view.s, cy:drag.v0.cy+(Y-drag.y0)/view.s}; viewT={...view}; userZoom=true; draw(); return; }
+  if(drag.pan){ const [X,Y]=evPos(e);
+    if(drag.orbit){ view.yaw=drag.v0.yaw+(X-drag.x0)*.008; view.pitch=Math.max(-1.35,Math.min(1.35,drag.v0.pitch+(Y-drag.y0)*.008)); }
+    else anchorView(view,drag.w0,X,Y);
+    viewT={...view}; userZoom=true; draw(); return; }
   if(drag.compound){ const [X,Y]=evPos(e), f=toWorld(X,Y), dx=drag.t[0]-drag.s[0], dy=drag.t[1]-drag.s[1];
-    drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-drag.s[0])*dx+(f[1]-drag.s[1])*dy)/(dx*dx+dy*dy))); draw(); return; }
+    drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-drag.s[0])*dx+(f[1]-drag.s[1])*dy)/(dx*dx+dy*dy))); kick(); return; }
   const [X,Y]=evPos(e), dx=X-drag.hx, dy=Y-drag.hy, dt=Math.max(1,e.timeStamp-drag.lt), sp=Math.hypot(dx,dy)/dt;
   const g = sp<.08 ? .2 : sp<.25 ? .5 : 1;
   drag.gain = drag.gain*.6 + g*.4;
@@ -1508,14 +1588,16 @@ function endDrag(e){ if(!drag) return;
   if(d.pan||d.paused){ draw(); return; }
   if(d.smart){
     const out=d.fold&&d.fold.ok ? d.fold : (Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6 ? smartFold(paper,d.s,d.t,{hold:d.hold}) : null);
-    if(out){ alive=null; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:900, u:0}; kick(); }
+    if(out){ alive=null; const rd=matchMedia('(prefers-reduced-motion: reduce)').matches; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:rd?1:1000, u:0, sim:rd?null:makeSim(paper,out.res), su:0}; kick(); }
     else { showToast('這樣壓不開：起點要按在最上面那片的角，終點拖到它壓平後的位置（摺痕先壓好會更容易）'); draw(); }
     return; }
   if(d.compound){
-    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:360, u:0, m3:d.m3}; kick(); }
+    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:520, u:0, m3:d.m3, sim:d.sim, su:d.u}; kick(); }
     else { showToast('沿著箭頭一路拖到終點，紙才會摺過去'); draw(); }
     return; }
-  if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, foldOpts(d)); if(fin) startAnim(fin); else { showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了'); draw(); } } else { if(d.t && Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6) showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了（紙會穿過自己）'); draw(); }
+  if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, foldOpts(d));
+    const mid=fin&&foldType==='crease' ? (foldByPoints(paper, d.s, d.t, {...foldOpts(d), type:'valley'})||{}).res : null;
+    if(fin) startAnim(fin, mid); else { showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了'); draw(); } } else { if(d.t && Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6) showToast(d.hold?'按住的地方擋住了，這樣摺不了':'這樣摺不了（紙會穿過自己）'); draw(); }
 }
 function foldOpts(d,preview){ return {type:foldType, scope, n:layerN, hold:d&&d.hold||null, preview:!!preview}; }
 cv.addEventListener('pointercancel',()=>{ drag=null; $('hud').hidden=true; draw(); });
@@ -1569,7 +1651,11 @@ function updateHud(kind,major){
   if(drag.gain<1) items.push(`<span class="fine">微調 ×${drag.gain<.35?'1/5':'1/2'}</span>`);
   hud.innerHTML=items.join(''); hud.hidden=false;
 }
-function startAnim(fold){ alive=null; anim={...fold, type:foldType, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:(foldType==='crease'?560:420), u:0}; kick(); }
+function startAnim(fold,mid){ alive=null;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 摺痕：先摺到 mid 再打開（物理用 mid 的形狀）；其他：直接摺到結果
+  const sim=reduce?null:makeSim(paper, mid||fold.res);
+  anim={...fold, type:foldType, sim, crease:!!mid, t0:performance.now(), dur:reduce?1:(mid?900:760), u:0, su:0}; kick(); }
 function commitFold(){
   const res=anim.res; lastFoldType=anim.type||null; anim=null; redoStack=[];
   history.push(paper); histFold.push(true);
@@ -1699,7 +1785,7 @@ $('pinBtn').onclick=()=>{ if(pin||pinMode){ pinMode=false; setPin(null); showToa
 $('cpBtn').onclick=()=>{ drawCP(); $('cpSheet').hidden=false; };
 /* ================= 3D 檢視 ================= */
 let v3=null;
-const THICK=0.0045, OY3=60;   // 一層紙的厚度（約 0.34 mm），疊起來看得出層次
+const THICK=SHEET_THICK, OY3=0;   // 一層紙的厚度（約 0.34 mm），疊起來看得出層次
 // 每片紙在「它那個位置」疊在第幾層（只算真的疊在它下面的，不是整個模型的順序）
 function localLevels(){ const lv=new Map(), ids=sorted(paper.facets).map(f=>f.id);
   for(const a of ids){ let m=0; for(const b of ids){ if(b===a) break; if(above(paper,a,b)>0) m=Math.max(m,(lv.get(b)||0)+1); } lv.set(a,m); }
@@ -1711,7 +1797,7 @@ function exactPos(sim){ // 平摺結果的 3D 位置：每一點用所在紙片�
     return xy?[xy[0],xy[1],n?zs/n:0]:[q[0],q[1],0]; }); }
 function enter3D(keepCam){
   const sim=buildSim(paper), b=bbox(paper);
-  const cam=keepCam&&v3 ? {yaw:v3.yaw,pitch:v3.pitch,s:v3.s,c:v3.c} : {yaw:-.55, pitch:.95, s:view.s*.8, c:[(b.x0+b.x1)/2,(b.y0+b.y1)/2,0]};
+  const cam=keepCam&&v3 ? {yaw:v3.yaw,pitch:v3.pitch,s:v3.s,c:v3.c} : {yaw:view.yaw, pitch:view.pitch, s:view.s, c:[view.cx,view.cy,0]};
   sim.x=exactPos(sim); sim.p=1;
   // 摺痕分組：同一直線、相連、同種類的網格邊＝一條摺痕
   const groups=[], gOf=new Map();
@@ -1732,19 +1818,19 @@ function enter3D(keepCam){
   $('v3fold').value=100; $('v3foldV').textContent='100%'; $('v3crow').hidden=true; $('v3pull').classList.remove('on');
   draw();
 }
-function exit3D(){ v3=null; $('v3p').hidden=true; $('readout').hidden=false; $('v3Btn').classList.remove('on'); renderStepCard(); draw(); }
+function exit3D(){ if(v3){ Object.assign(view,{yaw:v3.yaw, pitch:Math.max(-1.35,Math.min(1.35,v3.pitch)), s:v3.s, cx:v3.c[0], cy:v3.c[1]}); viewT={...view}; } v3=null; $('v3p').hidden=true; $('readout').hidden=false; $('v3Btn').classList.remove('on'); renderStepCard(); draw(); }
 function cam3(q){ // 世界座標 → [螢幕X, 螢幕Y, 深度]（深度越大越靠近你）
   const c=v3.c, dx=q[0]-c[0], dy=q[1]-c[1], dz=q[2]-c[2], cy=Math.cos(v3.yaw), sy=Math.sin(v3.yaw), cp=Math.cos(v3.pitch), sp=Math.sin(v3.pitch);
-  const x1=dx*cy-dy*sy, y1=dx*sy+dy*cy, y2=y1*cp-dz*sp, z2=y1*sp+dz*cp, k=6/(6-z2);
+  const x1=dx*cy-dy*sy, y1=dx*sy+dy*cy, y2=y1*cp+dz*sp, z2=-y1*sp+dz*cp, k=CAMF/(CAMF-z2);
   return [W/2+x1*v3.s*k, H/2-OY3-y2*v3.s*k, z2];
 }
 function uncam3(X,Y,z2){ // 螢幕＋深度 → 世界
-  const k=6/(6-z2), x1=(X-W/2)/(v3.s*k), y2=-(Y-H/2+OY3)/(v3.s*k), cp=Math.cos(v3.pitch), sp=Math.sin(v3.pitch), cy=Math.cos(v3.yaw), sy=Math.sin(v3.yaw);
-  const y1=y2*cp+z2*sp, dz=-y2*sp+z2*cp, dx=x1*cy+y1*sy, dy=-x1*sy+y1*cy;
+  const k=CAMF/(CAMF-z2), x1=(X-W/2)/(v3.s*k), y2=-(Y-H/2+OY3)/(v3.s*k), cp=Math.cos(v3.pitch), sp=Math.sin(v3.pitch), cy=Math.cos(v3.yaw), sy=Math.sin(v3.yaw);
+  const y1=y2*cp-z2*sp, dz=y2*sp+z2*cp, dx=x1*cy+y1*sy, dy=-x1*sy+y1*cy;
   return [dx+v3.c[0], dy+v3.c[1], dz+v3.c[2]];
 }
 function camDir(n){ const cy=Math.cos(v3.yaw), sy=Math.sin(v3.yaw), cp=Math.cos(v3.pitch), sp=Math.sin(v3.pitch);
-  const x1=n[0]*cy-n[1]*sy, y1=n[0]*sy+n[1]*cy; return [x1, y1*cp-n[2]*sp, y1*sp+n[2]*cp]; }
+  const x1=n[0]*cy-n[1]*sy, y1=n[0]*sy+n[1]*cy; return [x1, y1*cp+n[2]*sp, -y1*sp+n[2]*cp]; }
 function polys3(){ // 要畫的面：精確模式用紙片＋厚度；物理模式用三角網格
   const out=[];
   if(v3.mode==='exact'){
@@ -1808,6 +1894,7 @@ $('v3fold').oninput=e=>{ const v=+e.target.value; $('v3foldV').textContent=v+'%'
   if(v===100 && !v3.sim.over.size && !v3.sim.pins.size){ v3.sim.p=1; v3.mode='exact'; v3.sim.x=exactPos(v3.sim); draw(); return; }
   v3.sim.p=v/100; toPhys(); kick(); };
 $('v3ang').oninput=e=>{ if(v3.sel==null) return; const deg=+e.target.value; $('v3angV').textContent=deg+'°';
+  v3.sim.soft=true;
   for(const hi of v3.groups[v3.sel]){ const h=v3.sim.hinges[hi]; v3.sim.over.set(hi, Math.sign(h.full||1)*Math.min(deg,177.3)*Math.PI/180); }
   toPhys(); kick(); };
 // 3D 的滑鼠／觸控
@@ -1819,7 +1906,7 @@ cv.addEventListener('pointerdown',e=>{ if(!v3) return; e.stopImmediatePropagatio
   v3.mv={x0:X,y0:Y,x:X,y:Y,yaw:v3.yaw,pitch:v3.pitch,c:v3.c.slice(),pan:btn===1||btn===2,moved:false};
   if(v3.pull && btn===0){ // 抓最近的點
     let best=null, bd=30; v3.sim.x.forEach((q,i)=>{ const A=cam3(q), d=Math.hypot(A[0]-X,A[1]-Y); if(d<bd){ bd=d; best=i; } });
-    if(best!=null){ toPhys(); const A=cam3(v3.sim.x[best]); v3.grab={id:best, z:A[2]}; v3.sim.pins.set(best, v3.sim.x[best].slice()); kick(); } }
+    if(best!=null){ toPhys(); v3.sim.soft=true; const A=cam3(v3.sim.x[best]); v3.grab={id:best, z:A[2]}; v3.sim.pins.set(best, v3.sim.x[best].slice()); kick(); } }
 },true);
 cv.addEventListener('pointermove',e=>{ if(!v3) return; e.stopImmediatePropagation(); if(!v3.ptr.has(e.pointerId)) return; const [X,Y]=evPos(e); v3.ptr.set(e.pointerId,[X,Y]);
   if(v3.two && v3.ptr.size>=2){ const [a,b]=[...v3.ptr.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1])||1, m=[(a[0]+b[0])/2,(a[1]+b[1])/2];
