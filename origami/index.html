@@ -1192,14 +1192,12 @@ function frame(t){
   for(const key of ['s','cx','cy','yaw','pitch']){ const d=viewT[key]-view[key];
     if(Math.abs(d) > (key==='s'?.05:1e-4)){ view[key]+=d*.2; more=true; } else view[key]=viewT[key]; }
   if(anim){ const u=Math.min(1,(t-anim.t0)/anim.dur); anim.u=u;
-    if(anim.sim){ // 物理：摺痕角度跟著時間走
+    if(anim.track){ // 照時間播固定路線
       const e=easeInOut(u);
-      if(anim.crease){ anim.sim.u=Math.sin(Math.PI*u)*.85; anim.su=0; }
-      else if(anim.morph){ anim.sim.u=anim.u0+(1-anim.u0)*e; anim.su=anim.sim.u; }
-      else { anim.sim.u=e; anim.su=e; }
-      simStep(anim.sim, 8); }
+      let want = anim.back ? anim.u0*(1-e) : anim.crease ? Math.sin(Math.PI*u)*.85 : anim.u0+(1-anim.u0)*e;
+      trackAdvance(anim.track,want,30); anim.tu=want; }
     if(u>=1) commitFold(); else more=true; }
-  if(drag && drag.sim){ const du=drag.u-drag.sim.u; drag.sim.u+=Math.max(-.035,Math.min(.035,du)); if(simStep(drag.sim,6)>1e-5 || Math.abs(du)>1e-4) more=true; }
+  if(drag && drag.track){ const want=drag.crease?drag.u*.85:drag.u, have=trackAdvance(drag.track,want); drag.tu=Math.min(want,have); if(have<want-1e-9) more=true; }
   if(alive && t-alive.t0 < 1400) more=true;
   if(v3 && v3.mode==='phys'){ const mv=simStep(v3.sim, 6); if(mv>2e-5 || v3.grab) more=true; }
   draw(t);
@@ -1370,11 +1368,80 @@ function drawSim(c,V,sim,xs){
 }
 function tagEdges(sim){ const kindOf=new Map(sim.hinges.map(h=>[Math.min(h.a,h.b)+'|'+Math.max(h.a,h.b), h.kind]));
   for(const t of sim.tris) t.ek=[0,1,2].map(e=>{ const a=t.v[e], b=t.v[(e+1)%3]; return kindOf.get(Math.min(a,b)+'|'+Math.max(a,b))||'edge'; }); return sim; }
+/* ================= WebGL：只負責畫紙（三角形＋線） ================= */
+const GLR=(()=>{ try{
+  const cvs=document.createElement('canvas'), gl=cvs.getContext('webgl',{alpha:true,premultipliedAlpha:true,preserveDrawingBuffer:true,antialias:true,depth:true});
+  if(!gl) return null;
+  const CAM=`uniform vec2 uC; uniform float uCz,uYaw,uPitch,uS,uF; uniform vec2 uWH,uOff;
+    vec4 proj(vec3 p,float bias){ float dx=p.x-uC.x, dy=p.y-uC.y, dz=p.z-uCz, cy=cos(uYaw), sy=sin(uYaw), cp=cos(uPitch), sp=sin(uPitch);
+      float x1=dx*cy-dy*sy, y1=dx*sy+dy*cy, y2=y1*cp+dz*sp, z2=-y1*sp+dz*cp, k=uF/(uF-z2);
+      float X=uWH.x*.5+uOff.x+x1*k*uS, Y=uWH.y*.5+uOff.y-y2*k*uS;
+      return vec4(X/uWH.x*2.-1., 1.-Y/uWH.y*2., -(z2+bias)/8., 1.); }`;
+  const mk=(vs,fs)=>{ const p=gl.createProgram(); for(const [t,src] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]){ const sh=gl.createShader(t); gl.shaderSource(sh,src); gl.compileShader(sh); if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); gl.attachShader(p,sh); } gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error('link'); return p; };
+  const triP=mk(`attribute vec3 aP,aN,aCF,aCB; attribute float aA; varying vec3 vCF,vCB; varying float vL,vA; ${CAM}
+    void main(){ gl_Position=proj(aP,0.); vec3 L=normalize(vec3(.3,-.45,.85)); vL=.62+.38*abs(dot(normalize(aN),L)); vCF=aCF; vCB=aCB; vA=aA; }`,
+    `precision mediump float; varying vec3 vCF,vCB; varying float vL,vA; void main(){ vec3 c=(gl_FrontFacing?vCF:vCB)*vL; gl_FragColor=vec4(c*vA,vA); }`);
+  const lineP=mk(`attribute vec3 aP; attribute vec4 aC; varying vec4 vC; ${CAM} void main(){ gl_Position=proj(aP,.002); vC=aC; }`,
+    `precision mediump float; varying vec4 vC; void main(){ gl_FragColor=vec4(vC.rgb*vC.a,vC.a); }`);
+  const buf=gl.createBuffer();
+  const loc=(p,n)=>gl.getAttribLocation(p,n);
+  function uniforms(p,V,w,h){ gl.useProgram(p); const u=n=>gl.getUniformLocation(p,n);
+    gl.uniform2f(u('uC'),V.cx,V.cy); gl.uniform1f(u('uCz'),V.cz||0); gl.uniform1f(u('uYaw'),V.yaw||0); gl.uniform1f(u('uPitch'),V.pitch||0); gl.uniform1f(u('uS'),V.s); gl.uniform1f(u('uF'),CAMF);
+    gl.uniform2f(u('uWH'),w,h); gl.uniform2f(u('uOff'),V.ox||0,V.oy||0); }
+  function attrib(p,name,size,stride,off){ const l=loc(p,name); if(l<0) return; gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,size,gl.FLOAT,false,stride*4,off*4); }
+  return {
+    // tris: [{p:[[x,y,z]×3], n:[x,y,z], cf:[r,g,b], cb:[r,g,b], a}]；lines: [{a:[x,y,z], b:[x,y,z], c:[r,g,b,a]}]
+    render(V,tris,lines){
+      const w=W, h=H; if(cvs.width!==Math.round(w*DPR)||cvs.height!==Math.round(h*DPR)){ cvs.width=Math.round(w*DPR); cvs.height=Math.round(h*DPR); }
+      gl.viewport(0,0,cvs.width,cvs.height); gl.clearColor(0,0,0,0); gl.clearDepth(1); gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1,1);
+      const draw=(list,opaque)=>{ if(!list.length) return; const d=new Float32Array(list.length*3*13); let o=0;
+        for(const t of list) for(const q of t.p){ d.set([q[0],q[1],q[2]||0, t.n[0],t.n[1],t.n[2], t.cf[0],t.cf[1],t.cf[2], t.cb[0],t.cb[1],t.cb[2], t.a??1],o); o+=13; }
+        uniforms(triP,V,w,h); gl.bindBuffer(gl.ARRAY_BUFFER,buf); gl.bufferData(gl.ARRAY_BUFFER,d,gl.STREAM_DRAW);
+        attrib(triP,'aP',3,13,0); attrib(triP,'aN',3,13,3); attrib(triP,'aCF',3,13,6); attrib(triP,'aCB',3,13,9); attrib(triP,'aA',1,13,12);
+        gl.depthMask(opaque); gl.drawArrays(gl.TRIANGLES,0,list.length*3); gl.depthMask(true); };
+      draw(tris.filter(t=>(t.a??1)>=1),true); draw(tris.filter(t=>(t.a??1)<1),false);
+      if(lines&&lines.length){ const d=new Float32Array(lines.length*2*7); let o=0; for(const l of lines){ d.set([...l.a.slice(0,2),l.a[2]||0,...l.c],o); o+=7; d.set([...l.b.slice(0,2),l.b[2]||0,...l.c],o); o+=7; }
+        uniforms(lineP,V,w,h); gl.bindBuffer(gl.ARRAY_BUFFER,buf); gl.bufferData(gl.ARRAY_BUFFER,d,gl.STREAM_DRAW); attrib(lineP,'aP',3,7,0); attrib(lineP,'aC',4,7,3);
+        gl.disableVertexAttribArray(loc(triP,'aN')); gl.drawArrays(gl.LINES,0,lines.length*2); }
+      for(const n of ['aP','aN','aCF','aCB','aA']){ const l=loc(triP,n); if(l>=0) gl.disableVertexAttribArray(l); }
+      for(const n of ['aP','aC']){ const l=loc(lineP,n); if(l>=0) gl.disableVertexAttribArray(l); }
+      return cvs; } };
+}catch(e){ console.warn('WebGL off',e); return null; } })();
+const rgb01=h=>{ const n=parseInt(h.slice(1),16); return [(n>>16&255)/255,(n>>8&255)/255,(n&255)/255]; };
+const EDGE_ON_COLOR=[0,0,0,.2], EDGE_ON_BACK=[70/255,70/255,50/255,.2];
+// 平摺的紙：每片三角化，高度＝它那個位置的層；從上面看是 f.c 那面
+function glFacets(p,opt={}){ const tris=[], lines=[], pc=rgb01(paperColor), bk=rgb01(BACK);
+  withLevels(p);
+  for(const f of p.facets){ let pts=f.pts; if(polyArea(pts)<0) pts=pts.slice().reverse();
+    const mv=opt.moved&&f.moved, z=(f.zl||0)+(mv?opt.lift||0:0), top=f.c?pc:bk, bot=f.c?bk:pc, tint=c=>mv?c.map((v,i)=>v*.86+[1,.48,.35][i]*.14):c, a=mv?(opt.alpha??1):1;
+    for(let i=1;i+1<pts.length;i++) tris.push({p:[[...pts[0],z],[...pts[i],z],[...pts[i+1],z]], n:[0,0,1], cf:tint(top), cb:tint(bot), a});
+    const ec=f.c?EDGE_ON_COLOR:EDGE_ON_BACK; for(let i=0;i<pts.length;i++) lines.push({a:[...pts[i],z], b:[...pts[(i+1)%pts.length],z], c:mv&&opt.outline?[1,.48,.35,.95]:ec}); }
+  return {tris, lines}; }
+// 物理網格
+function glSim(sim,xs){ const tris=[], lines=[], pc=rgb01(paperColor), bk=rgb01(BACK), f0=paper.facets[0], upC=(det(f0.T)>0)===!!f0.c, up=upC?pc:bk, dn=upC?bk:pc;
+  for(const t of sim.tris){ const P3=t.v.map(i=>xs[i]), n=cross3([P3[1][0]-P3[0][0],P3[1][1]-P3[0][1],P3[1][2]-P3[0][2]],[P3[2][0]-P3[0][0],P3[2][1]-P3[0][1],P3[2][2]-P3[0][2]]);
+    tris.push({p:P3, n, cf:up, cb:dn});
+    for(let e=0;e<3;e++){ const k=t.ek&&t.ek[e]; if(k==='facet') continue; lines.push({a:P3[e], b:P3[(e+1)%3], c:k==='flat'?[0,0,0,.06]:[0,0,0,.2]}); } }
+  return {tris, lines}; }
+function glBlit(c,V,scene){ if(!GLR) return false; const cvs=GLR.render(V,scene.tris,scene.lines); c.drawImage(cvs,0,0,W,H); return true; }
 function makeSim(before,after){ try{ return tagEdges(foldSim(before,after)); }catch(e){ return null; } }
+const TRACK_K=48;
+function makeTrack(before,after){ if(matchMedia('(prefers-reduced-motion: reduce)').matches) return null; const sim=makeSim(before,after); if(!sim) return null; return {sim, frames:[sim.x.map(q=>q.slice())]}; }
+// 往前多算幾格（一定照 0→1 的順序算，所以同一個進度永遠是同一個形狀）
+function trackAdvance(tr,u,budget=8){ const need=Math.min(TRACK_K,Math.ceil(u*TRACK_K)), t0=performance.now();
+  while(tr.frames.length-1<need && (performance.now()-t0<budget || tr.frames.length<2)){ const k=tr.frames.length; tr.sim.u=k/TRACK_K; simStep(tr.sim,10); tr.frames.push(tr.sim.x.map(q=>q.slice())); }
+  return (tr.frames.length-1)/TRACK_K; }   // 目前算到哪
+function trackPose(tr,u,toEnd=true){ const f=Math.max(0,Math.min(u,(tr.frames.length-1)/TRACK_K))*TRACK_K, i=Math.floor(f), j=Math.min(i+1,tr.frames.length-1), w=f-i, A=tr.frames[i], B=tr.frames[j];
+  const xs=A.map((q,n)=>[q[0]+(B[n][0]-q[0])*w, q[1]+(B[n][1]-q[1])*w, q[2]+(B[n][2]-q[2])*w]);
+  if(!toEnd) return xs; const e0=u<.8?0:Math.min(1,(u-.8)/.2), e=e0*e0*(3-2*e0);   // 快結束時對齊精確結果
+  return e<=0?xs:xs.map((q,n)=>{ const b=tr.sim.xEnd[n]; return [q[0]+(b[0]-q[0])*e, q[1]+(b[1]-q[1])*e, q[2]+(b[2]-q[2])*e]; }); }
+function drawTrack(c,V,tr,u,toEnd){ tr.sim.u=u; const xs=trackPose(tr,u,toEnd); if(!glBlit(c,V,glSim(tr.sim,xs))) drawSim(c,V,tr.sim,xs); }
 function drawScene(c,V,t){
   drawMat(c,V);
-  if(anim && anim.sim){ drawSim(c,V,anim.sim,simPose(anim.sim,anim.su)); return; }
-  if(drag && drag.sim){ drawSim(c,V,drag.sim,drag.sim.x); return; }
+  if(anim && anim.track){ drawTrack(c,V,anim.track,anim.tu,!anim.crease); return; }
+  if(drag && drag.track){ drawTrack(c,V,drag.track,drag.tu||0,!drag.crease); return; }
   if(anim && anim.morph){ const u=anim.u0+(1-anim.u0)*anim.u;
     if(anim.m3===undefined) anim.m3=build3D(paper,anim.res);
     if(anim.m3) frame3D(anim.m3,u).forEach(f=>drawFacet(c,f,V,{lift:f.lift,shade:f.shade}));
@@ -1395,7 +1462,8 @@ function drawScene(c,V,t){
     if(!behind(anim.type)) pose.forEach(f=>drawFacet(c,f,V,{shade,lift}));
     return;
   }
-  if(drag && drag.fold && drag.smart && !drag.fold.ok){ drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V)); return; }
+  if(drag && drag.fold && drag.smart && !drag.fold.ok){ if(!glBlit(c,V,glFacets(paper))) drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V)); return; }
+  if(drag && drag.fold && GLR){ const bh=behind(foldType); glBlit(c,V,glFacets(drag.fold.res,{moved:true, lift:bh?0:.004, alpha:bh?.55:.95, outline:true})); return; }
   if(drag && drag.fold){
     const fs=drawOrder(withLevels(drag.fold.res).facets,V);
     fs.forEach(f=>drawFacet(c,f,V, f.moved ? (behind(foldType)?{alpha:.55}:{alpha:.92,lift:true,outline:true}) : {}));
@@ -1406,7 +1474,8 @@ function drawScene(c,V,t){
   let hop=0; const at=alive?(t||performance.now())-alive.t0:Infinity;
   if(alive && at>=0 && at<700) hop=Math.abs(Math.sin(at/700*Math.PI*2))*14*(1-at/700);
   c.save(); c.translate(0,-hop);
-  drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V));
+  if(GLR){ c.restore(); glBlit(c,{...V, oy:(V.oy||0)-hop},glFacets(paper)); c.save(); c.translate(0,-hop); }
+  else drawOrder(withLevels(paper).facets,V).forEach(f=>drawFacet(c,f,V));
   if(!stickerMode && !alive) drawSnapDots(c,V);
   const map=q=>toScreen(q,V);
   if(alive) drawFace(c,alive.face,map,V.s,{t:at-150});
@@ -1583,7 +1652,7 @@ function startDrag(e){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
     let out=compoundStep(paper, lv.steps[h.i]);
     if(!out){ out=compoundStep(stages[h.i], lv.steps[h.i]); if(out) paper=stages[h.i]; }
-    if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, f, hx:X, hy:Y, points:[], gain:1, sim:matchMedia('(prefers-reduced-motion: reduce)').matches?null:makeSim(paper,out.res)};
+    if(out){ try{ cv.setPointerCapture(e.pointerId); }catch(_){} drag={compound:true, s:h.s, t:h.t, res:out.res, u:0, tu:0, f, hx:X, hy:Y, points:[], gain:1, track:makeTrack(paper,out.res)};
       $('coach').hidden=true; hideToast(); draw(); return; }
   }
   const points=snapPoints(paper);
@@ -1597,6 +1666,13 @@ function startDrag(e){
     follow=h;
     if(h.type!==foldType || h.scope!==scope){ setType(h.type); setScope(h.scope); showToast(`照提示：已切成「${TYPES[h.type].name}・${h.scope==='flap'?'這一片':'全部層'}」`); }
   }
+  // 教學關照提示摺（不是「位置自己決定」那種）：固定沿著提示的箭頭，避免拖歪了紙亂跳
+  const guideH = !lv.free && h && h.s && !h.vertex && !h.free && !pinMode && (follow || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1]))) ? h : null;
+  if(guideH){ const o={type:guideH.type, scope:guideH.scope, n:layerN, hold:pin};
+    const fin=foldByPoints(paper,guideH.s,guideH.t,o), mid=fin&&guideH.type==='crease' ? (foldByPoints(paper,guideH.s,guideH.t,{...o,type:'valley'})||{}).res : null;
+    if(fin){ try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+      drag={compound:true, guided:true, type:guideH.type, crease:!!mid, s:guideH.s, t:guideH.t, res:fin.res, u:0, tu:0, f, hx:X, hy:Y, x0:X, y0:Y, points:[], gain:1, pid:e.pointerId, track:makeTrack(paper, mid||fin.res)};
+      $('coach').hidden=true; hideToast(); kick(); return; } }
   let s=follow?follow.s:null, bd=30/view.s;
   if(!follow) for(const sp of points){ const d=Math.hypot(sp.p[0]-f[0], sp.p[1]-f[1])-(sp.major?6/view.s:0); if(d<bd){ bd=d; s=sp.p; } }
   if(pinMode){ setPin(topAt(paper,f[0],f[1])?f:null,'sticky'); pinMode=false; $('pinBtn').classList.toggle('on',!!pin); showToast(pin?'釘住了：這幾層不會動。再按一次 📌 取消':'沒有點在紙上'); return; }
@@ -1616,7 +1692,9 @@ cv.addEventListener('pointermove',e=>{ if(!drag) return;
     else anchorView(view,drag.w0,X,Y);
     viewT={...view}; userZoom=true; draw(); return; }
   if(drag.compound){ const [X,Y]=evPos(e), f=pickWorld(X,Y), dx=drag.t[0]-drag.s[0], dy=drag.t[1]-drag.s[1];
-    drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-drag.s[0])*dx+(f[1]-drag.s[1])*dy)/(dx*dx+dy*dy))); kick(); return; }
+    if(!drag.f0) drag.f0=drag.f||f;
+    const from=Math.hypot(drag.f0[0]-drag.s[0],drag.f0[1]-drag.s[1])*view.s<40 ? drag.s : drag.f0;   // 從起點旁邊開始：照絕對位置；從別處開始（鎖住起點）：照移動量
+    drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-from[0])*dx+(f[1]-from[1])*dy)/(dx*dx+dy*dy))); kick(); return; }
   const [X,Y]=evPos(e), dx=X-drag.hx, dy=Y-drag.hy, dt=Math.max(1,e.timeStamp-drag.lt), sp=Math.hypot(dx,dy)/dt;
   const g = sp<.08 ? .2 : sp<.25 ? .5 : 1;
   drag.gain = drag.gain*.6 + g*.4;
@@ -1635,12 +1713,19 @@ function endDrag(e){ if(!drag) return;
     draw(); return; }
   if(d.smart){
     const out=d.fold&&d.fold.ok ? d.fold : (Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6 ? smartFold(paper,d.s,d.t,{hold:d.hold}) : null);
-    if(out){ alive=null; const rd=matchMedia('(prefers-reduced-motion: reduce)').matches; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:rd?1:1000, u:0, sim:rd?null:makeSim(paper,out.res), su:0}; kick(); }
+    if(out){ alive=null; const rd=matchMedia('(prefers-reduced-motion: reduce)').matches; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:rd?1:1000, u:0, track:makeTrack(paper,out.res), tu:0}; kick(); }
     else { showToast('這樣壓不開：起點要按在最上面那片的角，終點拖到它壓平後的位置（摺痕先壓好會更容易）'); draw(); }
     return; }
   if(d.compound){
-    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.sim?d.sim.u:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:620, u:0, m3:d.m3, sim:d.sim, su:d.sim?d.sim.u:d.u}; kick(); }
-    else { showToast('沿著箭頭一路拖到終點，紙才會摺過去'); draw(); }
+    const rd=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(d.crease){ // 照提示壓摺痕：摺過去再打開
+      if(d.u>.6){ alive=null; anim={morph:true, res:d.res, track:d.track, crease:true, back:true, u0:d.tu||0, t0:performance.now(), dur:rd?1:380, u:0, tu:d.tu||0, type:'crease'}; kick(); }
+      else { showToast('沿著箭頭拖過去再放開，就會壓出摺痕'); draw(); }
+      return; }
+    if(d.u>(d.guided?.6:.7)){ alive=null; anim={morph:true, res:d.res, track:d.track, u0:d.tu||d.u, t0:performance.now(), dur:rd?1:520, u:0, tu:d.tu||d.u, m3:d.m3, type:d.guided?d.type:null}; kick(); }
+    else { // 放開太早：彈回去
+      if(d.track && (d.tu||0)>.02){ anim={morph:true, res:paper, track:d.track, back:true, u0:d.tu, t0:performance.now(), dur:rd?1:300, u:0, tu:d.tu, revert:true}; kick(); }
+      showToast(d.guided?'沿著箭頭拖到超過一半再放開，紙才會摺過去':'沿著箭頭一路拖到終點，紙才會摺過去'); draw(); }
     return; }
   if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, foldOpts(d));
     const mid=fin&&foldType==='crease' ? (foldByPoints(paper, d.s, d.t, {...foldOpts(d), type:'valley'})||{}).res : null;
@@ -1706,9 +1791,10 @@ function updateHud(kind,major){
 function startAnim(fold,mid){ alive=null;
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 摺痕：先摺到 mid 再打開（物理用 mid 的形狀）；其他：直接摺到結果
-  const sim=reduce?null:makeSim(paper, mid||fold.res);
-  anim={...fold, type:foldType, sim, crease:!!mid, t0:performance.now(), dur:reduce?1:(mid?900:760), u:0, su:0}; kick(); }
+  const track=reduce?null:makeTrack(paper, mid||fold.res);
+  anim={...fold, type:foldType, track, crease:!!mid, u0:0, t0:performance.now(), dur:reduce?1:(mid?900:760), u:0, tu:0}; kick(); }
 function commitFold(){
+  if(anim && anim.revert){ anim=null; draw(); return; }
   lockS=null; lockFollow=null;
   const res=anim.res; lastFoldType=anim.type||null; anim=null; redoStack=[];
   history.push(paper); histFold.push(true);
@@ -1905,7 +1991,11 @@ function draw3D(c){
     for(const [a,b] of [[[u,-3,-.02],[u,3,-.02]],[[-3,u,-.02],[3,u,-.02]]]){ const A=cam3(a), B=cam3(b);
       c.strokeStyle=i%4===0?'rgba(235,245,238,.16)':'rgba(235,245,238,.06)'; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); } }
   c.restore();
-  const L=[.35,.45,.82], ps=polys3().map(p=>{ const sc=p.w.map(cam3), d=sc.reduce((s,q)=>s+q[2],0)/sc.length, n=camDir(p.n);
+  if(GLR){ const V3={s:v3.s, cx:v3.c[0], cy:v3.c[1], cz:v3.c[2], yaw:v3.yaw, pitch:v3.pitch, oy:-OY3};
+    const sc = v3.mode==='exact' ? glFacets(paper) : glSim(v3.sim, v3.sim.x);
+    if(v3.mode==='exact'){ const lvl=v3.lvl||(v3.lvl=localLevels()); }
+    glBlit(c,V3,sc); }
+  const L=[.35,.45,.82], ps=GLR?[]:polys3().map(p=>{ const sc=p.w.map(cam3), d=sc.reduce((s,q)=>s+q[2],0)/sc.length, n=camDir(p.n);
     return {sc, d, face:n[2]>0, lit:.62+.38*Math.abs(n[0]*L[0]+n[1]*L[1]+n[2]*L[2]), up:p.up, tri:p.tri}; }).sort((a,b)=>a.d-b.d);
   for(const p of ps){ const col=(p.face?p.up:!p.up)?paperColor:BACK;
     c.beginPath(); p.sc.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])); c.closePath();
