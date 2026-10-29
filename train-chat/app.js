@@ -16,6 +16,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
+const VERSION = '0.5.2';
 const BOARD = 60;            // 車進站後可以上車的秒數（起站：開車前 60 秒）
 const STALE = 50000;         // 多久沒心跳算離線（毫秒）
 const BYE = 60;              // 到站前幾秒提醒說再見
@@ -802,7 +803,8 @@ function openProfile(first) {
     <div class="lbl">聊天步調</div><div class="pcRow" id="pcR">${Object.entries(PACES).map(([k, v]) => `<button class="pc${k === f.pc ? ' on' : ''}" data-p="${k}">${v}</button>`).join('')}</div>
     <div class="lbl">興趣（最多 3 個）</div><div class="tagRow" id="tgR">${TAGS.map(t => `<button class="tg${f.tg.includes(t) ? ' on' : ''}" data-t="${esc(t)}">${t}</button>`).join('')}</div>
     ${first ? '' : `<label class="tog"><input type="checkbox" id="tstIn" ${S.test ? 'checked' : ''}> 🧪 測試模式（可以快轉時間，只影響自己）</label>
-    <div class="note">連線：${CFG.db ? '已連線伺服器' : '單機（看不到其他玩家）'}<br>時刻表來源：國營臺灣鐵路公司 開放資料（每日時刻表）<br>玩家 ID：${esc(S.id)}</div>`}
+    <button class="btn ghost" id="unstuck" style="width:100%;margin-top:12px">🆘 卡住了？下車回大廳</button>
+    <div class="note">版本 v${VERSION}<br>連線：${CFG.db ? '已連線伺服器' : '單機（看不到其他玩家）'}<br>時刻表來源：國營臺灣鐵路公司 開放資料（每日時刻表）<br>玩家 ID：${esc(S.id)}</div>`}
     <div class="btns">${first ? '' : '<button class="btn ghost" id="setCancel">取消</button>'}<button class="btn" id="setOk">${first ? '出發！' : '儲存'}</button></div>`, first);
   const box = $('modalBox');
   const pick = (sel, attr, val) => box.querySelectorAll(sel).forEach(b => b.classList.toggle('on', b.dataset[attr] === val));
@@ -823,6 +825,13 @@ function openProfile(first) {
     b.classList.toggle('on', f.tg.includes(t));
   };
   if ($('setCancel')) $('setCancel').onclick = () => closeModal(true);
+  if ($('unstuck')) $('unstuck').onclick = () => {   // 緊急脫困：取消車票、下車、回到現實時間的大廳
+    const tr = S.ride && TR[S.ride.key];
+    if (tr) { const p = trainPos(tr, now()); const i = clamp(p.kind === 'move' ? p.i + 1 : p.i, 0, tr.stops.length - 1); S.station = tr.stops[i].c; }
+    S.ride = null; S.sel = null; S.area = 'hall'; S.test = false; npcQ.length = 0; myMsg = { m: '', mt: 0 };
+    save(); Net.join(roomName()); closeModal(true); applyTest(); listSig = ''; dirty = true;
+    toast('已經下車，回到 ' + stName(S.station) + ' 大廳（測試模式已關閉）', 4000);
+  };
   $('setOk').onclick = () => {
     f.name = $('nmIn').value.trim().slice(0, 10);
     if (!f.name) { toast('取個名字吧'); return; }
