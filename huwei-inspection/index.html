@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>虎尾機車定檢地圖</title>
+<meta name="description" content="雲林縣虎尾鎮 17 家機車排氣定檢站地圖：電話、導航、離我最近">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff; --fg:#202124; --sub:#5f6368; --line:#e3e5e8; --chip:#f1f3f4;
+  --accent:#1a73e8; --shadow:0 2px 10px rgba(0,0,0,.18);
+  --kymco:#e8710a; --sym:#1a73e8; --yamaha:#8e24aa; --other:#5f6368;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+#map{position:fixed;inset:0}
+.top{position:fixed;z-index:1000;top:calc(10px + env(safe-area-inset-top));left:12px;right:12px;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.bar{pointer-events:auto;background:var(--bg);border-radius:24px;box-shadow:var(--shadow);
+  padding:10px 16px;display:flex;align-items:center;gap:10px}
+.bar h1{font-size:16px;margin:0;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar small{color:var(--sub);font-size:12px}
+.chips{pointer-events:auto;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:0;background:var(--bg);box-shadow:var(--shadow);border-radius:16px;padding:6px 12px;
+  font-size:13px;color:var(--fg);display:flex;align-items:center;gap:6px;cursor:pointer}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip.on{background:#e8f0fe;color:#1967d2;font-weight:600}
+.locate{position:fixed;z-index:1000;right:12px;bottom:calc(var(--sheet-h,46vh) + 14px);
+  width:48px;height:48px;border-radius:50%;border:0;background:var(--bg);box-shadow:var(--shadow);
+  font-size:22px;cursor:pointer;color:var(--accent);transition:bottom .25s}
+.sheet{position:fixed;z-index:1000;left:0;right:0;bottom:0;height:var(--sheet-h,46vh);background:var(--bg);
+  border-radius:16px 16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,.15);display:flex;flex-direction:column;
+  transition:height .25s;padding-bottom:env(safe-area-inset-bottom)}
+.grab{border:0;background:none;padding:8px 16px 4px;cursor:pointer;width:100%;text-align:left;color:var(--fg)}
+.grab::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#c4c7c5;margin:0 auto 8px}
+.grab b{font-size:15px}
+.grab span{color:var(--sub);font-size:12px;margin-left:6px}
+.list{overflow-y:auto;flex:1;padding:0 0 12px}
+.item{display:flex;gap:12px;padding:12px 16px;border-top:1px solid var(--line);cursor:pointer;align-items:flex-start}
+.item:active,.item.sel{background:#f6f8fc}
+.num{flex:none;width:28px;height:28px;border-radius:50%;color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.info{flex:1;min-width:0}
+.info .n{font-weight:600;font-size:15px}
+.info .a{color:var(--sub);font-size:13px;margin-top:2px}
+.info .m{font-size:12px;color:var(--sub);margin-top:4px}
+.dist{flex:none;font-size:13px;color:var(--accent);font-weight:600;padding-top:2px}
+.acts{display:flex;gap:8px;margin-top:8px}
+.btn{display:inline-flex;align-items:center;gap:4px;text-decoration:none;font-size:13px;border-radius:16px;
+  padding:6px 12px;border:1px solid var(--line);color:var(--accent);background:var(--bg)}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.note{font-size:12px;color:var(--sub);padding:12px 16px;border-top:1px solid var(--line);line-height:1.6}
+.note a{color:var(--accent)}
+.pin{position:relative}
+.pin svg{display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.pin b{position:absolute;top:5px;left:0;width:30px;text-align:center;color:#fff;font:700 12px/1 sans-serif}
+.pin.sel svg{transform:scale(1.25);transform-origin:50% 100%}
+.me{width:18px;height:18px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 0 0 6px rgba(66,133,244,.25)}
+.leaflet-popup-content{margin:12px 14px;font-family:inherit}
+.pop .n{font-weight:700;font-size:15px}
+.pop .a{color:var(--sub);font-size:13px;margin:3px 0}
+@media (min-width:820px){
+  .sheet{left:12px;right:auto;top:calc(118px + env(safe-area-inset-top));bottom:12px;width:360px;height:auto!important;border-radius:16px}
+  .grab::before{display:none}
+  .locate{bottom:24px!important}
+  .top{right:auto;width:360px}
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="top">
+  <div class="bar"><h1>🏍️ 虎尾機車定檢站</h1><small>17 家</small></div>
+  <div class="chips" id="chips"></div>
+</div>
+
+<button class="locate" id="locate" title="我的位置" aria-label="我的位置">◎</button>
+
+<div class="sheet" id="sheet">
+  <button class="grab" id="grab"><b id="cnt">定檢站</b><span id="hint">按「◎」可依距離排序</span></button>
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+// 資料：雲林縣環保局「機車排氣檢驗站」虎尾鎮名單（2026-10-29 抓取），座標由地址轉換
+const STATIONS = [
+ {no:"P28",name:"長發機車行",tel:"05-6339057",addr:"虎尾鎮中正路348號",brand:"三陽",lat:23.703692,lng:120.428911},
+ {no:"P29",name:"大泰機車行",tel:"05-6322843",addr:"虎尾鎮光復路250號",brand:"三陽",lat:23.709952,lng:120.440333},
+ {no:"P30",name:"永發機車行",tel:"05-6327365",addr:"虎尾鎮林森路一段362號",brand:"三陽",lat:23.711837,lng:120.436082},
+ {no:"P31",name:"道一機車行",tel:"05-6323735",addr:"虎尾鎮林森路二段94號",brand:"山葉",lat:23.705838,lng:120.429458},
+ {no:"P32",name:"興隆機車行",tel:"05-6325808",addr:"虎尾鎮博愛路160號",brand:"光陽",lat:23.717115,lng:120.436426},
+ {no:"P72",name:"旺來機車行",tel:"05-6339099",addr:"虎尾鎮復興路176號",brand:"光陽",lat:23.706452,lng:120.42617},
+ {no:"P74",name:"鴻輝機車行",tel:"05-6322658",addr:"虎尾鎮林森路二段193號",brand:"光陽",lat:23.70426,lng:120.428616},
+ {no:"P75",name:"詠豐機車行",tel:"05-6321068",addr:"虎尾鎮工專一街120、122號",brand:"三陽",lat:23.701258,lng:120.422203},
+ {no:"P78",name:"鈺和機車行",tel:"05-6314666",addr:"虎尾鎮中山路3-8號",brand:"光陽",lat:23.704604,lng:120.435927},
+ {no:"P88",name:"福進機車行",tel:"05-6222936",addr:"虎尾鎮中溪里中興106之4號",brand:"光陽",lat:null,lng:null},
+ {no:"PA6",name:"勇志機車行",tel:"05-6333557",addr:"虎尾鎮八德街80號",brand:"其他",lat:23.700966,lng:120.428459},
+ {no:"PA7",name:"建銘機車行",tel:"05-6330398",addr:"虎尾鎮北平路256號",brand:"光陽",lat:23.708138,lng:120.42608},
+ {no:"PC2",name:"承億機車行",tel:"05-6327998",addr:"虎尾鎮工專路117號",brand:"光陽",lat:23.703539,lng:120.424533},
+ {no:"PC7",name:"鑫速二輪車業行",tel:"05-6323056",addr:"虎尾鎮林森路二段203號",brand:"三陽",lat:23.704078,lng:120.428492},
+ {no:"PC9",name:"建治機車行",tel:"05-6332529",addr:"虎尾鎮西安街69號",brand:"其他",lat:23.70548,lng:120.433305},
+ {no:"PD0",name:"日昌機車行",tel:"05-6335065",addr:"虎尾鎮新生路153-32號",brand:"光陽",lat:23.707523,lng:120.436905},
+ {no:"PE4",name:"富榮機車行",tel:"05-6333300",addr:"虎尾鎮福民路5號",brand:"三陽",lat:23.712058,lng:120.437152},
+];
+const COLOR = {"光陽":"var(--kymco)","三陽":"var(--sym)","山葉":"var(--yamaha)","其他":"var(--other)"};
+const HEX = {"光陽":"#e8710a","三陽":"#1a73e8","山葉":"#8e24aa","其他":"#5f6368"};
+STATIONS.forEach((s,i)=>s.idx=i+1);
+
+const map = L.map('map',{zoomControl:false,attributionControl:true}).setView([23.7065,120.4310],15);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  maxZoom:20, subdomains:'abcd',
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+}).addTo(map);
+
+let filter = "全部", me = null, meMarker = null, selected = null;
+const markers = {};
+
+function pinIcon(s, sel){
+  const c = HEX[s.brand];
+  return L.divIcon({className:'', iconSize:[30,40], iconAnchor:[15,40], popupAnchor:[0,-36],
+    html:`<div class="pin${sel?' sel':''}"><svg width="30" height="40" viewBox="0 0 30 40"><path d="M15 39C15 39 28 24 28 14A13 13 0 0 0 2 14C2 24 15 39 15 39Z" fill="${c}" stroke="#fff" stroke-width="2"/></svg><b>${s.idx}</b></div>`});
+}
+const gmapsDir = s => s.lat
+  ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`
+  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('雲林縣'+s.addr+' '+s.name)}`;
+function distKm(s){
+  if(!me || !s.lat) return null;
+  return map.distance([me.lat,me.lng],[s.lat,s.lng])/1000;
+}
+function popupHtml(s){
+  const d = distKm(s);
+  return `<div class="pop"><div class="n">${s.idx}. ${s.name}</div>
+    <div class="a">${s.addr}</div>
+    <div class="a">廠牌 ${s.brand}${d!=null?` · 距離約 ${d.toFixed(1)} km`:''}</div>
+    <div class="acts"><a class="btn" href="tel:${s.tel.replace(/-/g,'')}">📞 ${s.tel}</a>
+    <a class="btn pri" href="${gmapsDir(s)}" target="_blank" rel="noopener">🧭 導航</a></div></div>`;
+}
+
+STATIONS.forEach(s=>{
+  if(!s.lat) return;
+  const m = L.marker([s.lat,s.lng],{icon:pinIcon(s,false)}).addTo(map);
+  m.bindPopup(()=>popupHtml(s));
+  m.on('click',()=>select(s,false));
+  markers[s.no] = m;
+});
+
+function select(s, fly){
+  if(selected && markers[selected.no]) markers[selected.no].setIcon(pinIcon(selected,false));
+  selected = s;
+  if(markers[s.no]){
+    markers[s.no].setIcon(pinIcon(s,true));
+    if(fly){
+      map.flyTo([s.lat,s.lng], Math.max(map.getZoom(),17), {duration:.5});
+      map.once('moveend',()=>markers[s.no].openPopup());
+    }
+  }
+  renderList();
+}
+
+// 品牌篩選
+const chips = document.getElementById('chips');
+["全部","光陽","三陽","山葉","其他"].forEach(b=>{
+  const el = document.createElement('button');
+  el.className = 'chip' + (b===filter?' on':'');
+  el.innerHTML = (b==="全部"?'':`<i style="background:${COLOR[b]}"></i>`) + b;
+  el.onclick = ()=>{
+    filter = b;
+    [...chips.children].forEach(c=>c.classList.toggle('on', c===el));
+    STATIONS.forEach(s=>{
+      const m = markers[s.no]; if(!m) return;
+      const show = filter==="全部" || s.brand===filter;
+      if(show && !map.hasLayer(m)) m.addTo(map);
+      if(!show && map.hasLayer(m)) map.removeLayer(m);
+    });
+    renderList();
+  };
+  chips.appendChild(el);
+});
+
+function renderList(){
+  let rows = STATIONS.filter(s=>filter==="全部"||s.brand===filter);
+  if(me) rows = rows.slice().sort((a,b)=>(distKm(a)??1e9)-(distKm(b)??1e9));
+  document.getElementById('cnt').textContent = `${rows.length} 家定檢站`;
+  document.getElementById('hint').textContent = me ? '已依距離排序（最近在上）' : '按「◎」可依距離排序';
+  const list = document.getElementById('list');
+  list.innerHTML = rows.map(s=>{
+    const d = distKm(s);
+    return `<div class="item${selected===s?' sel':''}" data-no="${s.no}">
+      <div class="num" style="background:${COLOR[s.brand]}">${s.idx}</div>
+      <div class="info"><div class="n">${s.name}</div><div class="a">${s.addr}</div>
+        <div class="m">廠牌 ${s.brand}${s.lat?'':' · ⚠️ 鄉下地址，地圖沒標，按導航用 Google 找'}</div>
+        <div class="acts"><a class="btn" href="tel:${s.tel.replace(/-/g,'')}">📞 ${s.tel}</a>
+        <a class="btn pri" href="${gmapsDir(s)}" target="_blank" rel="noopener">🧭 導航</a></div></div>
+      ${d!=null?`<div class="dist">${d<1?Math.round(d*1000)+' m':d.toFixed(1)+' km'}</div>`:''}
+    </div>`;
+  }).join('') + `<div class="note">資料來源：<a href="https://rmei.ylepb.gov.tw/station_list.asp?city=%E8%99%8E%E5%B0%BE%E9%8E%AE" target="_blank" rel="noopener">雲林縣環保局 機車排氣檢驗站名單（虎尾鎮）</a>，2026-10-29 整理。<br>
+    出門前建議先打電話確認營業時間。顏色＝店家代理廠牌，排氣定檢一般不限車種品牌。</div>`;
+  list.querySelectorAll('.item').forEach(el=>{
+    el.onclick = e=>{
+      if(e.target.closest('a')) return;
+      const s = STATIONS.find(x=>x.no===el.dataset.no);
+      if(window.innerWidth<820) setSheet(false);
+      select(s,true);
+    };
+  });
+}
+
+// 下方清單展開／收合（手機）
+let sheetOpen = true;
+function setSheet(open){
+  sheetOpen = open;
+  document.documentElement.style.setProperty('--sheet-h', open ? '46vh' : '64px');
+}
+document.getElementById('grab').onclick = ()=>setSheet(!sheetOpen);
+
+// 我的位置
+document.getElementById('locate').onclick = ()=>{
+  if(!navigator.geolocation){ alertBox('這個瀏覽器不支援定位'); return; }
+  document.getElementById('hint').textContent = '定位中…';
+  navigator.geolocation.getCurrentPosition(p=>{
+    me = {lat:p.coords.latitude, lng:p.coords.longitude};
+    if(meMarker) meMarker.setLatLng([me.lat,me.lng]);
+    else meMarker = L.marker([me.lat,me.lng],{icon:L.divIcon({className:'',html:'<div class="me"></div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(map);
+    const near = STATIONS.filter(s=>s.lat).sort((a,b)=>distKm(a)-distKm(b))[0];
+    map.flyToBounds(L.latLngBounds([[me.lat,me.lng],[near.lat,near.lng]]).pad(0.4),{maxZoom:17,duration:.6});
+    setSheet(true);
+    renderList();
+  }, err=>{
+    alertBox(err.code===1 ? '沒有定位權限：請到設定允許這個網頁使用位置' : '定位失敗，請再試一次');
+    renderList();
+  }, {enableHighAccuracy:true, timeout:10000});
+};
+function alertBox(msg){ document.getElementById('hint').textContent = msg; }
+
+renderList();
+if(window.innerWidth>=820) setSheet(true);
+</script>
+</body>
+</html>
