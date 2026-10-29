@@ -372,7 +372,7 @@ function deathCause(G){
 }
 
 /* ======= 遊戲狀態 ======= */
-let G=null,timer=null,speed=1,paused=false,pendingChoices=[],cur=null;
+let G=null,timer=null,speed=1,paused=false,pendingChoices=[],cur=null,locked=false; // locked：選擇卡飛走動畫中，年齡不能前進
 function stat(key,f){const v=V(key,null);if(v==null)return '';const s=f(v);return s?`<span class="stat">📊 ${s}</span>`:''}
 function statLine(key,f){const v=V(key,null);if(v==null)return '';return '📊 '+f(v)}
 
@@ -399,7 +399,7 @@ function addYear(age,lines){
 }
 
 function tick(){
-  if(paused||cur) return;
+  if(paused||cur||locked) return;
   G.age++;
   paintClock();
   // 先發生這一年的事件
@@ -440,6 +440,7 @@ function die(){
 /* ======= 選擇卡 ======= */
 function resolveOpt(o){if(!o)return null;if(o.need&&!G.flags.has(o.need))o=o.alt;return o}
 function showChoice(ch){
+  const old=$('#veil');if(old)old.remove(); // 保險：畫面上永遠只有一張選擇卡
   cur={ch,opts:{l:resolveOpt(ch.l),r:resolveOpt(ch.r),d:resolveOpt(ch.d)}};
   const fact=val(ch.fact,G);
   const lab=(k,a)=>`<div class="opt ${k}" data-k="${k}" tabindex="0"><span class="arr">${a}</span><span>${esc(cur.opts[k].t)}</span></div>`;
@@ -493,7 +494,8 @@ function applyOpt(o){
   return line;
 }
 function choose(k){
-  if(!cur||!cur.opts[k]) return;
+  if(!cur||locked||!cur.opts[k]) return;
+  locked=true;
   const o=cur.opts[k];
   const line=applyOpt(o);
   const el=$('#card');
@@ -503,6 +505,7 @@ function choose(k){
   el.style.transform=`translate(${v[0]*600}px,${v[1]*700}px) rotate(${v[0]*25}deg)`;el.style.opacity='0';
   cur=null;
   setTimeout(()=>{
+    locked=false;
     const veil=$('#veil');if(veil)veil.remove();
     addYear(G.age,[line]);
     if(pendingChoices.length){showChoice(pendingChoices.shift());return}
@@ -543,7 +546,7 @@ function startPlay(){
       <div class="track"><b id="bar" style="width:0"></b>${marks.map(([a,n])=>`<i style="left:${a}%"></i><em style="left:${a}%">${n}</em>`).join('')}</div>
       <div class="ctrl"><button id="pp" aria-label="暫停">⏸</button><button id="sp">1x</button></div>
     </div>`;
-  paused=false;speed=1;pendingChoices=[];cur=null;
+  paused=false;speed=1;pendingChoices=[];cur=null;locked=false;
   $('#pp').onclick=()=>{paused=!paused;$('#pp').textContent=paused?'▶':'⏸';$('#pp').classList.toggle('on',paused)};
   $('#sp').onclick=()=>{speed=speed%3+1;$('#sp').textContent=SPEEDS[speed-1].n;start()};
   start();
