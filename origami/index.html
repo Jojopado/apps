@@ -957,7 +957,7 @@ function simStep(sim, iters=20){
 /* ---- 摺的過程用物理：從 before（摺之前）到 after（摺好）----
    網格用 after 的摺痕（含新摺痕），起點位置＝before 的樣子；每條摺痕的角度從 before 的角度轉到 after 的角度；
    沒動到的點釘在桌上。u（sim.u）從 0 到 1。 */
-const SHEET_THICK=0.0045;
+const SHEET_THICK=0.0025;   // 一層紙約 0.19 mm（真的紙約 0.1 mm，稍微加厚才看得出層次）
 function levelsOf(p){ // 每片紙在它那個位置疊在第幾層
   const ids=p.facets.slice().sort((a,b)=>a.z-b.z).map(f=>f.id), lv=new Map();
   for(const a of ids){ let m=0; for(const b of ids){ if(b===a) break; if(above(p,a,b)>0) m=Math.max(m,(lv.get(b)||0)+1); } lv.set(a,m); }
@@ -976,6 +976,9 @@ function foldSim(before, after){
   sim.xEnd=sim.V.map(q=>posOnPaper(after,lvA,q)||[q[0],q[1],0]);
   sim.V.forEach((q,i)=>{ const a=sim.x[i], b=sim.xEnd[i]; if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-6) sim.pins.set(i,a.slice()); });
   for(const h of sim.hinges){ h.t0=hingeKindIn(before,sim,h)*Math.PI*0.995; h.t1=hingeKindIn(after,sim,h)*Math.PI*0.995; }
+  // 每個三角形在摺之前／摺好後疊在第幾層（畫的時候排前後用：疊在一起的層幾乎同一平面，只看深度會交錯）
+  const cen=t=>{ const q=t.v.map(i=>sim.V[i]); return [(q[0][0]+q[1][0]+q[2][0])/3,(q[0][1]+q[1][1]+q[2][1])/3]; };
+  for(const t of sim.tris){ const c=cen(t), fb=before.facets.find(f=>pip(f.sh,c[0],c[1])); t.lv0=fb?lvB.get(fb.id):0; t.lv1=lvA.get(t.f)||0; }
   sim.anim=true; sim.u=0;
   return sim;
 }
@@ -1130,6 +1133,7 @@ const COLORS=[['#F4C93A','山吹黃'],['#EC8A3C','柿子橘'],['#C9955F','奶茶
 let W=0, H=0, DPR=1;
 let lv=ANIMALS[0], stages=[], target=null, paperColor=lv.color;
 let paper=null, history=[], histFold=[], foldType='valley', scope='all', drag=null, anim=null, hintOn=false, foldCount=0;
+let lockS=null, lockFollow=null;
 let layerN=2, pin=null, pinSrc=null, pinPid=null, pinMode=false, redoStack=[], mouseW=null, duo=null;
 let view={s:100, cx:0, cy:0, yaw:0, pitch:.5}, viewT={s:100, cx:0, cy:0, yaw:0, pitch:.5};
 const CAMF=6;   // 透視強度（越小越明顯）
@@ -1171,9 +1175,14 @@ function camXf(q,z,V){ const dx=q[0]-V.cx, dy=q[1]-V.cy, cy=Math.cos(V.yaw||0), 
   const x1=dx*cy-dy*sy, y1=dx*sy+dy*cy, y2=y1*cp+z*sp, z2=-y1*sp+z*cp, k=CAMF/(CAMF-z2); return [x1*k, y2*k, z2]; }   // 從南邊上方看：北邊比較遠、往上的東西在畫面上往上
 const toScreen=(q,V=view,z=0)=>{ const r=camXf(q,z,V); return [W/2+(V.ox||0)+r[0]*V.s, H/2+(V.oy||0)-r[1]*V.s, r[2]]; };
 // 螢幕 → 桌面（z=0）上的點
-const toWorld=(X,Y,V=view)=>{ const a=(X-W/2-(V.ox||0))/V.s, b=-(Y-H/2-(V.oy||0))/V.s, cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0), cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0);
-  const den=cp*CAMF-b*sp, y1=Math.abs(den)<1e-6?0:b*CAMF/den, k=CAMF/(CAMF+y1*sp), x1=a/k;
+const toWorld=(X,Y,V=view,z=0)=>{ const a=(X-W/2-(V.ox||0))/V.s, b=-(Y-H/2-(V.oy||0))/V.s, cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0), cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0);
+  const den=b*sp-cp*CAMF, y1=Math.abs(den)<1e-6?0:(z*sp*CAMF-b*CAMF+b*z*cp)/den, k=CAMF/(CAMF+y1*sp-z*cp), x1=a/k;
   return [x1*cy+y1*sy+V.cx, -x1*sy+y1*cy+V.cy]; };
+// 某一點上最上層紙的高度
+function zTop(q,p=paper){ withLevels(p); let z=0; for(const f of p.facets) if(pipInc(f.pts,q)) z=Math.max(z,f.zl||0); return z; }
+function zMax(p=paper){ withLevels(p); let z=0; for(const f of p.facets) z=Math.max(z,f.zl||0); return z; }
+// 點選：打到最上層紙面（斜著看時，疊很厚的地方才點得準）
+function pickWorld(X,Y,V=view){ let w=toWorld(X,Y,V,0); for(let i=0;i<3;i++){ const z=zTop(w); if(!z) break; w=toWorld(X,Y,V,z); } return w; }
 function anchorView(V,w,X,Y){ const w2=toWorld(X,Y,V); V.cx+=w[0]-w2[0]; V.cy+=w[1]-w2[1]; }   // 讓世界點 w 留在螢幕 (X,Y)
 const fromBelow=(V=view)=>Math.cos(V.pitch||0)<0;
 
@@ -1190,7 +1199,7 @@ function frame(t){
       else { anim.sim.u=e; anim.su=e; }
       simStep(anim.sim, 8); }
     if(u>=1) commitFold(); else more=true; }
-  if(drag && drag.sim){ drag.sim.u=drag.u; if(simStep(drag.sim,6)>1e-5) more=true; }
+  if(drag && drag.sim){ const du=drag.u-drag.sim.u; drag.sim.u+=Math.max(-.035,Math.min(.035,du)); if(simStep(drag.sim,6)>1e-5 || Math.abs(du)>1e-4) more=true; }
   if(alive && t-alive.t0 < 1400) more=true;
   if(v3 && v3.mode==='phys'){ const mv=simStep(v3.sim, 6); if(mv>2e-5 || v3.grab) more=true; }
   draw(t);
@@ -1338,12 +1347,26 @@ function drawSim(c,V,sim,xs){
   const tri=sim.tris.map(t=>{ const P3=t.v.map(i=>xs[i]), sc=P3.map(q=>toScreen(q,V,q[2]));
     const ar=(sc[1][0]-sc[0][0])*(sc[2][1]-sc[0][1])-(sc[1][1]-sc[0][1])*(sc[2][0]-sc[0][0]);
     const n=cross3([P3[1][0]-P3[0][0],P3[1][1]-P3[0][1],P3[1][2]-P3[0][2]],[P3[2][0]-P3[0][0],P3[2][1]-P3[0][1],P3[2][2]-P3[0][2]]), l=Math.hypot(...n)||1;
-    return {sc, d:(sc[0][2]+sc[1][2]+sc[2][2])/3, up:ar<0, lit:.66+.34*Math.abs((n[0]*L[0]+n[1]*L[1]+n[2]*L[2])/l), ek:t.ek}; }).sort((a,b)=>a.d-b.d);
-  for(const p of tri){ const col=(p.up?upC:!upC)?paperColor:BACK;
-    c.beginPath(); p.sc.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])); c.closePath();
-    c.fillStyle=col; c.fill(); c.fillStyle=`rgba(0,0,0,${(1-p.lit).toFixed(3)})`; c.fill();
-    c.strokeStyle=col===paperColor?FRONT_EDGE:BACK_EDGE; c.lineWidth=.8;
-    for(let e=0;e<3;e++){ const k=p.ek&&p.ek[e]; if(k==='facet') continue; if(k==='flat'){ c.globalAlpha=.25; } const A=p.sc[e], B=p.sc[(e+1)%3]; c.beginPath(); c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.stroke(); c.globalAlpha=1; } }
+    const lv=(sim.u<.5?t.lv0:t.lv1)||0;
+    return {sc, d:(sc[0][2]+sc[1][2]+sc[2][2])/3, lv, up:ar<0, lit:.66+.34*Math.abs((n[0]*L[0]+n[1]*L[1]+n[2]*L[2])/l), ek:t.ek}; }).sort((a,b)=>a.d-b.d);
+  // 每個三角形切成 N×N 小塊、每條邊切成 N 段，全部一起依深度排序
+  const N=4, items=[], mix=(a,b,u)=>[a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u, a[2]+(b[2]-a[2])*u];
+  const rgb=h=>{ const n=parseInt(h.slice(1),16); return [n>>16&255,n>>8&255,n&255]; }, cF=rgb(paperColor), cB=rgb(BACK);
+  for(const p of tri){ const front=p.up?upC:!upC, col=front?paperColor:BACK, b=front?cF:cB, shade=`rgb(${b.map(v=>Math.round(v*p.lit)).join(',')})`, [A,B,C]=p.sc;   // 直接算好調暗後的顏色（填色和描邊同一色，切細也不會有接縫）
+    const at=(i,j)=>{ const u=i/N, v=j/N, w=1-u-v; return [A[0]*w+B[0]*u+C[0]*v, A[1]*w+B[1]*u+C[1]*v, A[2]*w+B[2]*u+C[2]*v]; };
+    for(let i=0;i<N;i++) for(let j=0;j<N-i;j++){
+      const bias=p.lv*.03*(fromBelow(V)?-1:1);   // 同一疊紙裡上面那層先蓋過下面那層
+      const q=[at(i,j),at(i+1,j),at(i,j+1)]; items.push({t:0, q, d:(q[0][2]+q[1][2]+q[2][2])/3+bias, col, shade});
+      if(i+j<N-1){ const r=[at(i+1,j),at(i+1,j+1),at(i,j+1)]; items.push({t:0, q:r, d:(r[0][2]+r[1][2]+r[2][2])/3+bias, col, shade}); } }
+    for(let e=0;e<3;e++){ const k=p.ek&&p.ek[e]; if(k==='facet') continue; const P0=p.sc[e], P1=p.sc[(e+1)%3];
+      for(let m=0;m<N;m++){ const a=mix(P0,P1,m/N), b=mix(P0,P1,(m+1)/N); items.push({t:1, a, b, d:(a[2]+b[2])/2+1e-4+p.lv*.03*(fromBelow(V)?-1:1), col, k}); } } }
+  items.sort((x,y)=>x.d-y.d);
+  c.save(); c.lineJoin='round';
+  for(const it of items){
+    if(it.t===0){ c.beginPath(); c.moveTo(it.q[0][0],it.q[0][1]); c.lineTo(it.q[1][0],it.q[1][1]); c.lineTo(it.q[2][0],it.q[2][1]); c.closePath();
+      c.fillStyle=it.shade; c.fill(); c.strokeStyle=it.shade; c.lineWidth=1.3; c.stroke(); }
+    else { c.strokeStyle=it.col===paperColor?FRONT_EDGE:BACK_EDGE; c.globalAlpha=it.k==='flat'?.25:1; c.lineWidth=.9; c.beginPath(); c.moveTo(it.a[0],it.a[1]); c.lineTo(it.b[0],it.b[1]); c.stroke(); c.globalAlpha=1; } }
+  c.restore();
 }
 function tagEdges(sim){ const kindOf=new Map(sim.hinges.map(h=>[Math.min(h.a,h.b)+'|'+Math.max(h.a,h.b), h.kind]));
   for(const t of sim.tris) t.ek=[0,1,2].map(e=>{ const a=t.v[e], b=t.v[(e+1)%3]; return kindOf.get(Math.min(a,b)+'|'+Math.max(a,b))||'edge'; }); return sim; }
@@ -1400,11 +1423,11 @@ function drawSnapDots(c,V){
   c.restore();
 }
 function drawLineAcross(c,P,n,V,color,dash){
-  const d=[-n[1],n[0]], L=40, a=toScreen([P[0]-d[0]*L,P[1]-d[1]*L],V), b=toScreen([P[0]+d[0]*L,P[1]+d[1]*L],V);
+  const d=[-n[1],n[0]], L=40, z=zMax()+.002, a=toScreen([P[0]-d[0]*L,P[1]-d[1]*L],V,z), b=toScreen([P[0]+d[0]*L,P[1]+d[1]*L],V,z);
   c.save(); c.strokeStyle=color; c.lineWidth=2; c.setLineDash(dash); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.restore();
 }
 function drawArrow(c,s,t,V,color){
-  const A=toScreen(s,V), B=toScreen(t,V), dx=B[0]-A[0], dy=B[1]-A[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L;
+  const A=toScreen(s,V,zTop(s)+.002), B=toScreen(t,V,zTop(t)+.002), dx=B[0]-A[0], dy=B[1]-A[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L;
   const mx=(A[0]+B[0])/2-uy*L*.18, my=(A[1]+B[1])/2+ux*L*.18;
   c.save(); c.strokeStyle=color; c.fillStyle=color; c.lineWidth=2.4;
   c.beginPath(); c.moveTo(A[0],A[1]); c.quadraticCurveTo(mx,my,B[0],B[1]); c.stroke();
@@ -1415,27 +1438,32 @@ function drawArrow(c,s,t,V,color){
 }
 function drawOverlays(c,V){
   const h=hintCache;
-  if(pin){ const [hx,hy]=toScreen(pin,V); c.save(); c.beginPath(); c.arc(hx,hy,16,0,Math.PI*2); c.fillStyle='rgba(143,219,255,.28)'; c.fill(); c.lineWidth=2; c.strokeStyle=HINT; c.stroke();
+  if(lockS && !anim){ const [lx,ly]=toScreen(lockS,V,zTop(lockS)), ph=(performance.now()/600)%1; c.save();
+    c.beginPath(); c.arc(lx,ly,11,0,Math.PI*2); c.fillStyle='rgba(255,122,89,.3)'; c.fill(); c.lineWidth=2.5; c.strokeStyle=GUIDE; c.stroke();
+    c.beginPath(); c.arc(lx,ly,11+ph*12,0,Math.PI*2); c.globalAlpha=1-ph; c.lineWidth=1.5; c.stroke(); c.globalAlpha=1;
+    c.fillStyle='#fff'; c.font='600 11px system-ui'; c.textAlign='center'; c.fillText('鎖住',lx,ly-18); c.restore(); kick(); }
+  if(pin){ const [hx,hy]=toScreen(pin,V,zTop(pin)); c.save(); c.beginPath(); c.arc(hx,hy,16,0,Math.PI*2); c.fillStyle='rgba(143,219,255,.28)'; c.fill(); c.lineWidth=2; c.strokeStyle=HINT; c.stroke();
     c.beginPath(); c.arc(hx,hy,3,0,Math.PI*2); c.fillStyle=HINT; c.fill();
     c.fillStyle='#fff'; c.font='600 11px system-ui'; c.textAlign='center'; c.fillText('按住',hx,hy-22); c.restore(); }
   if(h && h.vertex && !anim && !alive && !(drag&&drag.compound)) drawArrow(c,h.s,h.t,V,HINT);
   if(drag && drag.compound) drawArrow(c,drag.s,drag.t,V,GUIDE);
   if(h && h.s && !h.vertex && hintOn && !anim && !alive){
     if(!h.ghost) h.ghost=foldByPoints(paper,h.s,h.t,{type:h.type,scope:h.scope,preview:true})||{res:{facets:[]}};
-    for(const f of h.ghost.res.facets) if(f.moved){ pathPoly(c,f.pts,V); c.save(); c.fillStyle='rgba(143,219,255,.16)'; c.fill(); c.setLineDash([6,5]); c.lineWidth=1.6; c.strokeStyle='rgba(143,219,255,.95)'; c.stroke(); c.restore(); }
+    for(const f of h.ghost.res.facets) if(f.moved){ pathPoly(c,f.pts,V,zMax()+.003); c.save(); c.fillStyle='rgba(143,219,255,.16)'; c.fill(); c.setLineDash([6,5]); c.lineWidth=1.6; c.strokeStyle='rgba(143,219,255,.95)'; c.stroke(); c.restore(); }
     const fl=foldLine(h.s,h.t); drawLineAcross(c,fl.P,fl.n,V,HINT,TYPES[h.type].dash); drawArrow(c,h.s,h.t,V,HINT);
     if(h.type==='crease') drawArrow(c,h.t,h.s,V,'rgba(143,219,255,.55)');
   }
   if(drag && !drag.pan){
     for(const sp of drag.points||[]){ const [X,Y]=toScreen(sp.p,V); c.beginPath(); c.arc(X,Y,sp.major?3:1.8,0,Math.PI*2); c.fillStyle=sp.major?'rgba(255,255,255,.85)':'rgba(255,255,255,.5)'; c.fill(); }
-    const [sx,sy]=toScreen(drag.s,V); c.beginPath(); c.arc(sx,sy,9,0,Math.PI*2); c.strokeStyle=GUIDE; c.lineWidth=2; c.stroke();
+    const [sx,sy]=toScreen(drag.s,V,zTop(drag.s)); c.beginPath(); c.arc(sx,sy,9,0,Math.PI*2); c.strokeStyle=GUIDE; c.lineWidth=2; c.stroke();
     if(drag.fold){
       drawLineAcross(c,drag.fold.P,drag.fold.n,V,GUIDE,TYPES[foldType].dash);
-      const [tx,ty]=toScreen(drag.t,V); c.beginPath(); c.arc(tx,ty,drag.kind==='free'?5:8,0,Math.PI*2);
+      const [tx,ty]=toScreen(drag.t,V,zTop(drag.t)); c.beginPath(); c.arc(tx,ty,drag.kind==='free'?5:8,0,Math.PI*2);
       c.fillStyle=drag.kind==='free'?'rgba(255,122,89,.5)':GUIDE; c.fill();
       if(drag.kind!=='free'){ c.beginPath(); c.arc(tx,ty,13,0,Math.PI*2); c.strokeStyle='rgba(255,255,255,.8)'; c.lineWidth=1.5; c.stroke(); }
     }
 
+    if(drag.blocked){ const [bx,by]=toScreen(drag.blocked,V,zTop(drag.blocked)); c.save(); c.strokeStyle='#E5675A'; c.lineWidth=3; c.beginPath(); c.moveTo(bx-7,by-7); c.lineTo(bx+7,by+7); c.moveTo(bx+7,by-7); c.lineTo(bx-7,by+7); c.stroke(); c.restore(); }
     if(drag.gain<1){ const [vx,vy]=toScreen(drag.f,V); c.save(); c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=1;
       c.beginPath(); c.moveTo(vx-7,vy); c.lineTo(vx+7,vy); c.moveTo(vx,vy-7); c.lineTo(vx,vy+7); c.stroke(); c.restore(); }
   }
@@ -1453,11 +1481,20 @@ function drawLoupe(){
   ctx.beginPath(); ctx.arc(lx,ly,R,0,Math.PI*2); ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.stroke();
   ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.arc(lx,ly,R+1.5,0,Math.PI*2); ctx.stroke();
 }
+function drawAxes(c,V){
+  const o=[40,H-62], cy=Math.cos(V.yaw||0), sy=Math.sin(V.yaw||0), cp=Math.cos(V.pitch||0), sp=Math.sin(V.pitch||0);
+  const dir=n=>{ const x1=n[0]*cy-n[1]*sy, y1=n[0]*sy+n[1]*cy; return [x1, y1*cp+n[2]*sp, -y1*sp+n[2]*cp]; };
+  const ax=[[1,0,0,'X','#E5675A'],[0,1,0,'Y','#7FCB7A'],[0,0,1,'Z','#6FB2F0']].map(a=>({a, d:dir(a)})).sort((p,q)=>p.d[2]-q.d[2]);
+  c.save(); c.font='700 11px system-ui'; c.textAlign='center'; c.textBaseline='middle';
+  c.beginPath(); c.arc(o[0],o[1],30,0,Math.PI*2); c.fillStyle='rgba(14,30,24,.45)'; c.fill();
+  for(const {a,d} of ax){ const e=[o[0]+d[0]*22, o[1]-d[1]*22]; c.strokeStyle=a[4]; c.lineWidth=2.5; c.beginPath(); c.moveTo(o[0],o[1]); c.lineTo(e[0],e[1]); c.stroke(); c.fillStyle=a[4]; c.fillText(a[3],o[0]+d[0]*30,o[1]-d[1]*30); }
+  c.restore();
+}
 function draw(t){
   if(!W||!paper) return;
   if(v3){ ctx.setTransform(DPR,0,0,DPR,0,0); draw3D(ctx); return; }
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  drawScene(ctx,view,t); drawOverlays(ctx,view); drawLoupe();
+  drawScene(ctx,view,t); drawOverlays(ctx,view); drawLoupe(); drawAxes(ctx,view);
 }
 const easeInOut=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
 
@@ -1526,6 +1563,7 @@ addEventListener('keydown',e=>{ if(e.target.closest&&e.target.closest('input,tex
   if((e.code==='Space'||e.key==='Shift') && !e.repeat && !v3 && mouseW && $('home').hidden && $('cpSheet').hidden && !drag){ e.preventDefault(); if(!pin) setPin(mouseW,'key'); }
   if(/^Digit[1-9]$/.test(e.code)){ setLayerN(+e.code.slice(5)); }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?$('redo').click():$('undo').click(); }
+  if(e.key==='Escape' && lockS){ lockS=null; lockFollow=null; showToast('起點解除了'); draw(); }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); $('redo').click(); } });
 addEventListener('keyup',e=>{ if((e.code==='Space'||e.key==='Shift') && pinSrc==='key') setPin(null); });
 cv.addEventListener('pointerup',endPtr,true); cv.addEventListener('pointercancel',endPtr,true);
@@ -1538,10 +1576,10 @@ cv.addEventListener('pointerdown',e=>{
   startDrag(e);
 });
 function startDrag(e){
-  const [X,Y]=evPos(e), f=toWorld(X,Y);
+  const [X,Y]=evPos(e), f=pickWorld(X,Y);
   if(stickerMode){ placeSticker(f); return; }
   const h=hintCache;
-  if(h && h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38){
+  if(h && h.vertex && (Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<38 || (lockS && Math.hypot(lockS[0]-h.s[0],lockS[1]-h.s[1])<1e-6 && topAt(paper,f[0],f[1])))){
     if(h.r){ showToast('這一步要用原本的方向，先按「旋轉」轉回來'); return; }
     let out=compoundStep(paper, lv.steps[h.i]);
     if(!out){ out=compoundStep(stages[h.i], lv.steps[h.i]); if(out) paper=stages[h.i]; }
@@ -1550,6 +1588,11 @@ function startDrag(e){
   }
   const points=snapPoints(paper);
   let follow=null;
+  if(lockS && topAt(paper,f[0],f[1])){ // 鎖住起點時：從紙上任何地方拖都算，手指的位置就是目標
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    const edges=[]; for(const fc of paper.facets) for(let i=0;i<fc.pts.length;i++) edges.push([fc.pts[i], fc.pts[(i+1)%fc.pts.length]]);
+    drag={s:lockS, follow:lockFollow, points, lines:lineTargets(points,lockS,edges), edges, f, vx:X, vy:Y, hx:X, hy:Y, x0:X, y0:Y, lt:e.timeStamp, gain:1, t:null, fold:null, kind:'free', pid:e.pointerId, hold:pin, locked:true};
+    $('coach').hidden=true; hideToast(); updateDrag(X,Y); return; }
   if(h && h.s && !h.vertex && Math.hypot(h.s[0]-f[0],h.s[1]-f[1])*view.s<40){
     follow=h;
     if(h.type!==foldType || h.scope!==scope){ setType(h.type); setScope(h.scope); showToast(`照提示：已切成「${TYPES[h.type].name}・${h.scope==='flap'?'這一片':'全部層'}」`); }
@@ -1572,7 +1615,7 @@ cv.addEventListener('pointermove',e=>{ if(!drag) return;
     if(drag.orbit){ view.yaw=drag.v0.yaw+(X-drag.x0)*.008; view.pitch=Math.max(-1.35,Math.min(1.35,drag.v0.pitch+(Y-drag.y0)*.008)); }
     else anchorView(view,drag.w0,X,Y);
     viewT={...view}; userZoom=true; draw(); return; }
-  if(drag.compound){ const [X,Y]=evPos(e), f=toWorld(X,Y), dx=drag.t[0]-drag.s[0], dy=drag.t[1]-drag.s[1];
+  if(drag.compound){ const [X,Y]=evPos(e), f=pickWorld(X,Y), dx=drag.t[0]-drag.s[0], dy=drag.t[1]-drag.s[1];
     drag.f=f; drag.hx=X; drag.hy=Y; drag.u=Math.max(0,Math.min(1,((f[0]-drag.s[0])*dx+(f[1]-drag.s[1])*dy)/(dx*dx+dy*dy))); kick(); return; }
   const [X,Y]=evPos(e), dx=X-drag.hx, dy=Y-drag.hy, dt=Math.max(1,e.timeStamp-drag.lt), sp=Math.hypot(dx,dy)/dt;
   const g = sp<.08 ? .2 : sp<.25 ? .5 : 1;
@@ -1586,13 +1629,17 @@ function endDrag(e){ if(!drag) return;
   if(drag.pid!=null && e.pointerId!==drag.pid) return;
   const d=drag; drag=null; $('hud').hidden=true; $('layers').hidden=true;
   if(d.pan||d.paused){ draw(); return; }
+  if(!d.compound && !d.locked && d.x0!=null && Math.hypot(d.hx-d.x0,d.hy-d.y0)<6){ // 點一下：鎖住／解除起點
+    if(lockS && Math.hypot(lockS[0]-d.s[0],lockS[1]-d.s[1])<1e-6){ lockS=null; showToast('起點解除了'); }
+    else { lockS=d.s; lockFollow=d.follow; showToast('起點鎖住了：可以縮放、轉視角，再從紙上任何地方拖到目標（點同一點或按 Esc 解除）'); }
+    draw(); return; }
   if(d.smart){
     const out=d.fold&&d.fold.ok ? d.fold : (Math.hypot(d.t[0]-d.s[0],d.t[1]-d.s[1])*view.s>6 ? smartFold(paper,d.s,d.t,{hold:d.hold}) : null);
     if(out){ alive=null; const rd=matchMedia('(prefers-reduced-motion: reduce)').matches; anim={morph:true, res:out.res, u0:0, t0:performance.now(), dur:rd?1:1000, u:0, sim:rd?null:makeSim(paper,out.res), su:0}; kick(); }
     else { showToast('這樣壓不開：起點要按在最上面那片的角，終點拖到它壓平後的位置（摺痕先壓好會更容易）'); draw(); }
     return; }
   if(d.compound){
-    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:520, u:0, m3:d.m3, sim:d.sim, su:d.u}; kick(); }
+    if(d.u>.7){ alive=null; anim={morph:true, res:d.res, u0:d.sim?d.sim.u:d.u, t0:performance.now(), dur:matchMedia('(prefers-reduced-motion: reduce)').matches?1:620, u:0, m3:d.m3, sim:d.sim, su:d.sim?d.sim.u:d.u}; kick(); }
     else { showToast('沿著箭頭一路拖到終點，紙才會摺過去'); draw(); }
     return; }
   if(d.fold){ const fin=foldByPoints(paper, d.s, d.t, foldOpts(d));
@@ -1603,7 +1650,7 @@ function foldOpts(d,preview){ return {type:foldType, scope, n:layerN, hold:d&&d.
 cv.addEventListener('pointercancel',()=>{ drag=null; $('hud').hidden=true; draw(); });
 
 function updateDrag(X,Y){
-  const f=toWorld(X,Y), s=view.s/Math.max(drag.gain,.35); drag.f=f;   // 微調時吸附範圍跟著變小
+  const f=pickWorld(X,Y), s=view.s/Math.max(drag.gain,.35); drag.f=f;   // 微調時吸附範圍跟著變小
   let t=null, kind='free', bd=Infinity, major=false;
   const dist=q=>Math.hypot(q[0]-f[0], q[1]-f[1]);
   if(drag.follow && dist(drag.follow.t)*view.s<40){ t=drag.follow.t; kind='pt'; major=true; bd=-1; }
@@ -1617,7 +1664,11 @@ function updateDrag(X,Y){
   if(!t) t=f;
   drag.t=t; drag.kind=kind;
   if(foldType==='squash'){ drag.smart=true; smartPreview(t); }
-  else drag.fold = Math.hypot(t[0]-drag.s[0], t[1]-drag.s[1])*view.s > 6 ? foldByPoints(paper, drag.s, t, foldOpts(drag,true)) : null;
+  else { const far=Math.hypot(t[0]-drag.s[0], t[1]-drag.s[1])*view.s > 6;
+    drag.fold = far ? foldByPoints(paper, drag.s, t, foldOpts(drag,true)) : null;
+    if(drag.fold){ drag.okFold=drag.fold; drag.okT=t; drag.okKind=kind; drag.blocked=null; }
+    else if(far && drag.okFold){ drag.blocked=t; drag.fold=drag.okFold; drag.t=drag.okT; drag.kind=drag.okKind; }   // 再過去紙會穿過自己：停在這裡
+    else drag.blocked=null; }
   renderLayers();
   updateHud(kind, major);
   draw();
@@ -1648,6 +1699,7 @@ function updateHud(kind,major){
   }
   if(drag.smart && drag.fold) items.push(drag.fold.ok?`<span>壓開：${drag.fold.smart.toggles+1} 條摺痕一起動</span>`:drag.fold.none?'<span class="fine">這裡壓不開</span>':'<span>計算中…</span>');
   if(drag.hold) items.push('<span>按住中</span>');
+  if(drag.blocked) items.push('<span class="fine">到這裡為止（再過去紙會穿過自己）</span>');
   if(drag.gain<1) items.push(`<span class="fine">微調 ×${drag.gain<.35?'1/5':'1/2'}</span>`);
   hud.innerHTML=items.join(''); hud.hidden=false;
 }
@@ -1657,6 +1709,7 @@ function startAnim(fold,mid){ alive=null;
   const sim=reduce?null:makeSim(paper, mid||fold.res);
   anim={...fold, type:foldType, sim, crease:!!mid, t0:performance.now(), dur:reduce?1:(mid?900:760), u:0, su:0}; kick(); }
 function commitFold(){
+  lockS=null; lockFollow=null;
   const res=anim.res; lastFoldType=anim.type||null; anim=null; redoStack=[];
   history.push(paper); histFold.push(true);
   paper=res;
@@ -2099,6 +2152,7 @@ $('pickGo').onclick=()=>{ $('pick').hidden=true; $('home').hidden=true; loadAnim
 $('homeBtn').onclick=()=>{ if(stickerMode) exitStickers(); openHome(); };
 
 function loadAnimal(a,color){
+  lockS=null; lockFollow=null;
   lv=a; paperColor=color; stages=a.free?[startPaper(a)]:buildStages(a); target=stages[stages.length-1];
   paper=startPaper(a); history=[]; histFold=[]; foldCount=0; doneShown=false; alive=null; hintOn=false; lastMatch=null; stickers=[];
   $('lvName').textContent=a.name;
