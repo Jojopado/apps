@@ -327,7 +327,7 @@ const EV=[
  {at:G=>G.age>=18&&G.age<=70&&G.flags.has('scooter'),p:()=>Math.max(.003,V('traffic_deaths_per_year',3000)/23000000*4),once:'crash',log:'<span class="sad">騎車出了車禍，在醫院躺了兩個禮拜。</span>',fx:G=>G.healthMul*=1.05},
 
  // ---- 中年與退休 ----
- {at:G=>G.age>=48&&G.age<=60,p:.25,once:'parents',choice:{face:'👴',who:'爸媽',say:'爸媽年紀大了，需要人照顧。',fact:'撥 1966 可以申請長照服務',
+ {at:G=>G.age>=48&&G.age<=60&&G.parents.some(p=>!p.dead),p:.25,once:'parents',choice:{face:'👴',who:'爸媽',say:'爸媽年紀大了，需要人照顧。',fact:'撥 1966 可以申請長照服務',
    l:{t:'打 1966 申請長照',log:'申請了長照服務，有居服員來幫忙。'},
    r:{t:'請外籍看護',log:'請了外籍看護照顧爸媽。',fx:G=>G.wealth-=1},
    d:{t:'辭職自己照顧',log:'辭職回家照顧爸媽。',fx:G=>{G.wealth-=2;G.payMul*=.7}}}},
@@ -345,6 +345,152 @@ const EV=[
    r:{t:'環島旅行',log:'退休後，開著車環島一圈。',set:'retired'},
    d:{t:'學跳廣場舞',log:'退休後學跳廣場舞，交了一群朋友。',set:'retired',fx:G=>G.healthMul*=.97}}},
  {at:G=>G.age>=70,p:.06,once:'dementia',log:G=>['<span class="sad">你開始常常忘記事情，醫生說是失智症初期。</span>',stat('dementia_or_longterm_care',v=>`台灣 65 歲以上約 ${pct(v.dementia_prevalence_65plus)} 有失智症。`)],fx:G=>G.healthMul*=1.3},
+
+ // ======== 更多人生事件（v0.4） ========
+ // ---- 爸媽：用同一張生命表決定爸媽什麼時候離開 ----
+ {at:G=>G.age>0,log:G=>{const out=[];for(const p of G.parents){if(p.dead)continue;const pa=p.age0+G.age;
+   if(rnd()<qx(p.sex,pa)){p.dead=true;out.push(`<span class="sad">${p.name}過世了，享年 ${pa} 歲。</span>`);G.flags.add('lostParent')}}return out}},
+ {at:G=>G.age>=40&&G.age<=60&&G.parents.some(p=>!p.dead),p:.06,once:'parentSick',log:G=>{const p=pick(G.parents.filter(x=>!x.dead));return `${p.name}住院開刀，你請假在醫院陪了一週。`}},
+
+ // ---- 嬰幼兒 ----
+ {at:G=>G.age===1,log:'學會走路了，跌倒了會自己爬起來。'},
+ {at:G=>G.age===2,log:G=>`會說的第一個詞是「${pick(['媽媽','爸爸','阿嬤','ㄋㄟㄋㄟ','不要'])}」。`},
+ {at:G=>G.age>=2&&G.age<=6,p:.12,once:'entero',log:'得了腸病毒，在家休息了一個禮拜。'},
+ {at:G=>G.age>=4&&G.age<=6,p:.5,once:'zoo',log:'第一次去動物園，看到大象一直尖叫。'},
+ {at:G=>G.age===7,log:'掉了第一顆牙，下排的牙齒被丟到屋頂上。'},
+
+ // ---- 國小 ----
+ {at:G=>G.age===9,choice:{face:'🎤',who:'老師',say:'學校有朗讀比賽，老師想推薦你去。',
+   l:{t:'好，我去',chance:{p:.4,ok:{log:'參加朗讀比賽，拿到第一名！',set:'speech'},ng:{log:'參加朗讀比賽，緊張到忘詞。'}}},
+   r:{t:'不要，好可怕',log:'拒絕了朗讀比賽。'},
+   d:{t:'推薦好朋友去',log:'推薦好朋友去比賽，他拿了第二名。'}}},
+ {at:G=>G.age>=7&&G.age<=12,p:.07,once:'found',choice:{face:'💵',who:'放學路上',say:'你在路邊撿到一張 500 元。',
+   l:{t:'交給警察',log:'撿到 500 元交給警察，被老師在朝會上表揚。',set:'honest'},
+   r:{t:'自己留著',log:'撿到 500 元，偷偷買了一堆零食。'},
+   d:{t:'交給老師',log:'撿到 500 元交給老師。',set:'honest'}}},
+ {at:G=>G.age===11,choice:{face:'📱',who:'媽媽',say:'你手機玩太久了！',
+   l:{t:'乖乖交出來',log:'手機被沒收，只好去外面玩。'},
+   r:{t:'偷偷玩',log:'躲在棉被裡偷玩手機，近視加深了。',set:'myopia'},
+   d:{t:'約定每天一小時',log:'跟媽媽約好，每天只玩一小時。'}}},
+ {at:G=>G.age===12,log:'國小畢業了，畢業旅行去了遊樂園。'},
+
+ // ---- 國中 ----
+ {at:G=>G.age===13,choice:{face:'😟',who:'同學',say:'班上有同學一直被欺負。',
+   l:{t:'站出來阻止',log:'你站出來保護被欺負的同學，後來你們變成好朋友。',set:'brave'},
+   r:{t:'告訴老師',log:'你偷偷告訴老師，事情處理好了。'},
+   d:{t:'假裝沒看到',log:'你假裝沒看到，心裡一直覺得怪怪的。'}}},
+ {at:G=>G.age===14,log:G=>G.sex==='男'?'開始變聲，講話像鴨子。':'臉上冒出第一顆青春痘。'},
+ {at:G=>G.age===14,choice:{face:'💌',who:'隔壁班同學',say:'有人在你抽屜放了一張紙條。',
+   l:{t:'寫信回覆',log:'你們開始傳紙條，傳了一整個學期。'},
+   r:{t:'約週末看電影',log:'第一次跟喜歡的人去看電影，緊張到忘記劇情。',set:'firstlove'},
+   d:{t:'裝沒看到',log:'你假裝沒看到那張紙條。'}}},
+ {at:G=>G.age===15,log:'國中畢業典禮，大家在制服上互相簽名。'},
+
+ // ---- 高中職 ----
+ {at:G=>G.age===16,choice:{face:'🎭',who:'社團博覽會',say:'要參加什麼社團？',
+   l:{t:'熱舞社',log:'加入熱舞社，成果發表會跳到腿軟。'},
+   r:{t:'吉他社',log:'加入吉他社，學會彈第一首歌。'},
+   d:{t:'不參加，回家讀書',log:'沒參加社團，放學就回家讀書。'}}},
+ {at:G=>G.age===17,p:.8,choice:{face:'🎮',who:'深夜的你',say:'凌晨一點了，遊戲還差一場就上分。',
+   l:{t:'再一場',log:'打到凌晨三點，隔天上課一直睡。'},
+   r:{t:'去睡覺',log:'乖乖去睡覺。'},
+   d:{t:'改成讀書',log:'關掉遊戲，熬夜讀書。'}}},
+ {at:G=>G.age===18,log:'18 歲，成年了。'},
+
+ // ---- 大學 ----
+ {at:G=>G.age===19&&G.flags.has('uni'),choice:{face:'⏰',who:'期末考',say:'明天期末考，你還沒開始讀。',
+   l:{t:'通宵抱佛腳',log:'通宵讀書，考完直接睡了一整天。'},
+   r:{t:'借同學筆記',log:'借了學霸的筆記，低空飛過。',set:'friends'},
+   d:{t:'放棄，明年重修',log:'這科被當，隔年重修。'}}},
+ {at:G=>G.age>=20&&G.age<=21&&G.flags.has('uni'),p:.25,once:'exchange',choice:{face:'✈️',who:'國際處',say:'學校有交換學生名額，要不要申請？',
+   l:{t:'去日本交換',log:'去日本交換一學期，學會用日文點餐。',set:'abroad'},
+   r:{t:'去歐洲交換',log:'去歐洲交換一學期，週末到處搭火車旅行。',set:'abroad'},
+   d:{t:'不去，留在台灣',log:'決定留在台灣。'}}},
+ {at:G=>G.age>=19&&G.age<=30,p:.15,once:'carlicense',choice:{face:'🚗',who:'駕訓班',say:'要不要考汽車駕照？',
+   l:{t:'報名駕訓班',log:'考到汽車駕照，路邊停車考了兩次才過。',set:'car'},
+   r:{t:'等需要再說',log:'覺得還用不到，先不考。'},
+   d:{t:'叫家人教',log:'讓家人在空地教你開車，吵了好幾次架。',set:'car'}}},
+
+ // ---- 上班族 ----
+ {at:G=>G.flags.has('job')&&G.age===(G.jobAt??99)+1,log:G=>`第一次領年終獎金，${pick(['1 個月','1.5 個月','2 個月','只有半個月'])}。`},
+ {at:G=>G.flags.has('job')&&!G.flags.has('soldier')&&G.age>=28&&G.age<=45,p:.12,once:'promote',choice:{face:'📋',who:'主管',say:'我想升你當組長，願意嗎？',
+   l:{t:'接受',log:'升上組長，加薪也加班。',fx:G=>{G.payMul*=1.15;G.healthMul*=1.01},set:'manager'},
+   r:{t:'要求加薪就好',chance:{p:.5,ok:{log:'沒有升官，但加薪了。',fx:G=>G.payMul*=1.08},ng:{log:'主管不太高興，加薪也沒了。'}}},
+   d:{t:'婉拒，想專心做事',log:'婉拒升遷，想專心把技術練好。'}}},
+ {at:G=>G.age>=23&&G.age<=45,p:.18,log:G=>`參加${pick(['大學同學','高中同學','同事','國中同學'])}的婚禮，包了 ${pick(['2200','3600','6600'])} 元紅包。`},
+ {at:G=>G.age>=24&&G.age<=45,p:.08,once:'skill',choice:{face:'📚',who:'下班後的你',say:'想不想下班後學點新東西？',
+   l:{t:'學英文',log:'下班去上英文課，終於敢跟外國人講話。',set:'english'},
+   r:{t:'學寫程式',log:'下班自學寫程式，做出第一個 App。',set:'coder'},
+   d:{t:'去健身房',log:'辦了健身房會員，一週去三次。',fx:G=>G.healthMul*=.92,set:'gym'}}},
+ {at:G=>G.age>=24&&G.age<=60,p:.06,choice:{face:'🧳',who:'連假',say:'連假快到了，要去哪裡？',
+   l:{t:'出國玩',log:G=>`連假出國去${pick(['日本','韓國','泰國','越南','歐洲'])}玩。`},
+   r:{t:'國內旅遊',log:G=>`連假去${pick(['花蓮','台東','墾丁','阿里山','澎湖'])}玩。`},
+   d:{t:'在家耍廢',log:'連假在家睡到自然醒。'}}},
+ {at:G=>G.age>=25&&G.age<=45,p:.06,once:'cat',choice:{face:'🐱',who:'朋友',say:'我家的貓生了一窩小貓，要不要領養一隻？',
+   l:{t:'領養',log:'領養了一隻小橘貓，取名叫「米糕」。',set:'cat'},
+   r:{t:'不要，沒時間照顧',log:'婉拒了，怕沒時間照顧。'},
+   d:{t:'先帶回家試養',log:'先試養一週，結果捨不得還回去。',set:'cat'}}},
+ {at:G=>G.flags.has('cat')&&G.age>=40,p:.08,once:'catbye',log:'<span class="sad">陪了你十幾年的貓咪離開了。</span>'},
+ {at:G=>G.age>=28&&G.age<=50,p:.08,once:'reunion',log:G=>`國中同學會，${pick(['班長已經是兩個孩子的爸媽','當年最皮的同學當上了老師','暗戀過的人一點都沒變','大家聊的都是房貸和小孩'])}。`},
+ {at:G=>G.flags.has('job')&&G.age>=28&&G.age<=50,p:.04,once:'startup',choice:{face:'🏪',who:'自己',say:'上班好累，要不要自己出來創業？',
+   l:{t:'辭職開店',chance:{p:.35,ok:{log:'辭職開了一間小店，生意越來越好！',set:['shop','boss'],fx:G=>G.payMul*=1.3},ng:{log:'<span class="sad">開店兩年，還是收掉了。</span>',fx:G=>G.wealth-=2}}},
+   r:{t:'下班做副業',log:'下班經營網拍，多了一份收入。',fx:G=>G.payMul*=1.05},
+   d:{t:'算了，繼續上班',log:'想想還是繼續上班。'}}},
+ {at:G=>G.flags.has('job')&&!G.flags.has('car')&&G.age>=28&&G.age<=50,p:.06,once:'buycar',choice:{face:'🚙',who:'業務',say:'要不要買台車？',
+   l:{t:'買新車',log:'買了一台新車，週末載家人出去玩。',set:'car'},
+   r:{t:'買二手車',log:'買了一台二手車，開了十年。',set:'car'},
+   d:{t:'不買，搭大眾運輸',log:'決定繼續搭大眾運輸。'}}},
+ {at:G=>G.age>=25&&G.age<=60,p:.04,once:'move',log:G=>`因為${pick(['工作','房租','想換環境'])}，搬到${pick(['台北','新竹','台中','台南','高雄'].filter(c=>!G.city.startsWith(c)))}。`},
+
+ // ---- 結婚之後 ----
+ {at:G=>G.marriedAt!=null&&G.age===G.marriedAt,choice:{face:'🏝️',who:'另一半',say:'蜜月要去哪裡？',
+   l:{t:'出國蜜月',log:'出國度蜜月，拍了一千張照片。'},
+   r:{t:'國內小旅行',log:'在國內小旅行，簡單就好。'},
+   d:{t:'存起來當買房基金',log:'把蜜月的錢存起來。',fx:G=>G.wealth+=1}}},
+ {at:G=>G.flags.has('married')&&G.age===G.marriedAt+1,choice:{face:'🧧',who:'過年',say:'今年過年要先回哪一邊的家？',
+   l:{t:'先回男方家',log:'過年先回男方家吃年夜飯。'},
+   r:{t:'先回女方家',log:'過年先回女方家吃年夜飯。'},
+   d:{t:'每年輪流',log:'說好每年輪流，大家都滿意。'}}},
+ {at:G=>G.kids>0&&G.age===G.kidAt&&!G.once.has('confine'),choice:{face:'🍼',who:'另一半',say:'坐月子要怎麼安排？',
+   l:{t:'去月子中心',log:'住了月子中心，花了不少錢。',fx:G=>G.wealth-=1},
+   r:{t:'請長輩來幫忙',log:'請長輩來家裡幫忙坐月子。'},
+   d:{t:'自己來',log:'夫妻兩個自己照顧寶寶，累到懷疑人生。'}},once:'confine'},
+ {at:G=>G.kids>0&&G.age===G.kidAt+1,log:'孩子半夜一直哭，你已經一年沒睡過整晚了。'},
+ {at:G=>G.kids>0&&G.age===G.kidAt+6,log:'孩子上小學了，第一天在校門口哭著不放手。'},
+ {at:G=>G.kids>0&&G.age===G.kidAt+14,choice:{face:'😤',who:'孩子',say:'孩子進入叛逆期，一回家就關在房間裡。',
+   l:{t:'找他好好談',log:'找孩子好好談了一次，關係慢慢變好。',set:'closeKid'},
+   r:{t:'給他空間',log:'給孩子空間，等他自己走出來。'},
+   d:{t:'沒收手機',log:'沒收孩子的手機，冷戰了一個月。'}}},
+ {at:G=>G.kids>0&&G.age===G.kidAt+18,log:'孩子 18 歲，要搬出去住了。家裡突然好安靜。'},
+ {at:G=>G.kids>0&&G.age>=G.kidAt+28&&G.age<=G.kidAt+36,p:.2,once:'kidwed',log:'<span class="big">孩子結婚了，你在婚禮上致詞。</span>'},
+
+ // ---- 中年 ----
+ {at:G=>G.age===45,log:'看手機要拿得越來越遠，你老花了。'},
+ {at:G=>G.age===50,log:G=>pick(['頭上冒出好多白頭髮。','50 歲生日，朋友送了一支按摩槍。','開始覺得自己真的老了。'])},
+ {at:G=>G.age>=45&&G.age<=60,p:.08,once:'pension',choice:{face:'🐷',who:'理專',say:'該開始準備退休金了吧？',
+   l:{t:'定期定額存退休金',log:'每個月定期定額存退休金。',fx:G=>G.wealth+=2},
+   r:{t:'買保險',log:'買了一份年金保險。',fx:G=>G.wealth+=1},
+   d:{t:'到時候再說',log:'覺得到時候再說。'}}},
+ {at:G=>G.age>=50&&G.age<=75,p:.03,log:'<span class="sad">聽到老同學過世的消息，難過了好幾天。</span>'},
+
+ // ---- 老年 ----
+ {at:G=>G.age===65,log:'拿到敬老卡，搭公車更方便了。'},
+ {at:G=>G.age>=63&&G.age<=75,p:.15,once:'line',log:'學會在 LINE 群組傳早安長輩圖。'},
+ {at:G=>G.age>=70,p:.05,once:'fall',log:'<span class="sad">在浴室跌倒，休養了好幾個月。</span>',fx:G=>G.healthMul*=1.15},
+ {at:G=>G.age>=66&&G.age<=85,p:.08,once:'oldtrip',choice:{face:'🧓',who:'老同學',say:'我們幾個老同學要去旅行，一起來吧！',
+   l:{t:'一起去',log:'跟老同學去旅行，聊了一整晚當年的事。'},
+   r:{t:'走不動了，不去',log:'覺得體力不好，婉拒了。'},
+   d:{t:'用視訊聊就好',log:'學會用視訊，跟老同學聊天。'}}},
+ {at:G=>G.age===75,p:.6,log:'開始整理老照片，把一生的回憶裝進三本相簿。'},
+ {at:G=>G.age===80,log:G=>G.kids>0?'80 大壽，孩子們幫你辦了一桌壽宴。':'80 歲生日，朋友來家裡幫你慶生。'},
+ {at:G=>G.age>=82,p:.12,once:'care',choice:{face:'🏡',who:'社工',say:'年紀大了，生活越來越需要人幫忙。',fact:'撥 1966 可以申請長照服務',
+   l:{need:'kidOrSpouse',t:'跟家人住',log:'搬去跟家人一起住。',alt:{t:'申請居家服務',log:'申請了居家服務，每週有人來幫忙。'}},
+   r:{t:'請看護',log:'請了一位看護照顧你。'},
+   d:{t:'住進安養中心',log:'住進安養中心，交了幾個新朋友。'}}},
+
+ // ---- 任何年紀都可能 ----
+ {at:G=>G.age>=20,p:.02,log:'買樂透中了 2000 元。'},
+ {at:G=>G.age>=15&&G.age<=70,p:.02,log:'手機掉進馬桶，心情很差。'},
 
  // ---- 生活小事 ----
  {at:G=>G.age>=6&&G.age<=60,p:.06,log:'颱風來了，放了一天颱風假。'},
@@ -383,6 +529,9 @@ function newLife(){
   const fam=pick(['富裕','小康','小康','辛苦']);
   G={age:-1,city:c.city.replace('臺','台'),sex,fam,flags:new Set(),once:new Set(),log:[],big:[],
      healthMul:1,payMul:1,wealth:fam==='富裕'?2:fam==='辛苦'?-1:0,edu:'none',kids:0,lastKidAt:-9,kidAt:null};
+  // 爸媽生你時的年紀：媽媽約為台灣生第一胎平均年齡（上下幾歲），爸爸大 0～4 歲
+  const momAt=Math.round(V('fertility',{mean_age_first_birth_mother:31.8}).mean_age_first_birth_mother+(rnd()+rnd()+rnd()-1.5)*5);
+  G.parents=[{name:'媽媽',sex:'女',age0:momAt},{name:'爸爸',sex:'男',age0:momAt+pick([0,1,2,2,3,4])}];
   if(fam==='辛苦') G.flags.add('poor');
 }
 
@@ -438,7 +587,8 @@ function die(){
 }
 
 /* ======= 選擇卡 ======= */
-function resolveOpt(o){if(!o)return null;if(o.need&&!G.flags.has(o.need))o=o.alt;return o}
+function hasNeed(n){return n==='kidOrSpouse'?(G.kids>0||G.flags.has('married')):G.flags.has(n)}
+function resolveOpt(o){if(!o)return null;if(o.need&&!hasNeed(o.need))o=o.alt;return o}
 function showChoice(ch){
   const old=$('#veil');if(old)old.remove(); // 保險：畫面上永遠只有一張選擇卡
   cur={ch,opts:{l:resolveOpt(ch.l),r:resolveOpt(ch.r),d:resolveOpt(ch.d)}};
@@ -606,6 +756,7 @@ function showReview(){
 }
 
 const EXTRA_SOURCES=[
+ {t:'民法成年年齡 18 歲（2023 年 1 月 1 日起）',s:'中央社',u:'https://www.cna.com.tw/news/firstnews/202008130111.aspx'},
  {t:'義務役 1 年（94 年次以後出生）；替代役只保留家庭、宗教因素',s:'公視新聞',u:'https://news.pts.org.tw/article/616470'},
  {t:'學測在高三寒假（1 月）、統測 4 月底～5 月初',s:'大學問',u:'https://www.unews.com.tw/News/Info/10307'},
  {t:'打工度假年齡 18～30 歲',s:'104 職場力（整理外交部規定）',u:'https://blog.104.com.tw/work-and-travel-japan/'},
