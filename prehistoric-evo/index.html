@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>史前進化論</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* 版面：一個直式 180×320 像素畫布（整數放大），上面疊 DOM 介面（HUD／選卡／過場／結局） */
+:root{
+  --bg:#0b0d14;
+  --panel:#1a1d2b;
+  --panel-2:#252a3d;
+  --line:#3b4262;
+  --ink:#f2efe6;
+  --dim:#9aa0b8;
+  --gold:#ffd25e;
+  --danger:#ff5b5b;
+  --ok:#7fe08a;
+  --o2:#6fd3ff;
+  --f:"DotGothic16","Microsoft JhengHei","PingFang TC",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+body{color:var(--ink);font-family:var(--f);touch-action:none;user-select:none;-webkit-user-select:none}
+#wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;background:#000}
+#cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1.2em;text-align:center;background:rgba(8,9,16,.86)}
+.ov.on{display:flex}
+button{font-family:var(--f);color:var(--ink);background:var(--panel-2);border:.18em solid var(--line);border-radius:.3em;padding:.55em 1em;font-size:1.15em;cursor:pointer;box-shadow:0 .2em 0 #000}
+button:active{transform:translateY(.15em);box-shadow:0 .05em 0 #000}
+button.main{background:#2f5a3a;border-color:#5aa86a;font-size:1.35em}
+button.small{font-size:.95em;padding:.4em .7em}
+h1,h2,h3,p{margin:0}
+/* HUD */
+#hud{position:absolute;left:0;right:0;top:0;padding:.5em .6em;display:none;pointer-events:none;background:linear-gradient(#000c,#0000)}
+#hud.on{display:block}
+#hudTop{display:flex;align-items:center;gap:.5em;font-size:1.05em}
+#eraName{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lvl{color:var(--gold)}
+.bar{height:.55em;background:#000a;border:.12em solid #000;margin-top:.3em;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;display:block}
+#hpBar i{background:var(--danger)}
+#xpBar i{background:var(--gold)}
+#timeBar{height:.35em}
+#timeBar i{background:#8aa0ff}
+#timeBar.boss i{background:#ff8a3c}
+#o2Wrap{display:none}
+#o2Bar i{background:var(--o2)}
+#hudRow{display:flex;gap:.5em;align-items:center;font-size:.9em;margin-top:.2em}
+#hudRow span{white-space:nowrap}
+#pauseBtn{position:absolute;right:.4em;bottom:.5em;display:none;font-size:1em;padding:.25em .55em;opacity:.8}
+#pauseBtn.on{display:block}
+#banner{position:absolute;left:0;right:0;top:32%;display:none;text-align:center;pointer-events:none;padding:.6em;background:#300c0cdd;border-top:.15em solid var(--danger);border-bottom:.15em solid var(--danger)}
+#banner.on{display:block;animation:pop .3s}
+#banner h2{color:#ffb0a0;font-size:1.5em}
+#banner p{font-size:1em;margin-top:.3em;color:#ffe0d0}
+#toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);display:none;pointer-events:none;background:#000c;border:.12em solid var(--gold);padding:.3em .7em;color:var(--gold);font-size:1.05em;white-space:nowrap}
+#toast.on{display:block}
+@keyframes pop{from{transform:scale(1.3);opacity:0}to{transform:scale(1);opacity:1}}
+/* 標題 */
+#title{background:radial-gradient(ellipse at 50% 30%,#1f3346 0%,#0b0d14 75%)}
+#title h1{font-size:2.6em;color:var(--gold);text-shadow:.12em .12em 0 #6a2a10;letter-spacing:.08em}
+#title .sub{color:var(--dim);margin:.4em 0 .8em;font-size:1em}
+#titleArt{width:100%;image-rendering:pixelated;margin:.4em 0 1em}
+#title .btns{display:flex;flex-direction:column;gap:.55em;width:80%}
+#fossilLine{margin-top:.9em;color:#e8d6b0;font-size:1em}
+/* 卡片 */
+#cards h2{font-size:1.4em;color:var(--gold)}
+#cardsHint{color:var(--dim);font-size:.95em;margin:.35em 0 .7em;line-height:1.35}
+#cardList{display:flex;flex-direction:column;gap:.55em;width:100%}
+.card{display:flex;gap:.6em;align-items:center;text-align:left;padding:.55em .7em;background:var(--panel);border:.18em solid var(--line);border-radius:.35em;font-size:1em;width:100%}
+.card .ic{font-size:2em;width:1.3em;text-align:center;flex:none}
+.card b{font-size:1.15em;display:block}
+.card small{color:var(--dim);display:block;line-height:1.3;margin-top:.15em}
+.card .lv{color:var(--gold);font-size:.85em}
+.card.key{border-color:var(--gold);background:linear-gradient(90deg,#3a3010,#1a1d2b)}
+.card.key .tag{color:var(--gold);font-size:.85em}
+.card.key .fact{color:#e8d6b0}
+#rerollBtn{margin-top:.7em}
+/* 過場 / 結局 */
+#trans h2,#end h2{font-size:1.6em;color:var(--gold)}
+.formImg{image-rendering:pixelated;width:45%;margin:.6em 0}
+#transBody,#endBody{line-height:1.45;font-size:1em;color:#e6e2d6}
+#transBody b,#endBody b{color:var(--gold)}
+.dim{color:var(--dim)}
+#endEmoji{font-size:3.5em;margin:.2em 0}
+#endStats{margin:.6em 0;font-size:.95em;color:var(--dim);line-height:1.5}
+#endBtns{display:flex;flex-direction:column;gap:.5em;width:80%;margin-top:.6em}
+.new{color:var(--ok)}
+/* 演化樹 / 商店 / 來源 */
+.panelOv{justify-content:flex-start;overflow-y:auto}
+.panelOv h2{font-size:1.5em;color:var(--gold);margin:.3em 0 .6em}
+.treeRow{display:flex;gap:.5em;align-items:center;text-align:left;width:100%;padding:.45em .5em;border-left:.25em solid var(--line);margin-left:.4em;background:#ffffff08;margin-bottom:.35em}
+.treeRow .em{font-size:1.8em;width:1.4em;text-align:center}
+.treeRow b{display:block}
+.treeRow small{color:var(--dim);display:block;line-height:1.3}
+.treeRow.got{border-left-color:var(--ok)}
+.treeRow.human{border-left-color:var(--gold)}
+.treeEra{color:#8aa0ff;font-size:.9em;width:100%;text-align:left;margin:.3em 0 .2em}
+.shopRow{display:flex;align-items:center;gap:.5em;width:100%;text-align:left;background:var(--panel);padding:.55em;border-radius:.3em;margin-bottom:.5em}
+.shopRow .em{font-size:1.8em}
+.shopRow div{flex:1}
+.shopRow small{color:var(--dim);display:block}
+#srcList{text-align:left;font-size:.9em;line-height:1.5;width:100%}
+#srcList a{color:#9cc8ff}
+#srcList li{margin-bottom:.4em}
+.back{margin-top:.6em;margin-bottom:1em}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="180" height="320"></canvas>
+
+  <div id="hud">
+    <div id="hudTop"><span id="eraName"></span><span id="lvl"></span></div>
+    <div class="bar" id="timeBar"><i></i></div>
+    <div class="bar" id="hpBar"><i></i></div>
+    <div class="bar" id="xpBar"><i></i></div>
+    <div id="o2Wrap"><div class="bar" id="o2Bar"><i></i></div></div>
+    <div id="hudRow"><span id="hpTxt"></span><span id="sizeTxt"></span><span id="hazTxt" style="color:#ffb070"></span></div>
+  </div>
+  <button id="pauseBtn">⏸</button>
+  <div id="banner"><h2 id="bannerT"></h2><p id="bannerP"></p></div>
+  <div id="toast"></div>
+
+  <div class="ov on" id="title">
+    <h1>史前進化論</h1>
+    <p class="sub">從一條小蟲，活過五次大滅絕，進化成人</p>
+    <canvas id="titleArt" width="180" height="40"></canvas>
+    <div class="btns">
+      <button class="main" id="startBtn">開始演化</button>
+      <button id="treeBtn">🌳 演化樹</button>
+      <button id="shopBtn">🦴 化石商店</button>
+      <button id="srcBtn">📚 資料來源</button>
+    </div>
+    <p id="fossilLine"></p>
+  </div>
+
+  <div class="ov" id="cards">
+    <h2 id="cardsT">突變！選一個</h2>
+    <p id="cardsHint"></p>
+    <div id="cardList"></div>
+    <button class="small" id="rerollBtn">🎲 重抽</button>
+  </div>
+
+  <div class="ov" id="trans">
+    <h2 id="transT"></h2>
+    <img class="formImg" id="transImg" alt="">
+    <div id="transBody"></div>
+    <button class="main" id="transBtn" style="margin-top:1em">出發</button>
+  </div>
+
+  <div class="ov" id="end">
+    <h2 id="endT"></h2>
+    <div id="endEmoji"></div>
+    <div id="endBody"></div>
+    <div id="endStats"></div>
+    <div id="endBtns">
+      <button class="main" id="againBtn">再演化一次</button>
+      <button id="endTreeBtn">🌳 演化樹</button>
+      <button id="homeBtn">主選單</button>
+    </div>
+  </div>
+
+  <div class="ov panelOv" id="tree"><h2>🌳 演化樹</h2><div id="treeList" style="width:100%"></div><button class="back" data-back>返回</button></div>
+  <div class="ov panelOv" id="shop"><h2>🦴 化石商店</h2><p class="dim" id="shopFossil" style="margin-bottom:.6em"></p><div id="shopList" style="width:100%"></div><button class="back" data-back>返回</button></div>
+  <div class="ov panelOv" id="src"><h2>📚 資料來源</h2><ul id="srcList"></ul><button class="back" data-back>返回</button></div>
+
+  <div class="ov" id="pause">
+    <h2 style="color:var(--gold);font-size:1.6em">暫停</h2>
+    <div style="display:flex;flex-direction:column;gap:.6em;width:70%;margin-top:1em">
+      <button class="main" id="resumeBtn">繼續</button>
+      <button id="quitBtn">放棄這一局</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ===== 基本設定 =====
+const W = 180, H = 320, TOP = 34;           // TOP：HUD 下緣，玩家不能游進去
+const ERA_LEN = 55, BOSS_LEN = 20;          // 每個時代 55 秒＋大滅絕 20 秒
+const HASH = location.hash;
+const HEADLESS = /fuzz|bot/.test(HASH);
+let rand = Math.random;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = (a,b) => a + rand()*(b-a);
+const RI = (a,b) => Math.floor(R(a,b+1));
+const pick = arr => arr[Math.floor(rand()*arr.length)];
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+// ===== 像素圖 =====
+// 每張圖朝右；'.' 透明、'k' 外框、'w' 白，其他字母看 pal
+const SPR_SRC = {
+  plank:{pal:{a:'#7fe0c0',b:'#3fb08f'},rows:[".a.a.","aabaa",".bwb.","aabaa",".a.a."]},
+  pikaia:{pal:{a:'#f0a8cc',b:'#c070a0'},rows:["...kkkkkkkk..",".kkaaaaaaaakk","kbbaaaaaaawkk",".kkaaaaaaaakk","...kkkkkkkk.."]},
+  trilo:{pal:{a:'#c09868',b:'#806040'},rows:["...kkkkk...","..kaaaaak..",".kabbbbbak.","kkakbbbkakk",".kakbbbkak.","kkakbbbkakk",".kakbbbkak.","..kakkkak..","...k...k..."]},
+  anomalo:{pal:{a:'#d07050',b:'#a04030',c:'#f0b080'},rows:[
+    "....kk.kk.kk.kk.......",
+    "..kkcckcckcckcckkkk...",
+    ".kaaaaaaaaaaaaaaaaakk.",
+    "kababababababababaawk.",
+    ".kaaaaaaaaaaaaaaaaaakk",
+    "..kkcckcckcckcckkkkakk",
+    "....kk.kk.kk.kk....kak",
+    "...................kk."]},
+  camero:{pal:{a:'#e0d0a8',b:'#a07850',c:'#d08888'},rows:[
+    "kkk.................",
+    "kaakkkkkk...........",
+    "kabaaaaaakkkkkk.....",
+    "kaaabaaabaaaaaakkc.c",
+    "kabaaaaaaaabaaaawkcc",
+    "kaaabaaabaaaaaakkc.c",
+    "kabaaaaaakkkkkk.....",
+    "kaakkkkkk...........",
+    "kkk................."]},
+  fish:{pal:{a:'#70a8e0',b:'#d0e8f8'},rows:["....kkkkk.....","k..kaaaaakk...","kkkaaaaaaaakk.","kaaaaaaaaaawkk","kkkbbbbbbbbbkk","k..kbbbbbbkk..","....kkkkkk...."]},
+  smallfish:{pal:{a:'#e8c860',b:'#f8f0c0'},rows:["...kkk...","k.kaaakk.","kkaaaaawk","k.kbbbkk.","...kkk..."]},
+  scorp:{pal:{a:'#b05a48',b:'#702820'},rows:["..............kk","kk..kkkkkkkk.kak","kakkaabaabaakaak","kaaaaabaabaaaawk","kakkaabaabaakaak","kk..kkkkkkkk.kak","..............kk"]},
+  dunk:{pal:{a:'#5e6e80',b:'#98a0b0'},rows:[
+    "..........kkkkkkkk......",
+    ".......kkkbbbbbbbbkk....",
+    "kk...kkaaaabbbbbbbbbkk..",
+    "kak.kaaaaaaabbbbbbbwkbk.",
+    "kaakaaaaaaaaabbbbbbbbbbk",
+    "kaaaaaaaaaaaaaaaaakkkkkk",
+    "kaakaaaaaaaaaaaaakwkwk..",
+    "kak.kaaaaaaaaaaaaakkkk..",
+    "kk...kkaaaaaaaaaakk.....",
+    ".......kkkkkkkkkk......."]},
+  tetra:{pal:{a:'#80a850',b:'#c8d888'},rows:[".....kkkkkk.....","...kkaaaaaakkk..","kkkaabaabaaaakkk","kaaaaaaaaaaaawkk","kkkaaaaaaaaaaaak","...kbbbbbbbbbkk.","...kak.....kak..","..kk.kk...kk.kk."]},
+  bug:{pal:{a:'#e8d850'},rows:[".k.k.","kaaak","kaaak",".k.k."]},
+  milli:{pal:{a:'#7a4434',b:'#b06a48'},rows:[".kkkkkkkkkkkkkkkkk..","kabababababababaakk.","kaaaaaaaaaaaaaaaawk.",".kkkkkkkkkkkkkkkkkk.",".k.k.k.k.k.k.k.k.k.."]},
+  dragon:{pal:{a:'#3868b0',c:'#c8e8f8'},rows:["...kkkk..kkkk...","..kcccckkcccck..","kkkkkkkaakkkkkwk","kaaaaaaaaaaaaakk","kkkkkkkaakkkkkk.","..kcccckkcccck..","...kkkk..kkkk..."]},
+  eryops:{pal:{a:'#665c44',b:'#988868'},rows:["......kkkkkkkkkk......","....kkaaaaaaaaaakkk...","kkkkaabaabaabaaaaakkk.","kaaaaaaaaaaaaaaaaaawkk","kkkkaaaaaaaaaaaaaaaakk","....kbbbbbbbbbbbbkwkwk","....kak.......kak.kk..","...kk.kk.....kk.kk...."]},
+  cyno:{pal:{a:'#a87452',b:'#d8b088'},rows:["............kk..","....kkkkkkkkaak.","..kkaaaaaaaaaaawk","kkaabababaaaaaaakk","k.kaaaaaaaaaaakkkk","...kbbbbbbbbbk....","...kak....kak.....","..kk.k...kk.k....."]},
+  lizard:{pal:{a:'#78b868'},rows:["......kkkk..","kkkkkkaaaawk","aaaaaaaaaakk","kkkkkkaaaak.","....k.k.k.k."]},
+  dino:{pal:{a:'#a8a848',b:'#e0e0a0'},rows:[
+    "..........kkkk..",
+    ".........kaaawk.",
+    ".........kaaaakk",
+    "........kaabkkw.",
+    "kk.....kaaak....",
+    "kakk..kaaabk....",
+    ".kaakkaaaabk....",
+    "..kaaaaaaabkk...",
+    "...kaaaaaabbk...",
+    "....kkaaaakk.k..",
+    ".....kaak.kk....",
+    ".....kak..kak...",
+    "....kak....kak..",
+    "....kk.....kk..."]},
+  posto:{pal:{a:'#786656',b:'#544434'},rows:["......kkkkkkkkk.......","...kkkaabababaakkkkkk.","kkkaaaaaaaaaaaaaaaawkk","..kkaaaaaaaaaaaaakwkwk","....kkaaaaaaaaakkkkkk.",".....kak.....kak......","....kak.....kak.......","....kk......kk........"]},
+  shrew:{pal:{a:'#8e6c52',b:'#c8a888'},rows:["........kk....","...kkkkkkakk..",".kkaaaaaaaaawk","kaaaaaaaaaaaakk","kaaaaaaaaaaaak.",".kkbbbbbbbbkk..","..kk.k..kk.k..."]},
+  ape:{pal:{a:'#5e4232',b:'#c89878'},rows:["....kkkk....","...kaaaak...","...kbwbwk...","...kbbbbk...","..kkaaaakk..",".kaaaaaaaak.","kaakaaaakaak","kak.kaaak.kak","kk..kaaak..kk","....kaaaak..","...kak..kak.","...kk....kk."]},
+  human:{pal:{a:'#3a2a20',b:'#e0b090',c:'#8a6a3a'},rows:["....kkkk....","...kaaaak...","...kbwbwk...","...kbbbbk...","....kbbk....","..kkccccck..",".kbkccccckbk",".kbkccccckbk","..k.kcccck.k","....kbkbk...","....kbkbk...","...kkk.kkk.."]},
+  rabbit:{pal:{a:'#b89878'},rows:[".......kk.k.","......kak.ak","......kaakk.","..kkkkaaawk.",".kaaaaaaaaak","kwaaaaaaaakk",".kaaaaaaak..","..kk.kk.kk.."]},
+  cat:{pal:{a:'#c89858',b:'#905e30'},rows:["................kk..","...............kaak.","..kkkkkkkkkkkkkaaawk",".kaabaabaabaaaaaaakk","kkaaaaaaaaaaaaaaakwk","k.kaaaaaaaaaaaaakkw.","...kaak.....kaak....","...kak......kak.....","..kk.......kk......."]},
+  fruit:{pal:{a:'#d84848',b:'#f8a8a8',g:'#4a9a40'},rows:["..gk..",".kaak.","kaaaak","kabaak",".kaak.","..kk.."]},
+  wood:{pal:{a:'#8a5a30',b:'#c08850'},rows:["kkkkkkkkk","kabababak","kkkkkkkkk"]},
+};
+const RECOLOR = {raptor:['dino',{a:'#b87048',b:'#e8c098'}], trex:['dino',{a:'#4e6230',b:'#8aa060'}], wolf:['cat',{a:'#8a8a94',b:'#5e5e68'}]};
+const SPR = {};
+function buildSprite(rows, pal){
+  const w = Math.max(...rows.map(r=>r.length)), h = rows.length;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  const P = Object.assign({k:'#15101c', w:'#f8f8f0'}, pal);
+  rows.forEach((r,j)=>{ for(let i=0;i<r.length;i++){ const ch=r[i]; if(ch==='.'||!P[ch]) continue; x.fillStyle=P[ch]; x.fillRect(i,j,1,1);} });
+  const f = document.createElement('canvas'); f.width = w; f.height = h;
+  const fx = f.getContext('2d'); fx.translate(w,0); fx.scale(-1,1); fx.drawImage(c,0,0);
+  return {c, f, w, h};
+}
+for(const k in SPR_SRC) SPR[k] = buildSprite(SPR_SRC[k].rows, SPR_SRC[k].pal);
+for(const k in RECOLOR){ const [base,pal]=RECOLOR[k]; SPR[k] = buildSprite(SPR_SRC[base].rows, Object.assign({},SPR_SRC[base].pal,pal)); }
+
+// ===== 生物資料 =====
+const CDEF = {
+  plank:{name:'浮游生物',spr:'plank',role:'food',spd:4},
+  trilo:{name:'三葉蟲',spr:'trilo',role:'prey',spd:14},
+  anomalo:{name:'奇蝦',spr:'anomalo',role:'pred',spd:27},
+  camero:{name:'房角石',spr:'camero',role:'pred',spd:18},
+  smallfish:{name:'小魚',spr:'smallfish',role:'prey',spd:24},
+  scorp:{name:'板足鱟（海蠍）',spr:'scorp',role:'pred',spd:30},
+  dunk:{name:'鄧氏魚',spr:'dunk',role:'pred',spd:24},
+  bug:{name:'昆蟲',spr:'bug',role:'food',spd:8},
+  milli:{name:'節胸蜈蚣',spr:'milli',role:'prey',spd:10},
+  dragon:{name:'巨脈蜻蜓',spr:'dragon',role:'pred',spd:36},
+  eryops:{name:'引螈',spr:'eryops',role:'pred',spd:24},
+  lizard:{name:'小型爬行類',spr:'lizard',role:'prey',spd:26},
+  coelo:{name:'腔骨龍',spr:'dino',role:'pred',spd:32},
+  posto:{name:'波斯特鱷',spr:'posto',role:'pred',spd:24},
+  raptor:{name:'伶盜龍',spr:'raptor',role:'pred',spd:36},
+  trex:{name:'暴龍',spr:'trex',role:'pred',spd:20},
+  fruit:{name:'果實',spr:'fruit',role:'food',spd:0},
+  rabbit:{name:'野兔',spr:'rabbit',role:'prey',spd:30},
+  wolf:{name:'恐狼',spr:'wolf',role:'pred',spd:33},
+  smilo:{name:'劍齒虎',spr:'cat',role:'pred',spd:32},
+};
+
+// ===== 時代（年代與事件依資料來源，見 SOURCES） =====
+const ERAS = [
+  {name:'寒武紀－奧陶紀', years:'5.39 億～4.44 億年前', land:false, form:'pikaia', formName:'皮卡蟲（原始脊索動物）',
+   formFact:'皮卡蟲身體裡有一條「脊索」，是脊椎的前身。',
+   key:'jaw', hazard:'ice', hazName:'奧陶紀末大滅絕', hazDesc:'全球冰河期，海水變冷', hazHint:'躲進發光的海底熱泉取暖！', branch:'lamprey',
+   bg:['#0e2a48','#123a5e'], spawns:[['plank',10,5,7],['trilo',6,8,20],['anomalo',2,24,34],['camero',1,30,40]]},
+  {name:'志留紀－泥盆紀', years:'4.44 億～3.59 億年前', land:false, form:'fish', formName:'有頜魚',
+   formFact:'頜骨讓魚可以咬東西，泥盆紀被稱為「魚類時代」。',
+   key:'lung', hazard:'anoxia', hazName:'晚泥盆紀大滅絕', hazDesc:'海洋大範圍缺氧', hazHint:'吃氣泡補氧氣！', branch:'bonyfish',
+   bg:['#0b3040','#0f4554'], spawns:[['plank',8,5,7],['smallfish',6,8,18],['scorp',2,20,30],['dunk',1,40,52]]},
+  {name:'石炭紀－二疊紀', years:'3.59 億～2.52 億年前', land:true, form:'tetra', formName:'早期四足動物',
+   formFact:'約 3.75 億年前的提塔利克魚，鰭裡已經有像手腕的骨頭。',
+   key:'egg', hazard:'volcano', hazName:'二疊紀末大滅絕', hazDesc:'西伯利亞大規模火山噴發，史上最慘的大滅絕', hazHint:'看到紅圈快閃開！', branch:'amphibian',
+   bg:['#2a3a1c','#33461f'], spawns:[['bug',10,5,7],['milli',4,10,40],['dragon',2,16,22],['eryops',2,26,34]]},
+  {name:'三疊紀', years:'2.52 億～2.01 億年前', land:true, form:'cyno', formName:'犬齒獸',
+   formFact:'犬齒獸可能已經長毛、體溫恆定，是哺乳類的祖先。',
+   key:'fur', hazard:'heat', hazName:'三疊紀末大滅絕', hazDesc:'中大西洋岩漿區噴發，氣候劇烈暖化', hazHint:'避開掃過來的熱浪帶！', branch:'dicyno',
+   bg:['#4a3a22','#56442a'], spawns:[['bug',10,5,7],['lizard',6,8,16],['coelo',2,26,34],['posto',1,36,44]]},
+  {name:'侏羅紀－白堊紀', years:'2.01 億～6600 萬年前', land:true, form:'shrew', formName:'早期哺乳類',
+   formFact:'恐龍稱霸的年代，哺乳類又小又會躲，多半在夜間活動。',
+   key:'placenta', hazard:'meteor', hazName:'白堊紀末大滅絕', hazDesc:'小行星撞擊地球，非鳥恐龍全部滅絕', hazHint:'最後的衝擊波來之前，躲進地洞！', branch:'marsupial',
+   bg:['#1e3a24','#24462a'], spawns:[['bug',10,5,7],['lizard',6,8,14],['raptor',2,24,30],['trex',1,60,72]]},
+  {name:'新生代', years:'6600 萬年前～現在', land:true, form:'ape', formName:'靈長類',
+   formFact:'恐龍消失後，哺乳類大爆發，靈長類在樹上學會了抓握。',
+   key:'upright', hazard:'iceage', hazName:'最後的冰河期', hazDesc:'更新世冰期，嚴寒加上劍齒虎', hazHint:'撿 3 根木柴生火，火能嚇跑劍齒虎！', branch:'chimp',
+   bg:['#5a6a5a','#6a7a68'], spawns:[['fruit',8,6,8],['rabbit',5,10,16],['wolf',2,24,30],['smilo',1,32,38]]},
+];
+
+// 結局：每個時代沒拿到關鍵突變就走上那條旁支
+const ENDINGS = {
+  lamprey:{era:0, emoji:'🐍', name:'無頜類：七鰓鰻', alive:true, desc:'沒有長出頜骨的你，一路活到今天——七鰓鰻和盲鰻就是無頜魚的後代。'},
+  bonyfish:{era:1, emoji:'🐟', name:'輻鰭魚', alive:true, desc:'你留在水裡。你的親戚輻鰭魚，今天佔了脊椎動物物種的一半左右。'},
+  amphibian:{era:2, emoji:'🐸', name:'兩棲類', alive:true, desc:'還得回水邊產卵的你，成了青蛙、蠑螈的祖先。'},
+  dicyno:{era:3, emoji:'🦴', name:'二齒獸', alive:false, desc:'沒長出毛的這一支，曾經在三疊紀到處都是，最後還是消失了。'},
+  marsupial:{era:4, emoji:'🦘', name:'有袋類', alive:true, desc:'寶寶在育兒袋裡長大——袋鼠、無尾熊是你的後代。'},
+  chimp:{era:5, emoji:'🐒', name:'其他猿類', alive:true, desc:'你留在森林裡，成了黑猩猩、巴諾布猿那一支。'},
+  human:{era:5, emoji:'🧍', name:'智人', alive:true, desc:'約 30 萬年前，智人出現在非洲。恭喜你從一條小蟲，走到了人類！'},
+};
+
+// ===== 突變卡 =====
+const TRAITS = {
+  stream:{ic:'🌊',name:'流線身形',desc:'移動速度 +12%',max:3},
+  armor:{ic:'🛡️',name:'堅硬鱗甲',desc:'受到的傷害 −20%',max:3},
+  glut:{ic:'🍖',name:'大胃口',desc:'吃東西得到的基因點 +25%',max:3},
+  heal:{ic:'💗',name:'快速癒合',desc:'每秒慢慢回血',max:3},
+  sense:{ic:'👁️',name:'敏銳感官',desc:'掠食者更晚發現你（偵測範圍 −20%）',max:3},
+  poison:{ic:'☠️',name:'毒刺',desc:'被咬時毒暈對方、擋下傷害（有冷卻）',max:3},
+  dash:{ic:'💨',name:'爆發衝刺',desc:'掠食者靠近時自動衝刺逃開',max:3},
+  filter:{ic:'🧲',name:'濾食觸手',desc:'把附近吃得下的東西吸過來',max:3},
+  strong:{ic:'💪',name:'強壯體魄',desc:'最大生命 +1，並回 1 血',max:3},
+  growth:{ic:'📈',name:'生長激素',desc:'吃東西長大的速度 +25%',max:3},
+  bite:{ic:'🦷',name:'強力咬合',desc:'可以吃下比較大的獵物',max:3},
+  fat:{ic:'🧥',name:'厚脂肪',desc:'冰冷、炎熱、缺氧的傷害 −30%',max:3},
+};
+const KEYS = {
+  jaw:{ic:'🦴',name:'頜骨',desc:'咬得動更大的獵物',fact:'有頜魚在志留紀興盛，頜骨讓脊椎動物能主動獵食。'},
+  lung:{ic:'🌬️',name:'肺與肉鰭',desc:'缺氧傷害減半',fact:'肉鰭魚有原始的肺，鰭骨後來演化成四肢，爬上陸地。'},
+  egg:{ic:'🥚',name:'羊膜卵',desc:'最大生命 +1',fact:'羊膜卵有殼不怕乾，讓動物不必回水邊產卵。'},
+  fur:{ic:'🦊',name:'毛髮與恆溫',desc:'冰冷、炎熱傷害 −30%',fact:'犬齒獸可能已有毛髮、體溫恆定，是哺乳類的祖先。'},
+  placenta:{ic:'🤰',name:'胎盤',desc:'每秒慢慢回血',fact:'約 1.6 億年前的侏羅獸，是目前最早的真獸類（胎盤哺乳類那一支）。'},
+  upright:{ic:'🚶',name:'直立行走',desc:'移動速度 +10%',fact:'直立行走空出雙手，可以拿工具、生火。'},
+};
+
+// ===== 存檔 =====
+const SAVE_KEY = 'prehistevo_v1';
+let SAVE = {fossils:0, upg:{hp:0,spd:0,reroll:0}, endings:{}, runs:0, best:0};
+function loadSave(){ if(HEADLESS) return; try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if(s) SAVE = Object.assign(SAVE, s, {upg:Object.assign({hp:0,spd:0,reroll:0}, s.upg||{})}); }catch(e){} }
+function writeSave(){ if(HEADLESS) return; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} }
+const UPGRADES = [
+  {id:'hp', em:'❤️', name:'祖傳體質', desc:'每局最大生命 +1', cost:[40,80,140]},
+  {id:'spd', em:'🦵', name:'祖傳腳力', desc:'每局移動速度 +6%', cost:[30,70,120]},
+  {id:'reroll', em:'🎲', name:'突變重抽', desc:'每局可以重抽卡片 +1 次', cost:[50,100,160]},
+];
+
+// ===== 遊戲狀態 =====
+let G = null;
+const input = {dx:0, dy:0, active:false, ox:0, oy:0, cx:0, cy:0, keys:{}};
+
+function tr(id){ return G.traits[id]||0; }
+function stat(n){
+  const k = G.keys;
+  switch(n){
+    case 'spd': return 52*(1+0.12*tr('stream'))*(1+0.06*G.upg.spd)*(k.upright?1.1:1);
+    case 'dmg': return Math.pow(0.8, tr('armor'));
+    case 'xp': return 1+0.25*tr('glut');
+    case 'regen': return 0.07*tr('heal') + (k.placenta?0.05:0);
+    case 'detect': return 62*Math.max(0.4, 1-0.2*tr('sense'));
+    case 'magnet': return 12*tr('filter');
+    case 'grow': return 1+0.25*tr('growth');
+    case 'bite': return 0.9 + 0.08*tr('bite') + (k.jaw?0.1:0);
+    case 'clim': return Math.pow(0.7, tr('fat'))*(k.fur?0.7:1);
+    case 'o2': return (k.lung?0.5:1)*Math.pow(0.7, tr('fat'));
+    case 'maxHp': return 5 + G.upg.hp + tr('strong') + (k.egg?1:0);
+  }
+}
+function newRun(){
+  G = {mode:'play', era:0, t:0, phase:'era', bossT:0, xp:0, lvl:1, need:32, pending:0, eraLevels:0,
+       traits:{}, keys:{}, upg:Object.assign({},SAVE.upg), rerolls:SAVE.upg.reroll, kills:0, killedBy:'', offer:null, forced:false,
+       cs:[], parts:[], fx:[], haz:{}, spawnT:0, total:0, ended:null, banner:0, toast:0, toastTxt:''};
+  G.p = {x:W/2, y:H*0.6, vx:0, vy:0, size:12, hp:0, face:1, inv:0, dashT:0, dashCd:0, poisonCd:0};
+  G.p.hp = stat('maxHp');
+  startEra(0);
+}
+function startEra(i){
+  G.era = i; G.t = 0; G.phase = 'era'; G.bossT = 0; G.eraLevels = 0;
+  G.cs = []; G.haz = {}; G.fx = [];
+  const p = G.p; p.size = 12; p.x = W/2; p.y = H*0.6; p.vx = p.vy = 0; p.inv = 1.5;
+  p.hp = Math.min(stat('maxHp'), p.hp + 2);
+  // 一開場先放一些食物，避免空畫面
+  for(const s of ERAS[i].spawns){ const n = s[0]==='plank'||s[0]==='bug'||s[0]==='fruit' ? s[1] : Math.ceil(s[1]/2); for(let j=0;j<n;j++) spawn(s, true); }
+}
+function curForm(){ return (G.era===5 && G.keys.upright) ? 'human' : ERAS[G.era].form; }
+
+function spawn(s, inside){
+  const def = CDEF[s[0]];
+  const size = R(s[2], s[3]);
+  let x, y;
+  if(inside){
+    do{ x = R(10, W-10); y = R(TOP+10, H-10); }while(Math.hypot(x-G.p.x, y-G.p.y) < 60);
+  } else {
+    const side = RI(0,3), m = size/2+6;
+    if(side===0){x=R(0,W);y=TOP-m;} else if(side===1){x=W+m;y=R(TOP,H);} else if(side===2){x=R(0,W);y=H+m;} else {x=-m;y=R(TOP,H);}
+  }
+  const ang = Math.atan2(R(TOP+60,H-60)-y, R(40,W-40)-x);
+  G.cs.push({k:s[0], def, x, y, size, vx:0, vy:0, dir:ang, stun:0, fleeT:0, wob:R(0,6), boss:false});
+}
+
+// ===== 每幀更新 =====
+function step(dt){
+  if(!G || G.mode!=='play') return;
+  const E = ERAS[G.era], p = G.p;
+  G.t += dt; G.total += dt;
+  if(G.phase==='boss') G.bossT += dt;
+  if(G.banner>0) G.banner -= dt;
+  if(G.toast>0) G.toast -= dt;
+
+  // 玩家移動
+  let dx = input.dx, dy = input.dy;
+  const kx = (input.keys.ArrowRight||input.keys.d?1:0)-(input.keys.ArrowLeft||input.keys.a?1:0);
+  const ky = (input.keys.ArrowDown||input.keys.s?1:0)-(input.keys.ArrowUp||input.keys.w?1:0);
+  if(kx||ky){ const l=Math.hypot(kx,ky); dx=kx/l; dy=ky/l; }
+  const spd = stat('spd') * (p.dashT>0 ? 2.6 : 1);
+  if(p.dashT<=0){
+    const a = Math.min(1, dt*10);
+    p.vx += (dx*spd - p.vx)*a; p.vy += (dy*spd - p.vy)*a;
+  }
+  p.x += p.vx*dt; p.y += p.vy*dt;
+  const pr = p.size*0.4;
+  p.x = clamp(p.x, pr, W-pr); p.y = clamp(p.y, TOP+pr, H-pr);
+  if(Math.abs(p.vx)>3) p.face = p.vx>0?1:-1;
+  p.inv = Math.max(0, p.inv-dt); p.dashT = Math.max(0, p.dashT-dt); p.dashCd = Math.max(0, p.dashCd-dt); p.poisonCd = Math.max(0, p.poisonCd-dt);
+  p.hp = Math.min(stat('maxHp'), p.hp + stat('regen')*dt);
+
+  // 生成：大滅絕期間數量減半
+  G.spawnT -= dt;
+  if(G.spawnT<=0){
+    G.spawnT = 0.25;
+    const mul = G.phase==='boss' ? 0.5 : 1;
+    for(const s of E.spawns){
+      const have = G.cs.reduce((n,c)=>n+(c.k===s[0]&&!c.boss?1:0),0);
+      // 最大的掠食者前 12 秒先不出現，讓玩家熟悉
+      if(s===E.spawns[3] && G.t<12 && G.phase==='era') continue;
+      if(have < Math.max(1, Math.round(s[1]*mul))){ spawn(s,false); break; }
+    }
+  }
+
+  // 生物
+  const bite = stat('bite'), detect = stat('detect'), mag = stat('magnet');
+  let nearPred = null, nearD = 1e9;
+  for(let i=G.cs.length-1;i>=0;i--){
+    const c = G.cs[i], d = Math.hypot(c.x-p.x, c.y-p.y);
+    const edible = !c.boss && c.size <= p.size*bite;
+    const danger = c.def.role==='pred' && !edible;
+    c.stun = Math.max(0,c.stun-dt); c.fleeT = Math.max(0,c.fleeT-dt); c.wob += dt;
+    let tx=0, ty=0, sp=c.def.spd*0.45;
+    if(c.stun>0){ sp=0; }
+    else if(G.haz.fire && c.boss && Math.hypot(c.x-G.haz.fire.x, c.y-G.haz.fire.y) < 70){
+      tx = c.x-G.haz.fire.x; ty = c.y-G.haz.fire.y; sp = c.def.spd;
+    }
+    else if(danger && c.fleeT<=0 && (d<detect || c.boss)){
+      tx = p.x-c.x; ty = p.y-c.y; sp = c.def.spd;
+      if(d<nearD){nearD=d; nearPred=c;}
+      // 追太久會累，放棄一陣子（頭目不會）
+      c.chase = (c.chase||0) + dt;
+      if(!c.boss && c.chase > 4){ c.chase = 0; c.fleeT = 2.5; }
+    }
+    else if(danger && c.fleeT>0){ tx = c.x-p.x; ty = c.y-p.y; sp = c.def.spd*0.8; }
+    else if(edible && c.def.role!=='food' && d<46){ tx = c.x-p.x; ty = c.y-p.y; sp = c.def.spd*0.9; }
+    else { c.dir += R(-1.5,1.5)*dt; tx = Math.cos(c.dir); ty = Math.sin(c.dir); }
+    if(edible && mag>0 && d < mag+p.size){ tx = p.x-c.x; ty = p.y-c.y; sp = Math.max(sp, 40); }
+    const tl = Math.hypot(tx,ty) || 1;
+    const a = Math.min(1, dt*4);
+    c.vx += (tx/tl*sp - c.vx)*a; c.vy += (ty/tl*sp - c.vy)*a;
+    c.x += c.vx*dt; c.y += c.vy*dt;
+    if(c.boss){ c.x = clamp(c.x, -20, W+20); c.y = clamp(c.y, TOP-10, H+20); }
+    // 離開畫面太遠就消失
+    if(!c.boss && (c.x<-70||c.x>W+70||c.y<TOP-70||c.y>H+70)){ G.cs.splice(i,1); continue; }
+    // 碰撞
+    const cr = c.size*0.34;
+    if(d < pr+cr){
+      if(edible){ eat(c); G.cs.splice(i,1); continue; }
+      if(danger){
+        if(tr('poison')>0 && p.poisonCd<=0){
+          c.stun = 2.5; c.fleeT = 4.5; p.poisonCd = 7/tr('poison'); burst(c.x,c.y,'#b060ff',10); showToast('☠️ 毒暈了'+c.def.name);
+        } else if(p.inv<=0){
+          hurt(1, '被'+c.def.name+'吃掉了'); p.inv = 1.5; c.fleeT = c.boss ? 1.5 : 4; c.chase = 0;
+          const l = d||1; p.vx = (p.x-c.x)/l*90; p.vy = (p.y-c.y)/l*90;
+        }
+      } else {
+        // 推開
+        const l = d||1, push = (pr+cr-d)*0.5;
+        p.x += (p.x-c.x)/l*push; p.y += (p.y-c.y)/l*push; c.x -= (p.x-c.x)/l*push; c.y -= (p.y-c.y)/l*push;
+      }
+    }
+  }
+  // 自動衝刺
+  if(tr('dash')>0 && nearPred && nearD < 30+nearPred.size*0.4 && p.dashCd<=0){
+    const l = nearD||1; p.vx = (p.x-nearPred.x)/l*stat('spd')*2.6; p.vy = (p.y-nearPred.y)/l*stat('spd')*2.6;
+    p.dashT = 0.28; p.dashCd = 6/tr('dash'); burst(p.x,p.y,'#ffffff',6);
+  }
+
+  if(G.phase==='boss') stepHazard(dt);
+
+  for(let i=G.fx.length-1;i>=0;i--){ G.fx[i].t -= dt; if(G.fx[i].t<=0) G.fx.splice(i,1); }
+  // 粒子
+  for(let i=G.parts.length-1;i>=0;i--){ const q=G.parts[i]; q.t-=dt; q.x+=q.vx*dt; q.y+=q.vy*dt; q.vx*=0.92; q.vy*=0.92; if(q.t<=0) G.parts.splice(i,1); }
+
+  if(p.hp<=0){ endRun(null); return; }
+  if(G.pending>0){ openCards(false); return; }
+  if(G.phase==='era' && G.t>=ERA_LEN){ startBoss(); return; }
+  if(G.phase==='boss' && G.bossT>=BOSS_LEN){ finishEra(); return; }
+}
+
+function eat(c){
+  const p = G.p, E = ERAS[G.era];
+  const cap = 30;
+  p.size = Math.min(cap, p.size + c.size*0.05*stat('grow'));
+  G.xp += c.size*0.55*stat('xp'); G.kills++;
+  burst(c.x, c.y, c.def.role==='pred'?'#ffd25e':'#ffffff', c.def.role==='pred'?12:5);
+  if(c.def.role==='pred') showToast('吃掉了'+c.def.name+'！');
+  while(G.xp >= G.need){ G.xp -= G.need; G.lvl++; G.need = Math.round(28 + G.lvl*3); G.pending++; }
+}
+function hurt(n, cause){
+  G.p.hp -= n*stat('dmg'); G.killedBy = cause;
+  G.fx.push({t:0.25, kind:'flash'});
+  burst(G.p.x, G.p.y, '#ff4040', 8);
+}
+function burst(x,y,col,n){ if(G.parts.length>220) return; for(let i=0;i<n;i++){ const a=R(0,6.28), s=R(15,60); G.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:R(0.25,0.6),col}); } }
+function showToast(t){ G.toast = 1.6; G.toastTxt = t; }
+
+// ===== 大滅絕 =====
+function startBoss(){
+  const E = ERAS[G.era];
+  G.phase = 'boss'; G.bossT = 0; G.banner = 3;
+  const h = G.haz = {type:E.hazard};
+  if(h.type==='ice'){ h.vents = [0,1,2].map(()=>({x:R(25,W-25), y:R(TOP+40,H-30), r:22, a:R(0,6.28)})); }
+  if(h.type==='anoxia'){ h.o2 = 100; h.bubbles = []; h.bt = 0; }
+  if(h.type==='volcano'){ h.bombs = []; h.bt = 0.5; }
+  if(h.type==='heat'){ h.bands = []; h.bt = 0.6; }
+  if(h.type==='meteor'){ h.holes = [0,1,2].map((_,i)=>({x:30+i*60+R(-10,10), y:R(TOP+60,H-40), r:13})); h.mets = []; h.bt = 1; h.shock = false; }
+  if(h.type==='iceage'){
+    h.wood = 0; h.sticks = [0,1,2].map(()=>({x:R(20,W-20), y:R(TOP+30,H-20)})); h.fire = null;
+    G.cs.push({k:'smilo', def:Object.assign({},CDEF.smilo,{name:'劍齒虎（頭目）',spd:34}), x:-30, y:H*0.4, size:42, vx:0, vy:0, dir:0, stun:0, fleeT:0, wob:0, boss:true});
+  }
+  // 還沒拿關鍵突變：演化關口
+  if(!G.keys[E.key]) openCards(true);
+}
+function inCircle(p, c){ return Math.hypot(p.x-c.x, p.y-c.y) < c.r; }
+function stepHazard(dt){
+  const h = G.haz, p = G.p, E = ERAS[G.era];
+  if(h.type==='ice'){
+    for(const v of h.vents){ v.a += dt*0.4; v.x = clamp(v.x+Math.cos(v.a)*6*dt, 20, W-20); v.y = clamp(v.y+Math.sin(v.a)*6*dt, TOP+25, H-20); }
+    const warm = h.vents.some(v=>inCircle(p,v));
+    if(!warm){ p.hp -= 0.38*stat('clim')*dt; G.killedBy = '凍死在'+E.hazName; }
+    h.warm = warm;
+  }
+  if(h.type==='anoxia'){
+    h.o2 = Math.max(0, h.o2 - 10*stat('o2')*dt);
+    h.bt -= dt;
+    if(h.bt<=0){ h.bt = 0.7; h.bubbles.push({x:R(12,W-12), y:H+6, r:6, vy:R(-28,-18)}); }
+    for(let i=h.bubbles.length-1;i>=0;i--){ const b=h.bubbles[i]; b.y += b.vy*dt; b.x += Math.sin(b.y*0.08)*0.3;
+      if(Math.hypot(b.x-p.x,b.y-p.y) < b.r+p.size*0.4+3){ h.o2 = Math.min(100, h.o2+24); h.bubbles.splice(i,1); burst(b.x,b.y,'#9fe8ff',5); continue; }
+      if(b.y < TOP-10) h.bubbles.splice(i,1); }
+    if(h.o2<=0){ p.hp -= 0.9*dt; G.killedBy = '窒息於'+E.hazName; }
+  }
+  if(h.type==='volcano'){
+    h.bt -= dt;
+    if(h.bt<=0){ h.bt = Math.max(0.32, 1.0 - G.bossT*0.035);
+      const near = rand()<0.5; h.bombs.push({x: near?clamp(p.x+R(-30,30),10,W-10):R(10,W-10), y: near?clamp(p.y+R(-30,30),TOP+10,H-10):R(TOP+10,H-10), r:16, t:1.2}); }
+    for(let i=h.bombs.length-1;i>=0;i--){ const b=h.bombs[i]; b.t -= dt;
+      if(b.t<=0){ if(Math.hypot(b.x-p.x,b.y-p.y) < b.r+p.size*0.3){ hurt(1, '被'+E.hazName+'的火山彈擊中'); } burst(b.x,b.y,'#ff8030',10); G.fx.push({t:0.3,kind:'boom',x:b.x,y:b.y,r:b.r}); h.bombs.splice(i,1); } }
+  }
+  if(h.type==='heat'){
+    h.bt -= dt;
+    if(h.bt<=0){ h.bt = 2.4; const down = rand()<0.5; h.bands.push({y: down?TOP-30:H+2, h:28, vy: down?R(34,46):-R(34,46), warn:0.9}); }
+    let inBand = false;
+    for(let i=h.bands.length-1;i>=0;i--){ const b=h.bands[i];
+      if(b.warn>0){ b.warn-=dt; continue; }
+      b.y += b.vy*dt;
+      if(p.y > b.y && p.y < b.y+b.h) inBand = true;
+      if(b.y < TOP-60 || b.y > H+40) h.bands.splice(i,1); }
+    if(inBand){ p.hp -= 1.7*stat('clim')*dt; G.killedBy = '熱死在'+E.hazName; }
+    h.hot = inBand;
+  }
+  if(h.type==='meteor'){
+    h.bt -= dt;
+    const left = BOSS_LEN - G.bossT;
+    const inHole = h.holes.some(o=>inCircle(p,o));
+    h.inHole = inHole;
+    if(h.bt<=0 && left>3){ h.bt = 0.55;
+      const near = rand()<0.5; h.mets.push({x: near?clamp(p.x+R(-25,25),10,W-10):R(10,W-10), y: near?clamp(p.y+R(-25,25),TOP+10,H-10):R(TOP+10,H-10), r:14, t:1.0}); }
+    for(let i=h.mets.length-1;i>=0;i--){ const m=h.mets[i]; m.t -= dt;
+      if(m.t<=0){ if(!inHole && Math.hypot(m.x-p.x,m.y-p.y) < m.r+p.size*0.3) hurt(1,'被隕石砸中'); burst(m.x,m.y,'#ffb040',10); G.fx.push({t:0.3,kind:'boom',x:m.x,y:m.y,r:m.r}); h.mets.splice(i,1); } }
+    if(left<=0.6 && !h.shock){ h.shock = true; G.fx.push({t:0.8,kind:'white'}); if(!inHole) hurt(3,'被小行星撞擊的衝擊波吹走'); }
+  }
+  if(h.type==='iceage'){
+    for(let i=h.sticks.length-1;i>=0;i--){ const s=h.sticks[i]; if(Math.hypot(s.x-p.x,s.y-p.y) < 10+p.size*0.4){ h.sticks.splice(i,1); h.wood++; burst(s.x,s.y,'#c08850',6);
+      if(h.wood>=3){ h.fire = {x:clamp(p.x,20,W-20), y:clamp(p.y,TOP+20,H-20), r:34}; showToast('🔥 生火了！'); } else showToast('木柴 '+h.wood+'/3'); } }
+    const warm = h.fire && inCircle(p,h.fire);
+    if(warm) p.hp = Math.min(stat('maxHp'), p.hp+0.4*dt);
+    else { p.hp -= 0.32*stat('clim')*dt; G.killedBy = '凍死在'+E.hazName; }
+    h.warm = warm;
+  }
+}
+
+function finishEra(){
+  const E = ERAS[G.era];
+  if(G.era===5){ endRun(G.keys.upright ? 'human' : 'chimp'); return; }
+  if(!G.keys[E.key]){ endRun(E.branch); return; }
+  startEra(G.era+1);
+  G.mode = 'trans'; showTrans(false);
+}
+
+// ===== 選卡 =====
+function openCards(forced){
+  if(forced) G.forced = true;
+  G.offer = makeOffer(forced);
+  G.mode = 'card';
+  if(!HEADLESS) showCards();
+}
+function makeOffer(forced){
+  const E = ERAS[G.era];
+  const pool = Object.keys(TRAITS).filter(id=>tr(id)<TRAITS[id].max);
+  const out = [];
+  const wantKey = !G.keys[E.key] && (forced || G.eraLevels>=1 || G.t>30);
+  if(wantKey) out.push({key:true, id:E.key});
+  while(out.length<3 && pool.length){ const id = pool.splice(Math.floor(rand()*pool.length),1)[0]; out.push({key:false,id}); }
+  while(out.length<3) out.push({key:false,id:'snack'});
+  // 洗牌，關鍵卡不一定在第一張
+  for(let i=out.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }
+  return out;
+}
+function chooseCard(i){
+  if(!G || G.mode!=='card' || !G.offer || !G.offer[i]) return;
+  const o = G.offer[i];
+  if(o.key){ G.keys[o.id] = true; if(o.id==='egg') G.p.hp += 1; }
+  else if(o.id==='snack'){ G.p.hp = Math.min(stat('maxHp'), G.p.hp+2); }
+  else { G.traits[o.id] = tr(o.id)+1; if(o.id==='strong') G.p.hp += 1; }
+  G.p.hp = Math.min(stat('maxHp'), G.p.hp);
+  if(G.forced) G.forced = false; else { G.pending = Math.max(0,G.pending-1); G.eraLevels++; }
+  G.offer = null;
+  if(G.pending>0){ openCards(false); return; }
+  G.mode = 'play';
+  if(!HEADLESS) hideOv('cards');
+}
+function reroll(){
+  if(!G || G.mode!=='card' || G.rerolls<=0) return;
+  G.rerolls--; G.offer = makeOffer(G.forced);
+  if(!HEADLESS) showCards();
+}
+
+// ===== 結束 =====
+function endRun(ending){
+  if(G.mode==='end') return;
+  G.mode = 'end';
+  const reached = G.era + (ending ? 1 : 0);
+  let fossils = G.era*15 + G.lvl*2 + Math.floor(G.kills/6);
+  if(ending) fossils += ending==='human' ? 120 : 30;
+  const isNew = ending && !SAVE.endings[ending];
+  G.ended = {ending, fossils, isNew, reached};
+  if(!HEADLESS){
+    SAVE.fossils += fossils; SAVE.runs++; SAVE.best = Math.max(SAVE.best, reached);
+    if(ending) SAVE.endings[ending] = true;
+    writeSave(); showEnd();
+  }
+}
+
+// ===== 繪圖 =====
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const bgCache = {};
+function eraBg(i){
+  if(bgCache[i]) return bgCache[i];
+  const E = ERAS[i], c = document.createElement('canvas'); c.width=W; c.height=H;
+  const x = c.getContext('2d'), r = mulberry32(1000+i);
+  x.fillStyle = E.bg[0]; x.fillRect(0,0,W,H);
+  // 大色塊＋小雜點
+  for(let n=0;n<70;n++){ x.fillStyle = E.bg[1]; const px=Math.floor(r()*W), py=Math.floor(r()*H), s=4+Math.floor(r()*14); x.fillRect(px,py,s,Math.ceil(s/2)); }
+  for(let n=0;n<500;n++){ x.fillStyle = r()<0.5?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.12)'; x.fillRect(Math.floor(r()*W),Math.floor(r()*H),1,1); }
+  if(!E.land){
+    // 海底：下方沙地＋海草
+    x.fillStyle='#2a3a4a'; x.fillRect(0,H-14,W,14);
+    for(let n=0;n<14;n++){ const sx=Math.floor(r()*W), sh=8+Math.floor(r()*18); x.fillStyle=n%2?'#2f7a5a':'#3f9a6a'; for(let j=0;j<sh;j++) x.fillRect(sx+Math.round(Math.sin(j*0.5)),H-14-j,1,1); }
+  } else {
+    const deco = i===2?['#1e5a24','#3a7a2a']: i===3?['#7a5a32','#8a6a3a']: i===4?['#2e6a2e','#4a8a3a']:['#e8ece8','#c8d0c8'];
+    for(let n=0;n<40;n++){ const sx=Math.floor(r()*W), sy=Math.floor(r()*H); x.fillStyle=deco[n%2];
+      if(i===3){ x.fillRect(sx,sy,3,2); } else { x.fillRect(sx,sy,1,3); x.fillRect(sx-1,sy+1,1,2); x.fillRect(sx+1,sy+1,1,2); } }
+    if(i===5) for(let n=0;n<60;n++){ x.fillStyle='rgba(255,255,255,0.55)'; x.fillRect(Math.floor(r()*W),Math.floor(r()*H),2,1); }
+  }
+  return bgCache[i] = c;
+}
+function drawSpr(name, cx, cy, size, face, alpha){
+  const s = SPR[name], sc = size/Math.max(s.w,s.h);
+  const w = Math.max(1,Math.round(s.w*sc)), h = Math.max(1,Math.round(s.h*sc));
+  if(alpha!=null) ctx.globalAlpha = alpha;
+  ctx.drawImage(face<0 ? s.f : s.c, Math.round(cx-w/2), Math.round(cy-h/2), w, h);
+  ctx.globalAlpha = 1;
+}
+function px(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
+function ring(x,y,r,col){ ctx.fillStyle=col; const n=Math.max(12,Math.round(r*1.6)); for(let i=0;i<n;i++){ const a=i/n*6.283; ctx.fillRect(Math.round(x+Math.cos(a)*r),Math.round(y+Math.sin(a)*r),1,1);} }
+function disc(x,y,r,col){ ctx.fillStyle=col; for(let j=-r;j<=r;j++){ const w=Math.round(Math.sqrt(r*r-j*j)); ctx.fillRect(Math.round(x-w),Math.round(y+j),w*2,1);} }
+function shadow(x,y,r,col){ ctx.fillStyle=col; for(let j=-2;j<=2;j++){ const w=Math.round(r*Math.sqrt(1-(j/2.5)*(j/2.5))); ctx.fillRect(Math.round(x-w),Math.round(y+j),w*2,1);} }
+
+function render(){
+  if(!G || G.mode==='title'){ return; }
+  const E = ERAS[G.era], p = G.p, h = G.haz, tt = G.total;
+  ctx.drawImage(eraBg(G.era),0,0);
+  // 海裡的漂浮微粒
+  if(!E.land){ ctx.fillStyle='rgba(200,240,255,0.25)'; for(let i=0;i<24;i++){ const y=((i*53 - tt*8)%H+H)%H, x=(i*37 + Math.sin(tt+i)*4 + W)%W; ctx.fillRect(Math.round(x),Math.round(y),1,1);} }
+
+  // 大滅絕底層
+  if(G.phase==='boss'){
+    if(h.type==='ice') for(const v of h.vents){ disc(v.x,v.y,v.r,'rgba(255,150,60,0.18)'); ring(v.x,v.y,v.r,(tt*4|0)%2?'#ffb060':'#ff8030'); disc(v.x,v.y,3,'#ffd080'); }
+    if(h.type==='meteor') for(const o of h.holes){ disc(o.x,o.y,o.r,'#1a120a'); ring(o.x,o.y,o.r,'#6a4a2a'); }
+    if(h.type==='iceage'){
+      for(const s of h.sticks) { if((tt*3|0)%2) ring(s.x,s.y,9,'#ffe0a0'); drawSpr('wood', s.x, s.y + Math.sin(tt*3+s.x)*1, 15, 1); }
+      if(h.fire){ disc(h.fire.x,h.fire.y,h.fire.r,'rgba(255,160,60,0.16)'); ring(h.fire.x,h.fire.y,h.fire.r,'#ffa040'); drawFire(h.fire.x,h.fire.y,tt); }
+    }
+    if(h.type==='volcano') for(const b of h.bombs){ const on = (b.t*8|0)%2; ring(b.x,b.y,b.r, on?'#ff3030':'#ffb030'); if(b.t<0.5) disc(b.x,b.y,Math.round(b.r*(1-b.t*2)),'rgba(255,60,30,0.35)'); }
+    if(h.type==='meteor') for(const m of h.mets){ ring(m.x,m.y,m.r,(m.t*8|0)%2?'#ff3030':'#ffd030'); const k=m.t; px(m.x+k*60, m.y-k*90, 3, 3, '#ffb040'); px(m.x+k*60+3, m.y-k*90-4, 2, 2, '#ff6020'); }
+    if(h.type==='heat') for(const b of h.bands){ if(b.warn>0){ const yy = b.vy>0?TOP:H-4; px(0,yy,W,4,(b.warn*8|0)%2?'#ff5020':'#ffb030'); } else { ctx.fillStyle='rgba(255,90,20,0.35)'; ctx.fillRect(0,Math.round(b.y),W,b.h); ctx.fillStyle='rgba(255,200,80,0.5)'; for(let x=0;x<W;x+=6) ctx.fillRect(x+((tt*20|0)%6),Math.round(b.y+b.h/2+Math.sin(x*0.3+tt*6)*4),2,1); } }
+    if(h.type==='anoxia') for(const b of h.bubbles){ ring(b.x,b.y,b.r,'#bff0ff'); px(b.x-2,b.y-3,2,1,'#ffffff'); }
+  }
+
+  // 生物＋玩家，依 y 排序
+  const bite = stat('bite');
+  const list = G.cs.slice().sort((a,b)=>a.y-b.y);
+  let drewP = false;
+  const drawPlayer = () => {
+    shadow(p.x, p.y+p.size*0.35, p.size*0.35, 'rgba(255,255,255,0.18)');
+    if(p.inv>0 && (tt*14|0)%2) return;
+    drawSpr(curForm(), p.x, p.y + Math.sin(tt*8)*0.6, p.size, p.face);
+    // 玩家頭上的小三角
+    px(p.x-1, p.y-p.size*0.55-4, 3, 1, '#ffffff'); px(p.x, p.y-p.size*0.55-3, 1, 1, '#ffffff');
+  };
+  for(const c of list){
+    if(!drewP && c.y > p.y){ drawPlayer(); drewP = true; }
+    const edible = !c.boss && c.size <= p.size*bite, danger = c.def.role==='pred' && !edible;
+    shadow(c.x, c.y+c.size*0.35, c.size*0.38, edible ? 'rgba(120,255,120,0.45)' : danger ? 'rgba(255,60,60,0.5)' : 'rgba(0,0,0,0.3)');
+    const face = Math.abs(c.vx)>1 ? (c.vx>0?1:-1) : 1;
+    const bob = c.def.role==='food' ? Math.sin(c.wob*2)*1 : 0;
+    drawSpr(c.def.spr, c.x, c.y+bob, c.size, face, c.stun>0 ? 0.6 : null);
+    if(danger && c.fleeT<=0 && Math.hypot(c.x-p.x,c.y-p.y) < stat('detect') && c.stun<=0){ px(c.x, c.y-c.size*0.5-6, 1, 3, '#ff4040'); px(c.x, c.y-c.size*0.5-2, 1, 1, '#ff4040'); }
+    if(c.stun>0){ px(c.x-3+Math.sin(tt*9)*3, c.y-c.size*0.5-3, 2, 2, '#c080ff'); }
+  }
+  if(!drewP) drawPlayer();
+
+  // 粒子
+  for(const q of G.parts) px(q.x,q.y,1,1,q.col);
+  // 特效
+  for(const f of G.fx){
+    if(f.kind==='boom') disc(f.x,f.y,Math.round(f.r*(1.2-f.t)),'rgba(255,140,40,'+(f.t*2).toFixed(2)+')');
+    if(f.kind==='flash'){ ctx.fillStyle='rgba(255,0,0,'+(f.t*1.2).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
+    if(f.kind==='white'){ ctx.fillStyle='rgba(255,250,230,'+Math.min(1,f.t*1.5).toFixed(2)+')'; ctx.fillRect(0,0,W,H); }
+  }
+
+  // 冰冷邊框
+  if(G.phase==='boss' && (h.type==='ice'||h.type==='iceage')){
+    const k = Math.min(1, G.bossT/8)*(h.warm?0.4:1);
+    ctx.fillStyle='rgba(220,240,255,'+(0.25*k).toFixed(2)+')'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(240,250,255,0.8)'; const r = mulberry32(7);
+    for(let i=0;i<Math.round(160*k);i++){ const e=r()*4|0, a=r(); const d=r()*14; const xx = e===0?a*W: e===1?W-d: e===2?a*W: d; const yy = e===0?TOP+d: e===1?TOP+a*(H-TOP): e===2?H-d: TOP+a*(H-TOP); ctx.fillRect(xx|0,yy|0,1,1); }
+  }
+  if(G.phase==='boss' && h.type==='meteor'){ const left = BOSS_LEN-G.bossT; if(left<4){ ctx.fillStyle='rgba(255,120,40,'+((4-left)*0.08).toFixed(2)+')'; ctx.fillRect(0,0,W,H); } }
+
+  // 搖桿
+  if(input.active){ ring(input.ox, input.oy, 14, 'rgba(255,255,255,0.5)'); disc(input.ox+input.dx*12, input.oy+input.dy*12, 4, 'rgba(255,255,255,0.45)'); }
+}
+function drawFire(x,y,t){
+  px(x-6,y+3,12,2,'#5a3a20'); px(x-5,y+1,2,4,'#7a5030'); px(x+3,y+1,2,4,'#7a5030');
+  for(let i=0;i<9;i++){ const fx = x-4+i, hgt = 4+Math.round(Math.abs(Math.sin(t*9+i*1.7))*5) - Math.abs(i-4); for(let j=0;j<hgt;j++) px(fx, y+1-j, 1, 1, j>hgt-3?'#ffe080':j>hgt-5?'#ffa030':'#e05020'); }
+}
+
+// ===== DOM 介面 =====
+const $ = id => document.getElementById(id);
+function showOv(id){ document.querySelectorAll('.ov').forEach(o=>o.classList.toggle('on', o.id===id)); }
+function hideOv(id){ $(id).classList.remove('on'); }
+function hideAllOv(){ document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on')); }
+function sprURL(name, scale){ const s=SPR[name], c=document.createElement('canvas'); c.width=s.w*scale; c.height=s.h*scale; const x=c.getContext('2d'); x.imageSmoothingEnabled=false; x.drawImage(s.c,0,0,c.width,c.height); return c.toDataURL(); }
+
+function showCards(){
+  const E = ERAS[G.era];
+  $('cardsT').textContent = G.forced ? '⚠ 演化關口' : '突變！選一個（Lv'+G.lvl+'）';
+  $('cardsHint').innerHTML = G.forced
+    ? E.hazName+'就要來了。<br>選 <b style="color:var(--gold)">🧬 '+KEYS[E.key].name+'</b> 才能繼續往人類演化；選別的會走上演化旁支。'
+    : (!G.keys[E.key] ? '這個時代的關鍵突變：🧬 '+KEYS[E.key].name : '已經拿到這個時代的關鍵突變 ✓');
+  const L = $('cardList'); L.innerHTML = '';
+  G.offer.forEach((o,i)=>{
+    const b = document.createElement('button'); b.className = 'card'+(o.key?' key':'');
+    if(o.key){ const k = KEYS[o.id]; b.innerHTML = '<span class="ic">'+k.ic+'</span><span><span class="tag">🧬 人類演化關鍵</span><b>'+k.name+'</b><small>'+k.desc+'</small><small class="fact">'+k.fact+'</small></span>'; }
+    else if(o.id==='snack'){ b.innerHTML = '<span class="ic">🍎</span><span><b>飽餐一頓</b><small>回復 2 生命</small></span>'; }
+    else { const t = TRAITS[o.id], lv = tr(o.id); b.innerHTML = '<span class="ic">'+t.ic+'</span><span><b>'+t.name+' <span class="lv">Lv'+lv+'→'+(lv+1)+'</span></b><small>'+t.desc+'</small></span>'; }
+    b.onclick = () => chooseCard(i);
+    L.appendChild(b);
+  });
+  $('rerollBtn').style.display = G.rerolls>0 ? '' : 'none';
+  $('rerollBtn').textContent = '🎲 重抽（剩 '+G.rerolls+' 次）';
+  showOv('cards');
+}
+function showTrans(first){
+  const E = ERAS[G.era];
+  $('transT').textContent = first ? E.name : '演化成功！';
+  $('transImg').src = sprURL(E.form, 8);
+  $('transBody').innerHTML = (first?'':'<b>'+E.name+'</b>　<span class="dim">'+E.years+'</span><br>')
+    + (first?'<span class="dim">'+E.years+'</span><br>':'')
+    + '你是 <b>'+E.formName+'</b><br><span class="dim">'+E.formFact+'</span><br><br>'
+    + (first ? '拖曳畫面移動。<br><span style="color:#7fe08a">綠影子</span> = 吃得下，<span style="color:#ff6060">紅影子</span> = 快逃！<br>'+ERA_LEN+' 秒後會遇到大滅絕。'
+             : '這個時代的關鍵突變：🧬 <b>'+KEYS[E.key].name+'</b><br>'+ERA_LEN+' 秒後：<span style="color:#ff9070">'+E.hazName+'</span>');
+  $('transBtn').textContent = '出發';
+  showOv('trans');
+}
+function showEnd(){
+  const e = G.ended, E = ERAS[G.era];
+  if(e.ending){
+    const d = ENDINGS[e.ending];
+    $('endT').textContent = e.ending==='human' ? '🎉 你進化成人了！' : '演化旁支';
+    $('endEmoji').textContent = d.emoji;
+    $('endBody').innerHTML = '<b>'+d.name+'</b>'+(d.alive?'　<span class="dim">（今天還活著）</span>':'　<span class="dim">（已滅絕）</span>')+'<br>'+d.desc
+      + (e.ending!=='human' ? '<br><br><span class="dim">想變成人？在「演化關口」選 🧬 '+KEYS[E.key].name+'。</span>' : '')
+      + (e.isNew ? '<br><span class="new">✨ 演化樹新解鎖！</span>' : '');
+  } else {
+    $('endT').textContent = '💀 滅絕';
+    $('endEmoji').textContent = '🪨';
+    $('endBody').innerHTML = '你的物種在 <b>'+E.name+'</b> 滅絕了。<br><span class="dim">'+(G.killedBy||'')+'</span><br><br>你留下了一些化石……';
+  }
+  const tl = Object.keys(G.traits).map(id=>TRAITS[id].ic+'×'+G.traits[id]).join(' ');
+  const kl = Object.keys(G.keys).map(id=>KEYS[id].ic+KEYS[id].name).join('、');
+  $('endStats').innerHTML = '到達：'+E.name+'　等級 '+G.lvl+'　吃掉 '+G.kills+'<br>'+(kl?'🧬 '+kl+'<br>':'')+(tl||'')+'<br><b style="color:#e8d6b0">🦴 +'+e.fossils+' 化石</b>（共 '+SAVE.fossils+'）';
+  showOv('end');
+  setHud(false);
+}
+function showTitle(){
+  if(G) G.mode = 'title';
+  setHud(false);
+  $('fossilLine').textContent = '🦴 化石 '+SAVE.fossils+'　｜　演化樹 '+Object.keys(SAVE.endings).length+'/'+Object.keys(ENDINGS).length;
+  showOv('title');
+  drawTitleArt();
+}
+function drawTitleArt(){
+  const c = $('titleArt'), x = c.getContext('2d'); x.imageSmoothingEnabled=false; x.clearRect(0,0,c.width,c.height);
+  const forms = ['pikaia','fish','tetra','cyno','shrew','ape','human'];
+  forms.forEach((f,i)=>{ const s=SPR[f], sz=10+i*2.4, sc=sz/Math.max(s.w,s.h), w=Math.round(s.w*sc), h=Math.round(s.h*sc); const cx=12+i*26; x.drawImage(s.c, Math.round(cx-w/2), 34-h, w, h);
+    if(i<6){ x.fillStyle='#ffd25e'; x.fillRect(cx+11,26,3,1); x.fillRect(cx+13,25,1,3); } });
+}
+function showTree(){
+  const L = $('treeList'); L.innerHTML = '';
+  const add = (id) => { const d = ENDINGS[id], got = !!SAVE.endings[id];
+    const r = document.createElement('div'); r.className = 'treeRow'+(got?' got':'')+(id==='human'?' human':'');
+    r.innerHTML = '<span class="em">'+(got?d.emoji:'❔')+'</span><span><b>'+(got?d.name:'？？？')+'</b><small>'+(got?d.desc:'在「'+ERAS[d.era].name+'」走上旁支就能解鎖')+'</small></span>';
+    L.appendChild(r); };
+  ERAS.forEach((E,i)=>{ const h = document.createElement('div'); h.className='treeEra'; h.textContent = '▼ '+E.name+'　'+E.years; L.appendChild(h);
+    Object.keys(ENDINGS).filter(id=>ENDINGS[id].era===i && id!=='human').forEach(add); });
+  const h = document.createElement('div'); h.className='treeEra'; h.textContent='★ 終點'; L.appendChild(h); add('human');
+  showOv('tree');
+}
+function showShop(){
+  $('shopFossil').textContent = '🦴 擁有化石 '+SAVE.fossils+'（每局結束都會拿到）';
+  const L = $('shopList'); L.innerHTML = '';
+  UPGRADES.forEach(u=>{ const lv = SAVE.upg[u.id]||0, maxed = lv>=u.cost.length, cost = u.cost[lv];
+    const r = document.createElement('div'); r.className='shopRow';
+    r.innerHTML = '<span class="em">'+u.em+'</span><div><b>'+u.name+'　Lv'+lv+'/'+u.cost.length+'</b><small>'+u.desc+'</small></div>';
+    const b = document.createElement('button'); b.className='small'; b.textContent = maxed ? '已滿' : '🦴'+cost;
+    b.disabled = maxed || SAVE.fossils<cost; if(b.disabled) b.style.opacity = .5;
+    b.onclick = () => { if(maxed || SAVE.fossils<cost) return; SAVE.fossils -= cost; SAVE.upg[u.id] = lv+1; writeSave(); showShop(); };
+    r.appendChild(b); L.appendChild(r); });
+  showOv('shop');
+}
+const SOURCES = [
+  ['五次大滅絕年代（奧陶紀末約 4.44 億、晚泥盆紀約 3.72 億、二疊紀末約 2.52 億、三疊紀末約 2.01 億、白堊紀末約 6600 萬年前）','https://geo.libretexts.org/Bookshelves/Geology/Historical_Geology_%28Bentley_et_al.%29/11%3A_Mass_Extinctions/11.02%3A_The_Big_Five'],
+  ['大滅絕介紹（Our World in Data）','https://ourworldindata.org/mass-extinctions'],
+  ['各紀年代：國際年代地層表 ICS 2024/12','https://stratigraphy.org/ICSchart/ChronostratChart2024-12.pdf'],
+  ['提塔利克魚約 3.75 億年前、鰭到腳的過渡；犬齒獸可能有毛、恆溫（PBS NOVA）','https://www.pbs.org/wgbh/nova/id/tran-nf.html'],
+  ['侏羅獸 Juramaia 約 1.6 億年前，最早的真獸類（Luo et al., Nature 2011）','https://www.nature.com/articles/nature10291'],
+  ['智人約 30 萬年前（摩洛哥 Jebel Irhoud 化石）','https://en.wikipedia.org/wiki/Jebel_Irhoud'],
+  ['約 100 萬年前用火證據（南非 Wonderwerk 洞穴）','https://www.history.com/news/human-ancestors-tamed-fire-earlier-than-thought'],
+];
+function showSrc(){
+  $('srcList').innerHTML = SOURCES.map(s=>'<li>'+s[0]+'<br><a href="'+s[1]+'" target="_blank" rel="noopener">'+s[1].replace(/^https?:\/\//,'').slice(0,48)+'…</a></li>').join('')
+    + '<li class="dim">遊戲為了好玩有簡化：每個時代只挑一種「人類這一支」的代表動物，生物大小與能力是遊戲數值，不是真實比例。</li>';
+  showOv('src');
+}
+
+let hudOn = false;
+function setHud(on){ hudOn = on; $('hud').classList.toggle('on',on); $('pauseBtn').classList.toggle('on',on); if(!on){ $('banner').classList.remove('on'); $('toast').classList.remove('on'); } }
+const hudCache = {};
+function setTxt(id, v){ if(hudCache[id]!==v){ hudCache[id]=v; $(id).textContent=v; } }
+function setW(id, f){ const v = (clamp(f,0,1)*100).toFixed(1)+'%'; if(hudCache[id]!==v){ hudCache[id]=v; $(id).querySelector('i').style.width=v; } }
+function updateHud(){
+  if(!G || !hudOn) return;
+  const E = ERAS[G.era], h = G.haz;
+  setTxt('eraName', (G.phase==='boss'?'⚠ '+E.hazName:E.name));
+  setTxt('lvl', 'Lv'+G.lvl);
+  $('timeBar').classList.toggle('boss', G.phase==='boss');
+  setW('timeBar', G.phase==='boss' ? 1-G.bossT/BOSS_LEN : 1-G.t/ERA_LEN);
+  setW('hpBar', G.p.hp/stat('maxHp')); setW('xpBar', G.xp/G.need);
+  setTxt('hpTxt', '❤ '+Math.max(0,G.p.hp).toFixed(1)+'/'+stat('maxHp'));
+  setTxt('sizeTxt', '體型 '+G.p.size.toFixed(0));
+  const o2 = G.phase==='boss' && h.type==='anoxia';
+  $('o2Wrap').style.display = o2 ? 'block' : 'none';
+  if(o2) setW('o2Bar', h.o2/100);
+  let ht = '';
+  if(G.phase==='boss'){
+    if(h.type==='ice') ht = h.warm?'🔥 取暖中':'❄ 好冷…';
+    if(h.type==='anoxia') ht = '🫧 氧氣 '+Math.round(h.o2);
+    if(h.type==='heat') ht = h.hot?'🔥 好燙！':'';
+    if(h.type==='meteor') ht = (BOSS_LEN-G.bossT<5 ? '‼ 衝擊波 '+Math.max(0,BOSS_LEN-G.bossT).toFixed(1)+' 秒 ' : '')+(h.inHole?'🕳 躲好了':'');
+    if(h.type==='iceage') ht = h.fire ? (h.warm?'🔥 取暖中':'回到火堆旁！') : '🪵 木柴 '+h.wood+'/3';
+  }
+  setTxt('hazTxt', ht);
+  $('banner').classList.toggle('on', G.banner>0 && G.mode==='play');
+  if(G.banner>0){ setTxt('bannerT', '⚠ '+E.hazName); $('bannerP').innerHTML = E.hazDesc+'<br><b>'+E.hazHint+'</b>'; }
+  $('toast').classList.toggle('on', G.toast>0);
+  if(G.toast>0) setTxt('toast', G.toastTxt);
+}
+
+// ===== 輸入 =====
+function toCanvas(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H}; }
+let pid = null;
+cv.addEventListener('pointerdown', e=>{ if(!G || G.mode!=='play') return; pid = e.pointerId; const q=toCanvas(e); input.active=true; input.ox=q.x; input.oy=q.y; input.dx=input.dy=0; try{cv.setPointerCapture(pid);}catch(_){} });
+cv.addEventListener('pointermove', e=>{ if(!input.active || e.pointerId!==pid) return; const q=toCanvas(e); let dx=q.x-input.ox, dy=q.y-input.oy; const l=Math.hypot(dx,dy);
+  if(l>18){ input.ox += dx/l*(l-18); input.oy += dy/l*(l-18); }   // 搖桿底座跟著手指
+  const k = Math.min(1, l/10); input.dx = l>1.5 ? dx/(l||1)*k : 0; input.dy = l>1.5 ? dy/(l||1)*k : 0; });
+const endPtr = e=>{ if(e.pointerId!==pid) return; input.active=false; input.dx=input.dy=0; pid=null; };
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+addEventListener('keydown', e=>{ const k = e.key.length===1 ? e.key.toLowerCase() : e.key; input.keys[k]=true;
+  if(G && G.mode==='card' && ['1','2','3'].includes(k)) chooseCard(+k-1);
+  if(k==='Escape' && G && G.mode==='play') pauseGame(); });
+addEventListener('keyup', e=>{ const k = e.key.length===1 ? e.key.toLowerCase() : e.key; input.keys[k]=false; });
+function pauseGame(){ if(!G || G.mode!=='play') return; G.mode='pause'; input.active=false; input.dx=input.dy=0; showOv('pause'); }
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseGame(); });
+
+$('startBtn').onclick = () => { newRun(); G.mode='trans'; showTrans(true); setHud(false); };
+$('transBtn').onclick = () => { if(!G || G.mode!=='trans') return; G.mode='play'; hideAllOv(); setHud(true); input.active=false; input.dx=input.dy=0; };
+$('rerollBtn').onclick = reroll;
+$('pauseBtn').onclick = pauseGame;
+$('resumeBtn').onclick = () => { if(G && G.mode==='pause'){ G.mode='play'; hideAllOv(); } };
+$('quitBtn').onclick = () => { if(G && G.mode==='pause'){ G.mode='play'; G.killedBy='你放棄了這一局'; endRun(null); } };
+$('againBtn').onclick = () => $('startBtn').onclick();
+$('homeBtn').onclick = showTitle;
+$('treeBtn').onclick = showTree; $('endTreeBtn').onclick = showTree;
+$('shopBtn').onclick = showShop; $('srcBtn').onclick = showSrc;
+document.querySelectorAll('[data-back]').forEach(b=>b.onclick = () => { if(G && G.mode==='end') showOv('end'); else showTitle(); });
+
+// ===== 版面縮放 =====
+function layout(){
+  const vw = innerWidth, vh = innerHeight;
+  const s = Math.min(vw/W, vh/H);
+  const w = Math.floor(W*s), h = Math.floor(H*s);
+  const wr = $('wrap'); wr.style.width = w+'px'; wr.style.height = h+'px'; wr.style.fontSize = (s*5.2).toFixed(2)+'px';
+}
+addEventListener('resize', layout);
+
+// ===== 主迴圈 =====
+let last = 0;
+function frame(ts){
+  const dt = Math.min(0.05, (ts-last)/1000 || 0); last = ts;
+  if(G && G.mode==='play'){ step(dt); }
+  if(G && G.mode!=='title'){ render(); updateHud(); }
+  requestAnimationFrame(frame);
+}
+
+// ===== 測試：#fuzz（小孩亂玩）／#bot（貪心機器人）=====
+function botInput(){
+  const p = G.p, h = G.haz, bite = stat('bite');
+  let vx=0, vy=0, best=null, bd=1e9;
+  for(const c of G.cs){ const d=Math.hypot(c.x-p.x,c.y-p.y); const edible=!c.boss&&c.size<=p.size*bite;
+    if(edible){ const sc=d - c.size*2; if(sc<bd && c.y>TOP+4 && c.x>2 && c.x<W-2){bd=sc;best=c;} }
+    else if(c.def.role==='pred' && d<70){ vx += (p.x-c.x)/(d*d+1)*900; vy += (p.y-c.y)/(d*d+1)*900; } }
+  let goal = best;
+  if(G.phase==='boss'){
+    if(h.type==='ice') goal = h.vents.reduce((a,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(a.x-p.x,a.y-p.y)?v:a);
+    if(h.type==='anoxia' && h.o2<70 && h.bubbles.length) goal = h.bubbles.reduce((a,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(a.x-p.x,a.y-p.y)?v:a);
+    if(h.type==='volcano') for(const b of h.bombs){ const d=Math.hypot(b.x-p.x,b.y-p.y); if(d<b.r+12){ vx+=(p.x-b.x)/(d+1)*3; vy+=(p.y-b.y)/(d+1)*3; } }
+    if(h.type==='meteor'){ for(const m of h.mets){ const d=Math.hypot(m.x-p.x,m.y-p.y); if(d<m.r+12){ vx+=(p.x-m.x)/(d+1)*3; vy+=(p.y-m.y)/(d+1)*3; } }
+      if(BOSS_LEN-G.bossT<6) { goal = h.holes.reduce((a,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(a.x-p.x,a.y-p.y)?v:a); vx=vy=0; } }
+    if(h.type==='heat') for(const b of h.bands){ if(b.warn>0) continue; const mid=b.y+b.h/2; if(Math.abs(mid-p.y)<40){ vy += (p.y>mid?1:-1)*2; } }
+    if(h.type==='iceage'){ if(h.sticks.length) goal = h.sticks[0]; else if(h.fire) goal = h.fire; }
+  }
+  if(goal){ const d=Math.hypot(goal.x-p.x,goal.y-p.y)||1; vx += (goal.x-p.x)/d; vy += (goal.y-p.y)/d; }
+  const l = Math.hypot(vx,vy); input.dx = l>0.01?vx/l:0; input.dy = l>0.01?vy/l:0;
+}
+function runTests(){
+  const q = new URLSearchParams(HASH.slice(1).replace(/^(fuzz|bot)&?/,''));
+  const isBot = HASH.startsWith('#bot');
+  const n = +(q.get('n')||20), seed = +(q.get('seed')||1);
+  const god = q.get('god')==='1';
+  rand = mulberry32(seed);
+  const res = {mode:isBot?'bot':'fuzz', seed, runs:0, errors:[], endings:{}, eras:[0,0,0,0,0,0], avgT:0, avgLvl:0};
+  const dt = 1/30;
+  for(let r=0;r<n;r++){
+    newRun(); G.mode='play';
+    let steps = 0, chg = 0;
+    try{
+      while(G.mode!=='end' && steps < 30*60*12){
+        steps++;
+        if(G.mode==='card'){ if(!isBot && rand()<0.2 && G.rerolls>0) reroll();
+          let i = RI(0,2); if(isBot){ const k=G.offer.findIndex(o=>o.key); if(k>=0) i=k; }
+          if(!isBot && rand()<0.1) chooseCard(RI(-2,6)); // 亂按不存在的卡
+          chooseCard(i); continue; }
+        if(G.mode==='trans'){ G.mode='play'; continue; }
+        if(G.mode==='pause'){ G.mode='play'; continue; }
+        if(isBot) botInput();
+        else { chg -= dt; if(chg<=0){ chg = R(0.05,0.8); const a=R(0,6.28), m=rand()<0.15?0:R(0.2,1); input.dx=Math.cos(a)*m; input.dy=Math.sin(a)*m; if(rand()<0.03){ G.mode='pause'; } } }
+        if(god && G.p) G.p.hp = stat('maxHp');
+        step(dt);
+        const p = G.p;
+        if(!isFinite(p.x)||!isFinite(p.y)||!isFinite(p.hp)||!isFinite(p.size)||!isFinite(G.xp)) throw new Error('NaN at era '+G.era);
+        if(p.x<-1||p.x>W+1||p.y<TOP-1||p.y>H+1) throw new Error('player out of bounds '+p.x.toFixed(1)+','+p.y.toFixed(1));
+        if(G.cs.length>120) throw new Error('too many creatures '+G.cs.length);
+        if(G.cs.some(c=>!isFinite(c.x)||!isFinite(c.y))) throw new Error('creature NaN');
+        if(steps%97===0) render();
+      }
+      if(G.mode!=='end') throw new Error('run never ended');
+    }catch(e){ res.errors.push('run'+r+': '+e.message); }
+    res.runs++;
+    const k = G.ended ? (G.ended.ending||"dead@"+G.era+":"+G.killedBy) : "none";
+    res.endings[k] = (res.endings[k]||0)+1;
+    res.eras[G.era]++; res.avgT += G.total/n; res.avgLvl += G.lvl/n;
+  }
+  res.avgT = +res.avgT.toFixed(1); res.avgLvl = +res.avgLvl.toFixed(1);
+  document.title = (res.errors.length?'FAIL ':'OK ')+JSON.stringify(res);
+  document.body.setAttribute('data-result', document.title);
+}
+
+loadSave(); layout();
+if(HEADLESS){ try{ runTests(); }catch(e){ document.title = 'FAIL crash '+e.message+' '+e.stack; } }
+else if(/demo=/.test(HASH)){
+  // 截圖用：#demo=時代&t=秒數（機器人先玩一段）
+  const q = new URLSearchParams(HASH.slice(1)); rand = mulberry32(+(q.get('seed')||3));
+  newRun(); startEra(+q.get('demo')); G.mode='play';
+  const T = +(q.get('t')||20);
+  for(let i=0;i<T*30;i++){ if(G.mode==='card'){ const k=G.offer.findIndex(o=>o.key); chooseCard(k>=0?k:0); continue; } G.p.hp = stat('maxHp'); botInput(); step(1/30); }
+  input.dx=input.dy=0; setHud(true); render(); updateHud();
+  if(q.get('cards')){ openCards(true); }
+}
+else { showTitle(); requestAnimationFrame(frame); }
+</script>
+</body>
+</html>
