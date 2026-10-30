@@ -42,7 +42,7 @@ th{color:var(--sub);font-weight:600}
 </style>
 </head>
 <body>
-<div id="gate"><h1>🎛️ 控盤台</h1><input id="pw" type="password" inputmode="numeric" placeholder="密碼"><div class="btns" style="justify-content:center"><button class="b go" id="pwBtn">進入</button></div><div class="sub" id="pwMsg"></div></div>
+<div id="gate"><h1>🎛️ 控盤台</h1><input id="pw" type="password" placeholder="密碼"><div class="btns" style="justify-content:center"><button class="b go" id="pwBtn">進入</button></div><div class="sub" id="pwMsg"></div></div>
 <main id="app" style="display:none">
   <h1>🎛️ 操盤人生・控盤台</h1>
   <div class="card" style="margin-bottom:12px"><div class="stat" id="status"></div></div>
@@ -128,7 +128,9 @@ th{color:var(--sub);font-weight:600}
 var SD = window.STOCK_DATA, G = SD.GAME, DB = G.DB, COMP = SD.COMPANIES, SEC = SD.SECTORS;
 var BY = {}; COMP.forEach(function(c){ BY[c.sym] = c; });
 var SECBY = {}; SEC.forEach(function(s){ SECBY[s.id] = s; });
-var HASH = '83610c19fdd981f65d63d42099f77f73cafe707c4419dfa9ce786920b0d9fb7b';
+var HASH = '3d1d95098cd7e360e3dec7eb110dc7bd7e6921d1b7778d57d1ab6d2b68755673';
+// KEY (derived from the password, never stored in this page) signs every command; ADM is the secret path of the admin data
+var KEY = '', ADM = 'adm';
 var M = null, A = null;
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -136,11 +138,11 @@ function money(v){ return v == null ? '—' : '$' + Math.round(v).toLocaleString
 function pct(v){ return (v > 0 ? '+' : '') + (v*100).toFixed(2) + '%'; }
 function cls(v){ return v > 1e-9 ? 'up' : v < -1e-9 ? 'down' : 'flat'; }
 var tt; function toast(m){ var e = $('toast'); e.textContent = m; e.classList.add('show'); clearTimeout(tt); tt = setTimeout(function(){ e.classList.remove('show'); }, 1800); }
-function cmd(o){ return fetch(DB + '/cmd.json', {method:'POST', body: JSON.stringify(o)}).then(function(r){ toast(r.ok ? '✅ 已送出（3 秒內生效）' : '❌ 失敗'); }).catch(function(){ toast('❌ 網路錯誤'); }); }
+function cmd(o){ o.k = KEY; return fetch(DB + '/cmd.json', {method:'POST', body: JSON.stringify(o)}).then(function(r){ toast(r.ok ? '✅ 已送出（3 秒內生效）' : '❌ 失敗'); }).catch(function(){ toast('❌ 網路錯誤'); }); }
 function sha(s){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function(b){ return Array.from(new Uint8Array(b)).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
-function enter(){ $('gate').style.display = 'none'; $('app').style.display = ''; boot(); }
-try{ if(sessionStorage.getItem('stk_adm') === HASH) setTimeout(enter, 0); }catch(e){}
-$('pwBtn').onclick = function(){ sha('stk:' + $('pw').value.trim()).then(function(h){ if(h === HASH){ try{ sessionStorage.setItem('stk_adm', HASH); }catch(e){} enter(); } else $('pwMsg').textContent = '密碼不對'; }); };
+function enter(key){ KEY = key; sha('stk-adm:' + KEY).then(function(h){ ADM = 'adm_' + h.slice(0, 20); $('gate').style.display = 'none'; $('app').style.display = ''; boot(); }); }
+try{ var sk = sessionStorage.getItem('stk_key'); if(sk) setTimeout(function(){ enter(sk); }, 0); }catch(e){}
+$('pwBtn').onclick = function(){ sha('stk:' + $('pw').value.trim()).then(function(h){ if(h === HASH){ sha('stk-key:' + $('pw').value.trim()).then(function(k){ try{ sessionStorage.setItem('stk_key', k); }catch(e){} enter(k); }); } else $('pwMsg').textContent = '密碼不對'; }); };
 $('pw').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('pwBtn').click(); });
 
 function listen(path, cb){
@@ -162,7 +164,7 @@ function boot(){
   drawScen();
   document.addEventListener('click', function(ev){ var tr = ev.target.closest && ev.target.closest('.prow'); if(tr) showDetail(tr.getAttribute('data-u')); });
   listen('market', function(d){ M = d; draw(); });
-  listen('adm', function(d){ A = d; draw(); });
+  listen(ADM, function(d){ A = d; draw(); });
   setInterval(draw, 5000);
 }
 

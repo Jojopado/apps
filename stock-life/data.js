@@ -7,7 +7,7 @@
 // single stocks ~20–60%): https://en.wikipedia.org/wiki/Volatility_(finance)
 (function (root) {
   var GAME = {
-    DB: 'https://minigolf-party-default-rtdb.asia-southeast1.firebasedatabase.app/rooms/stk',
+    DB: 'https://stocklife-33366-default-rtdb.asia-southeast1.firebasedatabase.app/stk',
     START_CASH: 50000,
     VIP_CASH: 500000,       // start cash for names on the admin's test-player list
     AI_COUNT: 20,           // computer-controlled traders that keep the market and leaderboard alive
