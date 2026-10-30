@@ -15,7 +15,7 @@
     FEE_RATE: 0.001425, FEE_MIN: 20, TAX_RATE: 0.003,
     STEP_PAY: 0.1,          // $ per step  (1,000 steps = $100)
     STEP_CAP: 30000,        // steps credited per day
-    SESSION: { days: [1, 2, 3, 4, 5], open: '09:00', close: '13:30', tzOffsetMin: 480 },
+    SESSION: { days: [1, 2, 3, 4, 5], open: '17:00', close: '21:30', tzOffsetMin: 480 },
     INDEX_NAME: 'AVX 綜合指數'
   };
 
