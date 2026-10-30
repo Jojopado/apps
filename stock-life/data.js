@@ -16,6 +16,9 @@
     STEP_PAY: 1.5,          // $ per step  (1,000 steps = $1,500)
     STEP_CAP: 50000,        // steps credited per day (all at full price)
     AD_CASH: 2000, AD_MULT: 2, AD_MIN: 45, AD_PER_DAY: 6,   // rewarded ad: a little cash + walking pays x2 for 45 min
+    AD_SSV: false,          // true at App Store release: only AdMob server-to-server confirmations pay (TestFlight test ads also use the app report)
+    REF_MAX: 5,             // one invite code pays out at most this many times
+    REQUIRE_SK: false,      // true once everyone runs an app that sends its device secret (build 4+): sessions without one must log in again
     REVERT: { keep: 0.3, halfLifeSessions: 1 },             // news shocks: 30% stays, the rest fades over about one session
     RECOVER_MULT: 3, RECOVER_UNTIL: 70000,                  // after bankruptcy: walking pays x3 until net worth is back to 70k
     REF_BONUS: 70000, REF_STEPS: 10000,                     // invite: both get 70k once the new player has walked 10k steps
