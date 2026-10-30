@@ -44,7 +44,7 @@ th{color:var(--sub);font-weight:600}
 <body>
 <div id="gate"><h1>🎛️ 控盤台</h1><input id="pw" type="password" placeholder="密碼"><div class="btns" style="justify-content:center"><button class="b go" id="pwBtn">進入</button></div><div class="sub" id="pwMsg"></div></div>
 <main id="app" style="display:none">
-  <h1>🎛️ 操盤人生・控盤台</h1>
+  <h1>🎛️ WalkStreet韭菜散步中・控盤台</h1>
   <div class="card" style="margin-bottom:12px"><div class="stat" id="status"></div></div>
   <div class="cols">
     <div class="card">
@@ -102,8 +102,14 @@ th{color:var(--sub);font-weight:600}
       <label>測試玩家起始資金</label><input id="vipCash" type="number" value="500000">
       <div class="btns"><button class="b go" id="vipBtn">儲存名單</button></div>
     </div>
+    <div class="card"><h2>🔑 重設玩家密碼</h2>
+      <div class="sub">玩家寫信說忘記密碼時用。<b>先確認是本人</b>：請對方說出大約的總資產、持有哪幾支股票、哪天加入，跟玩家詳細資料對得上再重設。重設後對方所有裝置都會被登出，請對方用新密碼登入後，到設定綁定 Apple 或 Google。（用 Apple／Google 登入的帳號沒有密碼，不用重設。）</div>
+      <label>玩家暱稱</label><input id="pwName" placeholder="例：KennyG">
+      <label>新的臨時密碼</label><input id="pwNew" placeholder="至少 4 個字">
+      <div class="btns"><button class="b go" id="pwResetBtn">重設密碼</button></div>
+    </div>
     <div class="card"><h2>🤖 AI 散戶</h2>
-      <div class="sub">20 位電腦玩家會自動交易、走路，讓股市和排行榜熱鬧。在遊戲裡會標示「AI」。</div>
+      <div class="sub">20 位電腦玩家會自動交易、走路，讓股市和排行榜熱鬧。在遊戲裡看起來跟一般玩家一樣，玩家分不出來。</div>
       <div class="btns"><button class="b" id="aiBtn">AI 散戶</button></div>
       <h2 style="margin-top:12px">📥 匯出數據</h2>
       <div class="sub">下載 CSV（Excel 可以開）：每位玩家每天的步數、健走步數、總資產、交易次數。</div>
@@ -181,6 +187,7 @@ document.addEventListener('click', function(ev){
   switch(t.id){
     case 'vipBtn': cmd({type:'vip', names: $('vipNames').value.split(/\n/).map(function(s){ return s.trim(); }).filter(Boolean), cash: +$('vipCash').value || 500000}); break;
     case 'aiBtn': cmd({type:'ai', v: !(A && A.aiOn)}); break;
+    case 'pwResetBtn': (function(){ var n = $('pwName').value.trim(), p = $('pwNew').value; if(!n || p.length < 4){ toast('請填暱稱和至少 4 個字的密碼'); return; } sha('stk:' + p).then(function(h){ cmd({type:'setpw', name: n, ph: h}); $('pwNew').value = ''; }); })(); break;
     case 'csvBtn': exportCsv(); break;
     case 'gBtn': if(detailU){ var amt = +$('gAmt').value || 0; if(!amt){ toast('請輸入金額'); break; } cmd({type:'grant', u: detailU, amount: amt, note: $('gNote').value}); setTimeout(function(){ showDetail(detailU); }, 4000); } break;
     case 'dClose': $('pDetail').style.display = 'none'; detailU = null; break;
@@ -270,7 +277,7 @@ function exportCsv(){
       days.forEach(function(d){ var x = (p.hist || {})[d] || {}; lines.push(['"' + String(p.name).replace(/"/g,'""') + '"', u, p.ai ? 'Y' : '', d, x.s || 0, x.o || 0, x.nw || '', x.tr || 0, p.cash, p.base || G.START_CASH, p.tot || 0, p.resets || 0].join(',')); });
     });
     var blob = new Blob(['﻿' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '操盤人生_玩家數據_' + new Date().toISOString().slice(0,10) + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'WalkStreet_玩家數據_' + new Date().toISOString().slice(0,10) + '.csv'; document.body.appendChild(a); a.click(); a.remove();
     toast('已下載 ' + (lines.length - 1) + ' 筆');
   });
 }

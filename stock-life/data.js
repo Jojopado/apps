@@ -15,11 +15,12 @@
     FEE_RATE: 0.001425, FEE_MIN: 20, TAX_RATE: 0.003,
     STEP_PAY: 1.5,          // $ per step  (1,000 steps = $1,500)
     STEP_CAP: 50000,        // steps credited per day (all at full price)
-    AD_CASH: 7000, AD_MULT: 2, AD_MIN: 45, AD_PER_DAY: 6,   // rewarded ad: cash now + walking pays x2 for 45 min
+    AD_CASH: 2000, AD_MULT: 2, AD_MIN: 45, AD_PER_DAY: 6,   // rewarded ad: a little cash + walking pays x2 for 45 min
+    REVERT: { keep: 0.3, halfLifeSessions: 1 },             // news shocks: 30% stays, the rest fades over about one session
     RECOVER_MULT: 3, RECOVER_UNTIL: 70000,                  // after bankruptcy: walking pays x3 until net worth is back to 70k
     REF_BONUS: 70000, REF_STEPS: 10000,                     // invite: both get 70k once the new player has walked 10k steps
     GIFT_VALUE: 50000,                                      // hold this much of a company at the close -> its sector's shareholder gift
-    SESSION: { days: [0, 1, 2, 3, 4, 5, 6], open: '17:00', close: '21:30', tzOffsetMin: 480 },
+    SESSION: { days: [0, 1, 2, 3, 4, 5, 6], open: '17:00', close: '02:00', tzOffsetMin: 480 },   // close earlier than open = the session runs past midnight
     INDEX_NAME: 'AVX 綜合指數'
   };
 
