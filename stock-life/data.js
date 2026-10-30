@@ -8,13 +8,17 @@
 (function (root) {
   var GAME = {
     DB: 'https://stocklife-33366-default-rtdb.asia-southeast1.firebasedatabase.app/stk',
-    START_CASH: 50000,
-    VIP_CASH: 500000,       // start cash for names on the admin's test-player list
+    START_CASH: 700000,
+    VIP_CASH: 1400000,      // start cash for names on the admin's test-player list
     AI_COUNT: 20,           // computer-controlled traders that keep the market and leaderboard alive
-    BANKRUPT_BELOW: 1000,
+    BANKRUPT_BELOW: 10000,
     FEE_RATE: 0.001425, FEE_MIN: 20, TAX_RATE: 0.003,
-    STEP_PAY: 0.1,          // $ per step  (1,000 steps = $100)
-    STEP_CAP: 30000,        // steps credited per day
+    STEP_PAY: 1.5,          // $ per step  (1,000 steps = $1,500)
+    STEP_CAP: 50000,        // steps credited per day (all at full price)
+    AD_CASH: 7000, AD_MULT: 2, AD_MIN: 45, AD_PER_DAY: 6,   // rewarded ad: cash now + walking pays x2 for 45 min
+    RECOVER_MULT: 3, RECOVER_UNTIL: 70000,                  // after bankruptcy: walking pays x3 until net worth is back to 70k
+    REF_BONUS: 70000, REF_STEPS: 10000,                     // invite: both get 70k once the new player has walked 10k steps
+    GIFT_VALUE: 50000,                                      // hold this much of a company at the close -> its sector's shareholder gift
     SESSION: { days: [0, 1, 2, 3, 4, 5, 6], open: '17:00', close: '21:30', tzOffsetMin: 480 },
     INDEX_NAME: 'AVX 綜合指數'
   };
