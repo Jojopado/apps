@@ -78,7 +78,7 @@
       const b = document.createElement('button'); b.className = 'ing';
       b.appendChild(iconCanvas(g.icon, g.emoji));
       const n = document.createElement('span'); n.textContent = g.name; b.appendChild(n);
-      b.onclick = () => add(g.id); ings.appendChild(b);
+      b.onclick = () => { add(g.id); try { G.SFX && G.SFX.play('pickup'); } catch (e) {} }; ings.appendChild(b);
     }
     function drawOrder() {
       const r = RECIPES[order];
@@ -110,6 +110,7 @@
       const ok = matches(cup, order);
       if (ok) { st.correct++; st.streak++; st.bestStreak = Math.max(st.bestStreak, st.streak); msg('完美！客人很開心 😊', true); }
       else { st.streak = 0; msg('做錯了…客人有點失望', false); }
+      try { G.SFX && G.SFX.play(ok ? 'good' : 'bad'); } catch (e) {}
       const f = $('#jFace'); f.innerHTML = ''; f.appendChild(iconCanvas(ok ? 'customer_happy' : 'customer_wait', ok ? '😊' : '😕'));
       $('#jOk').textContent = st.correct;
       lock = true;

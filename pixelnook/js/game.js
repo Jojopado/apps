@@ -301,6 +301,8 @@
     me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.path = []; me.pose = 'stand'; me.step = 0; me.facing = facing || 'SW'; me.onArrive = null;
     $('#place').textContent = '📍 ' + wsc.name;
     st.where = id; dirty = true;
+    sfx('door'); try { SFX.music(wsc.interior ? 'cafe' : 'city'); } catch (e) {}
+    emit('ENTER', { scene: id });
   }
   function goOut() {
     const central = getScene('central'), house = central.items.find(o => o.home);
@@ -311,6 +313,8 @@
       wsc = null; order = []; setMode('home');
       const c = S.doorCell(st.room.door); me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.facing = 'SW'; me.path = []; me.pose = 'stand';
       ensureFree(me, st.room); st.where = 'home';
+      sfx('door'); try { SFX.music('home'); } catch (e) {}
+      emit('HOME', {});
     });
   }
   function leaveInterior() {
@@ -395,6 +399,7 @@
       opts = [['我要打工', 'job'], ['聊聊天', 'chat'], ['再見', 'bye']];
     }
     showTalk(n, text, opts);
+    sfx('talk'); emit('TALK', { npc: id });
   }
   function showTalk(n, text, opts) {
     const box = $('#mTalk');
@@ -419,6 +424,8 @@
     jobRun = CafeJob.open($('#jobRoot'), { xp: j.xp, paidToday: j.paid }, r => {
       m.classList.remove('show'); jobRun = null;
       j.xp += r.xp; if (r.paid) j.paid++;
+      if (r.coins) sfx('coin'); if (r.levelUp) sfx('level');
+      emit('JOB', { served: r.served, correct: r.correct, coins: r.coins });
       st.coins += r.coins; st.stats = st.stats || {}; st.stats.jobs = (st.stats.jobs || 0) + (r.served ? 1 : 0);
       save(); refreshHud(); dirty = true;
       const line = r.coins ? `辛苦了！這是今天的薪水 ${r.coins} 金幣，拿去買喜歡的家具吧！` : (r.served ? '謝謝你來幫忙！今天的薪水已經發完了，明天再來喔。' : '沒關係，下次再來試試看！');
@@ -536,6 +543,7 @@
     st.bag[g.t]--; if (st.bag[g.t] <= 0) delete st.bag[g.t];
     if (!st.bag[g.t]) hold = null; else hold = { t: g.t, r: g.r };
     sel = o; save(); refreshHud(); renderBag(); showSelBar(); dirty = true;
+    sfx('place'); emit('PLACE', { item: o.t });
   }
 
   // ---------------- 佈置模式 UI ----------------
@@ -543,7 +551,7 @@
     mode = m; sel = null; hold = null; drag = null;
     $('#edit').style.display = m === 'edit' ? 'block' : 'none';
     $('#hudB').style.display = m === 'home' ? 'flex' : 'none';
-    $('#hudR').style.display = m === 'home' ? 'flex' : 'none';
+    $('#hudR').style.display = m === 'home' || m === 'city' ? 'flex' : 'none';
     $('#visitBar').style.display = m === 'visit' ? 'flex' : 'none';
     $('#hudL').style.display = m === 'visit' ? 'none' : 'flex';
     $('#hudCity').style.display = m === 'city' ? 'flex' : 'none';
@@ -622,7 +630,7 @@
   $('#bStore').onclick = () => {
     if (!sel) return; const arr = I[sel.t].kind === 'wall' ? st.room.walls : st.room.items, k = arr.indexOf(sel);
     if (k >= 0) arr.splice(k, 1);
-    st.bag[sel.t] = (st.bag[sel.t] || 0) + 1; toast('收進背包了'); sel = null; hideSelBar(); save(); refreshHud(); renderBag(); dirty = true;
+    st.bag[sel.t] = (st.bag[sel.t] || 0) + 1; toast('收進背包了'); sfx('pick'); sel = null; hideSelBar(); save(); refreshHud(); renderBag(); dirty = true;
   };
   addEventListener('keydown', e => { if (mode === 'edit' && (e.key === 'r' || e.key === 'R')) { if (hold && hold.i !== undefined) { hold.r = (hold.r + 1) & 3; dirty = true; } else $('#bRot').click(); } if (e.key === 'Escape') { hold = null; sel = null; hideSelBar(); renderBag(); dirty = true; } });
 
@@ -657,6 +665,7 @@
       b.onclick = () => {
         if (st.coins < pr) return;
         st.coins -= pr; st.bag[id] = (st.bag[id] || 0) + 1; save(false); refreshHud();
+        sfx('coin'); emit('BUY', { item: id });
         toast(`買了 ${d.name}！到 🛠 佈置 裡放進房間`); openShop();
       };
       row.appendChild(b); card.appendChild(row); grid.appendChild(card);
@@ -749,7 +758,7 @@
       const room = cleanRoom(d.room), look = cleanLook(d.look);
       visit = { id, name: String(d.name || name).slice(0, 12), room, look, likes: 0, liked: false };
       const f = freeCell(room, [4, 5]); guest.i = f[0] + 0.5; guest.j = f[1] + 0.5; guest.path = []; guest.facing = 'SW'; guest.nextT = performance.now() + 1500;
-      setMode('visit'); updateVisitBar();
+      setMode('visit'); updateVisitBar(); sfx('door'); emit('VISIT', { id });
       const [n, liked] = await Promise.all([Cloud.likeCount(id).catch(() => 0), Cloud.hasLiked(id, st.id).catch(() => false)]);
       if (visit && visit.id === id) { visit.likes = n; visit.liked = liked; updateVisitBar(); }
     } catch (e) { toast('連不上雲端，等一下再試試看'); }
@@ -768,7 +777,7 @@
       await Cloud.like(visit.id, st.id, dayNum());
       if (st.likeLog.d !== dayNum()) st.likeLog = { d: dayNum(), n: 0, ids: st.likeLog.ids || [] };
       st.likeLog.ids.push(visit.id); visit.likes++; visit.liked = true;
-      let msg = '按讚成功！';
+      let msg = '按讚成功！'; sfx('coin'); emit('LIKE', { id: visit.id });
       if (st.likeLog.n < 10) { st.likeLog.n++; st.coins += 5; msg += ' 金幣 +5'; }
       save(false); refreshHud(); updateVisitBar(); toast(msg);
     } catch (e) {
@@ -789,7 +798,7 @@
   // ---------------- 每日、讚 ----------------
   function daily() {
     if (!st.name || st.lastDay === dayNum()) return;
-    const gain = 20 + Math.floor(S.comfortOf(st.room).total / 2);
+    const gain = 30 + Math.floor(S.comfortOf(st.room).total / 10);
     st.coins += gain; st.lastDay = dayNum(); save(); refreshHud();
     setTimeout(() => toast(`☀️ 每日舒適度收入：金幣 +${gain}`), 600);
   }
@@ -803,6 +812,55 @@
   }
 
   // ---------------- HUD、雜項 ----------------
+  const sfx = n => { try { window.SFX && SFX.play(n); } catch (e) {} };
+  function emit(type, data) {
+    let done = [];
+    try { done = Quests.on(st, type, data || {}); } catch (e) { console.error(e); }
+    // 主線：完成就自動領獎並進到下一步；每日／每週要到任務面板領
+    const main = done.filter(d => Quests.MAIN.includes(d)), other = done.filter(d => !Quests.MAIN.includes(d));
+    for (const d of main) {
+      const r = Quests.claim(st, d.id); if (!r) continue;
+      st.coins += r.coins || 0; if (r.item) st.bag[r.item] = (st.bag[r.item] || 0) + 1;
+      const nx = Quests.current(st);
+      setTimeout(() => { sfx('quest'); toast(`✅ ${d.title}　${r.item ? '獲得禮物：' + I[r.item].name : '金幣 +' + r.coins}${nx ? '\n下一步：' + nx.def.desc : ''}`); }, 350);
+      refreshHud();
+    }
+    if (other.length) { sfx('quest'); setTimeout(() => toast('✅ 任務完成：' + other.map(d => d.title).join('、') + '（點左上任務領獎）'), main.length ? 2600 : 0); }
+    refreshQuest(); save(false);
+  }
+  function refreshQuest() {
+    const c = Quests.current(st), n = Quests.claimable(st);
+    $('#qText').textContent = c ? '🎯 ' + c.def.desc : '📋 每日任務';
+    $('#qBadge').style.display = n ? '' : 'none'; $('#qBadge').textContent = n;
+  }
+  function openQuests() {
+    Quests.ensure(st); sfx('open');
+    const box = $('#questList'); box.innerHTML = '';
+    const card = (def, prog, claimed, kind) => {
+      const el = document.createElement('div'); el.className = 'qcard' + (claimed ? ' done' : '');
+      const pct = Math.min(100, Math.round(prog / def.need * 100));
+      const reward = def.item ? '🎁 ' + (I[def.item] ? I[def.item].name : '禮物') : '金幣 ' + def.coins;
+      el.innerHTML = `<div class="qk">${kind}</div><div class="qm"><b></b><div class="qd"></div><div class="qbar"><i style="width:${pct}%"></i></div><div class="qp">${prog} / ${def.need}　獎勵：${reward}</div></div>`;
+      el.querySelector('b').textContent = def.title; el.querySelector('.qd').textContent = def.desc;
+      const b = document.createElement('button'); b.className = 'pri';
+      b.textContent = claimed ? '已領取' : prog >= def.need ? '領取' : '進行中'; b.disabled = claimed || prog < def.need;
+      b.onclick = () => {
+        const r = Quests.claim(st, def.id); if (!r) return;
+        st.coins += r.coins || 0;
+        if (r.item) st.bag[r.item] = (st.bag[r.item] || 0) + 1;
+        sfx('coin'); toast(r.item ? `領到禮物：${I[r.item].name}！到 🛠 佈置 的「牆面」掛起來` : `領到 ${r.coins} 金幣！`);
+        save(); refreshHud(); openQuests();
+      };
+      el.appendChild(b); box.appendChild(el);
+    };
+    const q = st.q, c = Quests.current(st);
+    if (c) card(c.def, q.mainProg, false, '主線');
+    else { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '新手主線都完成了！之後會有新的故事。'; box.appendChild(e); }
+    for (const it of q.daily.list) card(Quests.defOf(it.id), it.prog, it.claimed, '每日');
+    for (const it of q.weekly.list) card(Quests.defOf(it.id), it.prog, it.claimed, '每週');
+    $('#mQuest').classList.add('show');
+  }
+  $('#qChip').onclick = openQuests;
   function refreshHud() {
     $('#name').textContent = st.name ? `🏠 ${st.name} 的小窩` : '像素小窩';
     $('#coins').textContent = st.coins; $('#comfort').textContent = S.comfortOf(st.room).total;
@@ -835,10 +893,13 @@
     if (dirty) { dirty = false; try { render(); } catch (e) { loopErr = String(e && e.stack || e); console.error('render', e); } }
   }
   ensureFree(me, st.room);
-  fit(); refreshHud(); requestAnimationFrame(loop);
+  fit(); refreshHud(); refreshQuest(); requestAnimationFrame(loop);
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) sfx('tap'); }, true);
+  const snd = $('#bSound'); const sndTxt = () => { snd.textContent = SFX.on ? '🔊' : '🔇'; }; sndTxt();
+  snd.onclick = () => { SFX.setOn(!SFX.on); sndTxt(); };
   if (!st.name) openLook(true); else { daily(); checkLikes(); scheduleCloud(); }
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();

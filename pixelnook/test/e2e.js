@@ -173,7 +173,7 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   await ev(`document.querySelector('#jBack').click()`); await sleep(400);
   const coinsAfter = await ev('__nook.st.coins');
   // 分數：A=80、T=50、C=80 → 0.7*80+0.2*50+0.1*80 = 74 → 100*(0.6+0.4*0.74)=89.6 → 90
-  check(coinsAfter - coinsBefore === 90 && result.includes('74 分'), `薪水依公式計算（74 分 → 90 金幣）：實際 +${coinsAfter - coinsBefore}`);
+  check(result.includes('74 分') && result.includes('90 金幣') && coinsAfter - coinsBefore >= 90, `薪水依公式計算（74 分 → 90 金幣）：實際 +${coinsAfter - coinsBefore}`);
   check(await ev(`document.querySelector('#mTalk').classList.contains('show') && document.querySelector('#talkText').textContent.includes('薪水')`), '下班後 Mia 發薪水的對話');
   check((await ev('__nook.jobState().paid')) === 1 && (await ev('__nook.jobState().xp')) === 45, '紀錄：今天領薪 1 次、熟練度 +45');
   await ev(`[...document.querySelectorAll('#talkOpts button')].find(b=>b.textContent.includes('再見')).click()`); await sleep(200);
@@ -194,6 +194,23 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   // 「回家」按鈕
   await click('#bOut'); await settle(); await click('#bGoHome'); await settle();
   check((await ev('__nook.mode')) === 'home', '城市裡按「回家」→ 回到房間');
+  // 任務：一路走下來，新手主線應該已經完成 1～4 步，現在停在「買一件家具」
+  const qm = await ev('__nook.st.q.main');
+  check(qm === 4, '新手主線自動前進到第 5 步（買家具）：目前第 ' + (qm + 1) + ' 步');
+  check((await ev(`document.querySelector('#qText').textContent`)).includes('買一件家具'), '左上目標顯示「買一件家具」');
+  await click('#bShop'); await sleep(300);
+  await ev(`(()=>{const c=[...document.querySelectorAll('#shopGrid .card')].find(c=>c.querySelector('.t').textContent==='小盆栽'); c.querySelector('button').click();})()`);
+  await click('#mShop [data-close]'); await sleep(600);
+  check((await ev('__nook.st.q.main')) === 5 && (await ev('__nook.st.bag.poster')) >= 1, '買家具 → 主線完成，獲得禮物「星星海報」');
+  await ev('__nook.openQuests()'); await sleep(300);
+  const qcards = await ev(`document.querySelectorAll('#questList .qcard').length`);
+  check(qcards === 5, '任務面板：3 個每日＋2 個每週：' + qcards);
+  await shot('q1_panel.png');
+  const before2 = await ev('__nook.st.coins');
+  await ev(`[...document.querySelectorAll('#questList .qcard button')].filter(b=>!b.disabled).forEach(b=>b.click())`); await sleep(300);
+  const claimedAll = await ev(`[...document.querySelectorAll('#questList .qcard button')].filter(b=>!b.disabled).length`);
+  check(claimedAll === 0, '可以領的都領了（金幣 +' + ((await ev('__nook.st.coins')) - before2) + '）');
+  await click('#mQuest [data-close]');
   const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
   console.log('   城市走路時每秒畫面：', perf);
   await click('#bGoHome'); await settle();
