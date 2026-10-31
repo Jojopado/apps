@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RWST 期中測驗</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F4F6F8; --surface:#FFFFFF; --fg:#18202C; --muted:#5B6676; --line:#DCE1E8;
+  --accent:#2450C4; --accent-soft:#E6ECFA;
+  --good:#1D7F52; --good-soft:#E3F3EA; --bad:#B83A26; --bad-soft:#FBE9E5; --warn:#9A6B00;
+  --sans:"IBM Plex Sans","Noto Sans TC",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161D; --surface:#1A2029; --fg:#E6EAF0; --muted:#97A2B2; --line:#2C3542;
+  --accent:#86A6FF; --accent-soft:#1F2B47; --good:#5CC994; --good-soft:#163326; --bad:#F08B76; --bad-soft:#3A1F1A; --warn:#E3B341; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161D; --surface:#1A2029; --fg:#E6EAF0; --muted:#97A2B2; --line:#2C3542;
+  --accent:#86A6FF; --accent-soft:#1F2B47; --good:#5CC994; --good-soft:#163326; --bad:#F08B76; --bad-soft:#3A1F1A; --warn:#E3B341; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left)) 64px max(16px,env(safe-area-inset-right))}
+h1{font-size:1.5rem;margin:0 0 4px;font-weight:600}
+h2{font-size:1.1rem;margin:28px 0 10px;font-weight:600}
+.sub{color:var(--muted);font-size:.9rem;margin:0}
+button{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:500;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.opt:focus-visible,.chip:focus-visible,.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.modes{display:grid;gap:12px;margin-top:20px}
+.mode{display:block;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer}
+.mode b{display:block;font-size:1.05rem;font-weight:600}
+.mode span{color:var(--muted);font-size:.88rem}
+.mode .n{float:right;font-family:var(--mono);font-size:.85rem;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:.85rem;cursor:pointer;min-height:36px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.bar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left))) 16px;padding:calc(10px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-left)) 10px;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.bar .grow{flex:1}
+.bar .back{font-family:var(--sans);padding:6px 12px;min-height:36px}
+.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden;display:flex;flex:1}
+.meter i{display:block;height:100%}.meter .g{background:var(--good)}.meter .b{background:var(--bad)}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.q .meta{font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-bottom:6px;display:flex;gap:8px;flex-wrap:wrap}
+.q .stem{font-weight:500;margin:0 0 12px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;border:1px solid var(--line);background:transparent;border-radius:10px;padding:10px 12px;cursor:pointer;min-height:44px}
+.opt .l{font-family:var(--mono);font-weight:500;color:var(--muted);flex:none;width:1.4em}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}
+.opt.no{border-color:var(--bad);background:var(--bad-soft)}
+.opt.miss{border-color:var(--good);border-style:dashed}
+.opt:disabled{cursor:default;color:inherit}
+.tfrow{display:flex;gap:8px}.tfrow .opt{justify-content:center}
+input[type=text],textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
+input.ok{border-color:var(--good);background:var(--good-soft)}input.no{border-color:var(--bad);background:var(--bad-soft)}
+textarea{min-height:70px;resize:vertical}
+.exp{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:.92rem}
+.exp .v{font-weight:600}.exp .v.ok{color:var(--good)}.exp .v.no{color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.hint{color:var(--muted);font-size:.85rem}
+.score{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.score .big{font-size:2.4rem;font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:8px}
+th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500}
+td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 20px;min-height:220px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;cursor:pointer;width:100%}
+.card .term{font-size:1.5rem;font-weight:600}
+.card .zh{color:var(--muted);margin-top:6px}
+.card .def{margin-top:14px;font-size:1rem}
+.selfck{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.9rem}
+.selfck input{width:20px;height:20px}
+.sec-title{font-size:1rem;font-weight:600;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+// k: kind (tf / sc / mc / fill)；t: 章節；q: 題目；e: 解析
+// tf: a = true/false
+// sc: o = 選項，第一個是正確答案（顯示時會打亂）
+// mc: o = 選項，前面加 * 的是正確答案（顯示時會打亂）
+// fill: a = 可接受答案（不分大小寫）
+const TOPICS={M0:"M0 倫理與 AI",J:"M1 期刊與指標",S:"M1 Title～Intro／3C",R:"M1 Methods～Conclusion",A:"M1 致謝與文獻",B:"M2 Abstract 時態"};
+const BANK=[
+// ===================== 是非 =====================
+{k:"tf",t:"J",q:"The best journal for a paper is always the one with the highest impact factor.",a:false,e:"Best journal = strong fit between your paper, the journal, and its readers. Fit first, metrics second."},
+{k:"tf",t:"J",q:"JIF measures citation rate over a 2-year publication window.",a:true,e:"JIF（Web of Science）＝2 年；CiteScore（Scopus）＝4 年。"},
+{k:"tf",t:"J",q:"CiteScore is a metric provided by Web of Science.",a:false,e:"CiteScore 是 Scopus 的。WoS 只有 JIF、JCI。"},
+{k:"tf",t:"J",q:"SJR, SNIP, and CiteScore are all Scopus-based metrics.",a:true,e:"Scopus 三個：CiteScore、SJR、SNIP。"},
+{k:"tf",t:"J",q:"Raw JIFs can be compared directly across unrelated disciplines.",a:false,e:"DO NOT compare raw JIFs across unrelated disciplines."},
+{k:"tf",t:"J",q:"JIF should not be treated as a measure of an individual paper's quality.",a:true,e:"Metrics describe journals, not individual papers."},
+{k:"tf",t:"J",q:"Between 2005 and 2024, Asia's share of global scientific publishing increased from 23% to 49%.",a:true,e:"Asia +26 pp；North America 32%→16%；Europe 39%→26%。"},
+{k:"tf",t:"J",q:"Europe's share of scientific articles increased between 2005 and 2024.",a:false,e:"Europe 39% → 26%（−13 pp）。"},
+{k:"tf",t:"J",q:"According to Marv Bauer, 27% of papers in a journal were not cited within 5 years.",a:true,e:"Elsevier 編輯 Marv Bauer：27% 五年內零引用，令人 disconcerting。"},
+{k:"tf",t:"J",q:"Citation counts are the only indicator of a paper's impact.",a:false,e:"Citation counts are only ONE indicator of impact."},
+{k:"tf",t:"J",q:"Same research presented to a different audience may need a different presentation.",a:true,e:"Same research, different audience → different presentation."},
+{k:"tf",t:"S",q:"\"A Study of…\" is a recommended way to begin a research paper title.",a:false,e:"\"A Study of…\" 是 words that add little value，要刪掉。"},
+{k:"tf",t:"S",q:"A good abstract should be able to stand alone.",a:true,e:"Abstract can stand alone，讀者不看全文也懂。"},
+{k:"tf",t:"S",q:"Using uncommon abbreviations in keywords helps make a paper unique and easier to find.",a:false,e:"Avoid uncommon abbreviations；要 specific, searchable, standard terminology。"},
+{k:"tf",t:"S",q:"The Introduction should include a broad literature review of the entire field.",a:false,e:"Don't write a broad literature review of the entire field；只放最相關的前人研究。"},
+{k:"tf",t:"S",q:"\"This is the first study…\" is an example of an unsupported claim of novelty that should be avoided.",a:true,e:"Introduction 的 Don't：unsupported novelty / priority claims。"},
+{k:"tf",t:"S",q:"Coherent means \"no unnecessary words\".",a:false,e:"Concise = no unnecessary words；Coherent = easy to follow。"},
+{k:"tf",t:"S",q:"\"Due to the fact that\" can usually be replaced with \"because\".",a:true,e:"Due to the fact that → because；In order to → to。"},
+{k:"tf",t:"S",q:"Researchers should use their name consistently across publications (e.g., always \"David Chen\").",a:true,e:"Use your name consistently；用 ORCID iD 把著作連在一起。"},
+{k:"tf",t:"R",q:"The Results section should interpret the meaning of findings extensively.",a:false,e:"Present the evidence clearly; interpret its meaning in the Discussion."},
+{k:"tf",t:"R",q:"Figures are best for exact values, while tables are best for trends.",a:false,e:"反過來：figures for trends, tables for exact values。"},
+{k:"tf",t:"R",q:"You should report only significant or favourable results.",a:false,e:"Results 的 Avoid：reporting only significant or favourable results。"},
+{k:"tf",t:"R",q:"Every figure and table should be referred to in the text.",a:true,e:"Refer to every figure and table in the text."},
+{k:"tf",t:"R",q:"New datasets or methods may be introduced in the Discussion if they support the argument.",a:false,e:"Discussion 和 Conclusion 都不可以引入新方法、新資料、新結果。"},
+{k:"tf",t:"R",q:"Treating correlation as causation should be avoided in the Discussion.",a:true,e:"Avoid confusing correlation with causation."},
+{k:"tf",t:"R",q:"\"More research is needed.\" is a good, specific statement of future work.",a:false,e:"太模糊。要具體，例如 \"Future research should explore model compression techniques to reduce computational cost.\""},
+{k:"tf",t:"R",q:"In Methods, past tense is usually used for procedures actually performed.",a:true,e:"做過的步驟用過去式；已確立的方法、公式、系統特性用現在式。"},
+{k:"tf",t:"R",q:"Data should be displayed simply because you have them.",a:false,e:"Do not display data simply because you have them."},
+{k:"tf",t:"R",q:"The Conclusion synthesizes the overall message, while the Discussion interprets individual findings.",a:true,e:"Discussion：interprets individual findings；Conclusion：synthesizes the overall message。"},
+{k:"tf",t:"A",q:"A technician who only configured the GPU cluster should be acknowledged rather than listed as an author.",a:true,e:"沒有參與設計、分析、改稿 → Acknowledgement，不是作者。"},
+{k:"tf",t:"A",q:"You do not need permission before naming individuals in the Acknowledgements.",a:false,e:"Obtain permission before naming individuals."},
+{k:"tf",t:"A",q:"Output from a reference manager can be used without manual checking.",a:false,e:"可以用 reference manager，但要 check the output manually。"},
+{k:"tf",t:"A",q:"If an original study is available, you should cite it instead of a blog that summarizes it.",a:true,e:"Avoid citing secondary sources when the original source is available."},
+{k:"tf",t:"A",q:"Every in-text citation must have a matching entry in the reference list.",a:true,e:"Every in-text citation has a matching reference."},
+{k:"tf",t:"M0",q:"Asking AI to \"paraphrase this so Turnitin cannot detect it\" is an appropriate use.",a:false,e:"用 AI 躲抄襲偵測是 inappropriate。"},
+{k:"tf",t:"M0",q:"Asking AI to explain academic vocabulary is normally acceptable.",a:true,e:"屬於 Use GAI According to Its Purpose（一般可接受）。"},
+{k:"tf",t:"M0",q:"Translating an entire paper into academic English with AI is normally acceptable.",a:false,e:"\"Translate this entire paper into academic English.\" 通常不行；查單字、比較說法可以。"},
+{k:"tf",t:"M0",q:"You may cite a source that AI summarized for you even if you have not read it yourself.",a:false,e:"Do not cite a source that you have not checked yourself. AI is not a substitute for the original source."},
+{k:"tf",t:"M0",q:"Brainstorming and suggesting outlines with AI are allowed with acknowledgement.",a:true,e:"Use AI-Assisted Writing Carefully：Allowed with Acknowledgement。"},
+{k:"tf",t:"M0",q:"Uploading unpublished manuscripts to a generative AI tool is acceptable as long as you cite the tool.",a:false,e:"Protect Research Data and IP：unpublished manuscripts 不可上傳。"},
+{k:"tf",t:"M0",q:"The student remains responsible for every sentence, claim, citation, and reference submitted.",a:true,e:"12. The Student Remains Responsible。"},
+{k:"tf",t:"M0",q:"Contract cheating means having another person complete your academic work for you.",a:true,e:"Academic integrity 三種違規：Plagiarism、Fabrication、Contract cheating。"},
+{k:"tf",t:"B",q:"For very short abstracts, Purpose and Methods may be combined.",a:true,e:"Abstract Reduction → P+M。"},
+{k:"tf",t:"B",q:"Tense in an abstract should be chosen by section alone, not by sentence function.",a:false,e:"Choose tense according to function and level of generality, not section alone."},
+{k:"tf",t:"B",q:"\"The algorithm uses an attention mechanism.\" correctly uses present tense to describe how an established model works.",a:true,e:"M 的現在式用法：how the model works。"},
+{k:"tf",t:"B",q:"\"Accuracy increases as the amount of training data increases.\" uses present tense because it states a general pattern.",a:true,e:"R 的現在式：general facts / patterns。"},
+{k:"tf",t:"B",q:"In \"The results shows improved efficiency.\", the verb agrees correctly with the subject.",a:false,e:"results 是複數，要 showed（或 show）。"},
+{k:"tf",t:"B",q:"Background sentences in an abstract typically use present or present perfect tense.",a:true,e:"B：Present（established facts）／Present perfect（previous research still relevant）。"},
+{k:"tf",t:"B",q:"The Conclusion element of an abstract answers the question \"so what?\".",a:true,e:"C = What do the findings mean? Why do they matter?（so what?）"},
+
+// ===================== 單選 =====================
+{k:"sc",t:"S",q:"In the 3C principle, which one means \"no unnecessary words\"?",o:["Concise","Clear","Coherent","Correct"],e:"Clear = easy to understand；Concise = no unnecessary words；Coherent = easy to follow。"},
+{k:"sc",t:"S",q:"Coherent means:",o:["Easy to follow","Easy to understand","No unnecessary words","Easy to cite"],e:"Coherent：one main idea per paragraph、句子間有邏輯推進。"},
+{k:"sc",t:"S",q:"Writing \"blockchain ledger\" instead of \"system\" improves which C?",o:["Clear","Concise","Coherent","Creative"],e:"Clear：用具體詞代替模糊詞。"},
+{k:"sc",t:"S",q:"\"Due to the fact that\" should be replaced with:",o:["because","in order to","therefore","basically"],e:"Due to the fact that → because。"},
+{k:"sc",t:"S",q:"What should replace \"I think / I believe\" in academic writing?",o:["Evidence or passive voice","\"I strongly feel\"","\"Basically\"","\"It is important to note\""],e:"I think / I believe → 用證據或被動語態。"},
+{k:"sc",t:"S",q:"How should a sentence beginning with \"There is / There are\" be revised?",o:["Start with the real subject","Add \"really\"","Use \"It is important to note\"","Keep it unchanged"],e:"There is / There are → 用真正的主詞開頭。"},
+{k:"sc",t:"S",q:"Which advice matches the filler \"a little / a bit\"?",o:["Use specific quantifiers","Be direct","Replace with a stronger adjective","Replace with because"],e:"A little / A bit → specific quantifiers；Kind of / Sort of → be direct；Very → stronger adjective。"},
+{k:"sc",t:"S",q:"Which title is the best?",o:["Machine Learning Approaches for Real-Time Cyberattack Detection","A Study on Different Aspects of Cybersecurity","An Investigation into Some Aspects of Artificial Intelligence","Some Thoughts on Computers"],e:"A good title = maximum clarity with no unnecessary words。"},
+{k:"sc",t:"S",q:"Why is \"An Investigation into Some Aspects of Artificial Intelligence\" a weak title?",o:["It is vague and contains words that add little value","It is too specific","It is phrased as a question","It states the main finding"],e:"\"An Investigation into\"、\"Some Aspects\" 都是空話。"},
+{k:"sc",t:"S",q:"What does an ORCID iD help with?",o:["Distinguishing researchers with similar names and linking their publications","Measuring a journal's impact","Checking plagiarism","Formatting references"],e:"ORCID iD：區分同名研究者，換名字或單位後還能把著作連在一起。"},
+{k:"sc",t:"S",q:"Accurate author information ensures correct attribution, discoverability, and ___.",o:["accountability","novelty","impact factor","readability"],e:"…correct attribution, discoverability, and accountability."},
+{k:"sc",t:"S",q:"Which abstract sentence is better?",o:["This paper proposes a graph-based clustering algorithm for large-scale social network analysis, achieving a 15% improvement in runtime compared with k-means.","This paper presents a new algorithm for data mining which is very powerful and useful for many applications.","This paper talks about some algorithms.","This paper is very important for data mining."],e:"具體方法＋量化結果＋比較基準。"},
+{k:"sc",t:"S",q:"Which keyword set is the most effective?",o:["Blockchain consensus, Proof-of-stake, Distributed ledger, Cryptocurrency security","Technology, Computer, Internet, Data","System, Method, Result, Paper","A novel and efficient approach for secure distributed systems"],e:"Technology / Computer… 太廣；最後一個是過長片語。"},
+{k:"sc",t:"S",q:"In the Introduction funnel, what comes right after \"Problem, limitation, or inconsistency\"?",o:["Research gap","Broad research context","Study contribution","What previous research tells us"],e:"Broad context → Previous research → Problem → Gap → Purpose → Contribution。"},
+{k:"sc",t:"S",q:"What is the LAST step of the Introduction funnel?",o:["Study contribution","Research gap","Broad research context","Purpose, question, or hypothesis"],e:"漏斗由廣到窄，最後是 Study contribution。"},
+{k:"sc",t:"S",q:"\"However, resource allocation remains a major challenge due to dynamic workloads.\" In the cloud example, this sentence states the:",o:["Problem","Broad context","Purpose","Contribution"],e:"However 開頭 → problem，從 what we know 轉到 what we still need to know。"},
+{k:"sc",t:"S",q:"Which should NOT appear in the Introduction?",o:["Detailed methods, results, or conclusions","The research question or hypothesis","The research gap","Definitions of unfamiliar abbreviations"],e:"Don't present detailed methods, results, or conclusions。"},
+{k:"sc",t:"S",q:"Title, Abstract, and Keywords must be clear and accurate mainly because they affect:",o:["Discoverability and indexing","The impact factor","Reproducibility","Peer review time"],e:"攸關 discoverability and indexing。"},
+{k:"sc",t:"S",q:"In the article structure, what comes right after Keywords?",o:["Main text (Introduction…)","Abstract","Acknowledgements","References"],e:"Title → Authors → Abstract → Keywords → Main text → Acknowledgements → References → Supplementary material。"},
+{k:"sc",t:"S",q:"\"Deep learning models are also widely used in medical image classification.\" inserted into a paragraph about students using GenAI for writing is mainly a problem of:",o:["Coherence","Clarity","Concision","Citation"],e:"跟主題無關、打斷論證 → coherence 問題。"},
+{k:"sc",t:"J",q:"Which metric provides field-normalised citation impact in Web of Science?",o:["JCI","JIF","SJR","CiteScore"],e:"JCI = Journal Citation Indicator（WoS，field-normalised）。"},
+{k:"sc",t:"J",q:"CiteScore measures citation impact using a ___ window.",o:["4-year","1-year","2-year","5-year"],e:"CiteScore 4 年；JIF 2 年。"},
+{k:"sc",t:"J",q:"Which metric weights citations by source prestige?",o:["SJR","SNIP","JIF","JCI"],e:"SJR = SCImago Journal Rank：weighted by source prestige。"},
+{k:"sc",t:"J",q:"Which metric adjusts citation impact for field differences in Scopus?",o:["SNIP","SJR","JIF","CiteScore"],e:"SNIP = Source Normalized Impact per Paper。"},
+{k:"sc",t:"J",q:"Which database provides JIF?",o:["Web of Science","Scopus","Google Scholar","ORCID"],e:"JIF、JCI → Web of Science。"},
+{k:"sc",t:"J",q:"According to the course data, which region produced about 49% of scientific articles in 2024?",o:["Asia","North America","Europe","South America"],e:"Asia 23% → 49%。"},
+{k:"sc",t:"J",q:"North America's share of scientific articles in 2024 was about:",o:["16%","32%","26%","49%"],e:"North America 32% → 16%。"},
+{k:"sc",t:"J",q:"The two major trends in scientific publishing are globalization and ___.",o:["rationalization","digitalization","privatization","localization"],e:"Globalization of Scientific Publishing／Rationalization in Standardization and Research Evaluation。"},
+{k:"sc",t:"J",q:"In the class activity, why should Journal B (JIF 4.5, high topic fit) be chosen over Journal A (JIF 8.2, low topic fit)?",o:["Fit first, metrics second","Lower JIF journals are easier","Journal A is not Q1","Journal B is cheaper"],e:"兩本都是 Q1，B 的 topic fit 高、類似論文多、讀者對 → fit first。"},
+{k:"sc",t:"J",q:"Journals seek research that is rigorous, relevant, ethical, and ___.",o:["clearly communicated","very long","highly cited by the author","novel in every sentence"],e:"Journals seek rigorous, relevant, ethical, and clearly communicated research."},
+{k:"sc",t:"J",q:"Which of the following is NOT wanted by journals?",o:["Unnecessary duplication without clear added value","Fit with the journal's scope","Rigorous methods","Research integrity"],e:"Not wanted：duplication、limited relevance、outdated、unsupported conclusions、insufficient evidence。"},
+{k:"sc",t:"J",q:"\"Write for the field. Format for the ___.\"",o:["journal","reader","supervisor","conference"],e:"Guide for Authors 的結論句。"},
+{k:"sc",t:"J",q:"\"Metrics describe journals. They do not replace ___.\"",o:["critical judgement","peer review","citations","authors"],e:"Metrics describe journals. They do not replace critical judgement."},
+{k:"sc",t:"R",q:"Use figures for ___ and tables for ___.",o:["trends / exact values","exact values / trends","methods / results","results / methods"],e:"Figures for trends, tables for exact values。"},
+{k:"sc",t:"R",q:"Accuracy, precision, recall, F1-score, and latency belong to which part of Methods?",o:["Evaluation metrics","Datasets and preprocessing","Software and versions","Experimental setup"],e:"CIFAR-10 等是 datasets；PyTorch 是 software；hardware/hyperparameters 是 experimental setup。"},
+{k:"sc",t:"R",q:"Hardware, hyperparameters, and simulation environment belong to:",o:["Experimental setup","Evaluation metrics","Algorithms or models","Statistical analysis"],e:"Experimental setup。"},
+{k:"sc",t:"R",q:"The main goal of the Methods section is to provide enough detail for others to understand, evaluate, and ___ the study.",o:["reproduce","cite","publish","review"],e:"understand, evaluate, and reproduce。"},
+{k:"sc",t:"R",q:"\"The proposed model achieved an F1-score of 0.91, compared with 0.84 for the baseline.\" belongs to:",o:["Results","Discussion","Introduction","Conclusion"],e:"報告數據 → Results。"},
+{k:"sc",t:"R",q:"\"This improvement suggests that the attention mechanism helps the model…\" belongs to:",o:["Discussion","Results","Methods","Abstract keywords"],e:"suggests = 解釋原因 → Discussion。"},
+{k:"sc",t:"R",q:"Which is the correct Discussion structure?",o:["Finding → Interpretation → Comparison → Implication → Limitation","Limitation → Finding → Method → Result","Background → Purpose → Method → Result","Interpretation → Finding → Limitation → Comparison"],e:"Finding → Interpretation → Comparison with previous research → Implication → Limitation。"},
+{k:"sc",t:"R",q:"\"However, the model was evaluated on a single benchmark dataset, so further testing on real-world network traffic is needed…\" plays which role in the Discussion?",o:["Limitation","Comparison","Finding","Implication"],e:"single dataset → generalizability 受限 → limitation。"},
+{k:"sc",t:"R",q:"Which sentence should be avoided in the Discussion?",o:["This algorithm will revolutionize cloud computing.","One possible explanation is its ability to capture nonlinear relationships.","This finding is consistent with previous studies.","However, the model was evaluated on a single dataset."],e:"沒有證據的誇大主張。"},
+{k:"sc",t:"R",q:"\"Conclusion = What did we learn, why does it matter, and ___?\"",o:["what comes next","what did we do","who funded it","which journal"],e:"Conclusion = What did we learn, why does it matter, and what comes next?"},
+{k:"sc",t:"R",q:"Which is the best example of future work in a Conclusion?",o:["Future research should explore model compression techniques to reduce computational cost.","More research is needed.","Future work is important.","We will do more experiments someday."],e:"Future work 要具體。"},
+{k:"sc",t:"R",q:"A graph legend shows only \"1-2, 2-2, 1-1, 2-1\". What is the main problem?",o:["Readers must decode labels to understand the trend","The graph uses too few colors","It should be a table of exact values","It lacks a title page"],e:"用 descriptive labels（例如 method1.dual），讓讀者不用解碼。"},
+{k:"sc",t:"R",q:"When comparisons in a figure are too complex, the slides recommend:",o:["Grouping related data so the main trend is visible","Adding more categories","Removing the legend","Using 3D effects"],e:"Simplify complex comparisons by grouping related data。"},
+{k:"sc",t:"R",q:"Which section typically has HIGH passive voice and LOW citations?",o:["Methods","Introduction","Discussion","Conclusion"],e:"Methods 被動最多、引用最少。"},
+{k:"sc",t:"R",q:"Which sections typically have HIGH present tense and HIGH citations?",o:["Introduction and Discussion","Methods and Results","Results only","Methods only"],e:"I 和 D 長得像；M 和 R 長得像（過去式多）。"},
+{k:"sc",t:"A",q:"A technician who only set up the GPU cluster (did not design the study or revise the manuscript) should be:",o:["Acknowledged","Listed as first author","Listed as corresponding author","Cited in the references"],e:"不符合 authorship → Acknowledgement。"},
+{k:"sc",t:"A",q:"When acknowledging funding, you should state the funding agency and the:",o:["grant number","impact factor","ORCID iD","DOI"],e:"funding agency and grant number。"},
+{k:"sc",t:"A",q:"Which is an example of IEEE in-text citation?",o:["…potential application in smart medication [1].","…potential application in smart medication (Smith, 2021).","…potential application in smart medication, Smith says.","…potential application in smart medication¹⁹⁹⁸."],e:"IEEE 用方括號數字 [1]。"},
+{k:"sc",t:"A",q:"A blog post summarizes an original study you want to use. What should you cite?",o:["The original study","The blog post","Both, but the blog first","Neither"],e:"Cite the original research it summarizes。"},
+{k:"sc",t:"A",q:"Which is NOT one of the decision rules for citing a source?",o:["Will this source increase my citation count?","Is this source directly relevant to a claim I am making?","Have I actually checked the source?","Is it the best available source for that claim?"],e:"三個 decision rules：relevant? checked? best available?"},
+{k:"sc",t:"A",q:"\"Always check Originality, Readability, and ___.\"",o:["Coherence","Citations","Conciseness","Creativity"],e:"Be original in contribution, clear in expression, and coherent in argument."},
+{k:"sc",t:"A",q:"Swales & Feak's Academic Writing for Graduate Students links \"Summary writing (U5)\" to which section?",o:["Abstract","Methods","Results","Discussion"],e:"Abstract → Summary writing (U5)；Methods → Process descriptions (U3)。"},
+{k:"sc",t:"A",q:"\"Process descriptions\" are the writing skill associated with:",o:["Methods","Introduction","Discussion","Abstract"],e:"Methods → Process descriptions (U3)。"},
+{k:"sc",t:"M0",q:"Which AI use is normally NOT acceptable?",o:["Writing a complete literature review","Checking spelling","Suggesting transition words","Suggesting search keywords"],e:"寫完整文獻回顧屬於 Uses That Are Normally Not Acceptable。"},
+{k:"sc",t:"M0",q:"The recommended process for summarising research is:",o:["Read → Interpret → Summarise → Use AI to Check → Return to the Source","Upload Paper → Ask AI for a Summary → Cite the Paper","Ask AI → Summarise → Cite","Read the abstract only → Cite"],e:"8. Summarising Research。"},
+{k:"sc",t:"M0",q:"Which prompt is an appropriate paraphrasing request?",o:["Compare my paraphrase with the original. Is it too close to the source?","Paraphrase this so Turnitin cannot detect it.","Rewrite this paragraph so it looks like mine.","Paraphrase this whole article for me."],e:"先自己寫 paraphrase，再請 AI 比較。"},
+{k:"sc",t:"M0",q:"In acceptable use, AI plays the role of Tutor → Language Adviser → ___.",o:["Feedback Provider","Ghost Writer","Co-author","Translator"],e:"Tutor → Language Adviser → Feedback Provider。"},
+{k:"sc",t:"M0",q:"Which is acceptable for translation?",o:["Checking the meaning of a word or phrase","Writing the whole paper in Chinese and translating it all with AI","Asking AI to translate and submit it directly","Translating a classmate's paper"],e:"查單字、比較說法、理解難句、比較自己的版本 → 可以。"},
+{k:"sc",t:"M0",q:"\"Generate five references that support my argument.\" is:",o:["Not acceptable","Allowed with acknowledgement","Normally acceptable","Required"],e:"捏造參考文獻 → not acceptable。"},
+{k:"sc",t:"M0",q:"Presenting someone else's words or ideas as your own without proper citation is:",o:["Plagiarism","Fabrication","Contract cheating","Paraphrasing"],e:"Plagiarism。"},
+{k:"sc",t:"M0",q:"Inventing data, results, or references is called:",o:["Fabrication","Plagiarism","Contract cheating","Synthesis"],e:"Fabrication。"},
+{k:"sc",t:"M0",q:"Paying someone else to complete your assignment is:",o:["Contract cheating","Fabrication","Paraphrasing","Proofreading"],e:"Contract cheating。"},
+{k:"sc",t:"M0",q:"\"Overuse of 'novel'\" should be solved by:",o:["Using precise claims","Using summary charts","Balancing references","Applying the 3C principle"],e:"Rambling → 3C；Overloaded tables → summary charts；Overuse of novel → precise claims；Self-citation → balance references。"},
+{k:"sc",t:"M0",q:"\"Excessive self-citation\" should be solved by:",o:["Balancing references","Using precise claims","Using summary charts","Deleting all citations"],e:"Excessive self-citation → Balance references。"},
+{k:"sc",t:"M0",q:"Which is the key message of the GAI guidelines?",o:["Use AI to support the writing process, not to outsource the writing process.","Use AI to write as much as possible.","Never use AI for anything.","AI is responsible for errors in its output."],e:"Use AI to support…, not to outsource…"},
+{k:"sc",t:"M0",q:"For the Self-Introduction (p47), which is NOT one of the items?",o:["Favourite journal","Previous study","Principal supervisor","Potential research topic"],e:"① previous study ② principal supervisor ③ potential research topic。"},
+{k:"sc",t:"B",q:"The correct order of abstract elements is:",o:["B→P→M→R→C","P→B→M→C→R","B→M→P→R→C","M→R→B→P→C"],e:"Background → Purpose → Methods → Results → Conclusion。"},
+{k:"sc",t:"B",q:"\"Three models ___ on the dataset.\" (Methods, procedure performed)",o:["were trained","are trained","have been training","will train"],e:"做過的步驟 → 過去式。"},
+{k:"sc",t:"B",q:"\"The findings ___ that the proposed method is effective.\" (Conclusion, interpretation)",o:["suggest","suggested","suggesting","had suggested"],e:"C：現在式表解讀。"},
+{k:"sc",t:"B",q:"\"Several studies ___ AI-based scheduling.\" (Background, previous research still relevant)",o:["have investigated","investigate","will investigate","investigating"],e:"B：present perfect。"},
+{k:"sc",t:"B",q:"\"The proposed model ___ an F1-score of 0.92.\" (Results, specific finding)",o:["achieved","achieves","has been achieving","achieve"],e:"R：具體發現用過去式。"},
+{k:"sc",t:"B",q:"\"The method ___ improve real-time detection.\" (Conclusion, cautious implication)",o:["may","did","was","has"],e:"Modal verbs 表保留語氣。"},
+{k:"sc",t:"B",q:"Which element answers \"Why is the study needed?\"",o:["Background","Purpose","Methods","Conclusion"],e:"B = why?；P = what?；M = how?；R = what happened；C = so what?"},
+{k:"sc",t:"B",q:"Which element answers \"so what?\"",o:["Conclusion / Implications","Results","Purpose","Background"],e:"C：What do the findings mean? Why do they matter?"},
+{k:"sc",t:"B",q:"\"The aim of this study was to determine whether a lightweight model could improve…\" is which element?",o:["Purpose","Background","Methods","Results"],e:"P：已完成研究的目的，用過去式。"},
+{k:"sc",t:"B",q:"\"Phishing attacks remain a major cybersecurity threat.\" uses present tense because it:",o:["Describes the current situation / established knowledge","Reports a specific finding","Describes a procedure performed","Is a cautious implication"],e:"B：現在式描述目前的狀況。"},
+{k:"sc",t:"B",q:"\"These findings suggesting practical applications.\" What is wrong?",o:["\"suggesting\" is not a finite verb, so the sentence is incomplete","It should use future tense","\"findings\" should be singular","Nothing is wrong"],e:"改成 These findings suggest practical applications."},
+{k:"sc",t:"B",q:"\"This paper investigates three scheduling algorithms.\" Why is present tense acceptable here?",o:["It describes what the paper does","It reports a specific result","It describes a past procedure","It is background knowledge"],e:"P 的現在式：describing what the paper does。"},
+{k:"sc",t:"B",q:"Which is an example of cautious language?",o:["indicate","prove","always","definitely"],e:"Cautious language：suggest, indicate, may, can。"},
+{k:"sc",t:"B",q:"In very short abstracts, which element may be reduced or omitted?",o:["Background","Results","Conclusion","Methods"],e:"Abstract Reduction：縮減或省略 Background，合併 P+M。"},
+
+// ===================== 複選 =====================
+{k:"mc",t:"M0",q:"Key signs of a rambling sentence include:",o:["*Too many \"and\"s or conjunctions","*Too much information at once","*Lacks punctuation or logical breaks","Uses the passive voice","*Feels wandering or unfocused"],e:"四個徵兆：太多連接詞、塞太多資訊、缺標點斷句、散漫沒重點。被動語態不是。"},
+{k:"mc",t:"M0",q:"A transparent AI use disclosure should include:",o:["*Tool","*Purpose","Price of the tool","*Modification","*Verification"],e:"五要素：Tool / Purpose / Process / Modification / Verification。"},
+{k:"mc",t:"M0",q:"Which should NOT be uploaded to a generative AI tool?",o:["*Confidential research data","*Participant information","A single word whose meaning you want to check","*Unpublished manuscripts","*A supervisor's unpublished work"],e:"查單字屬於可接受的翻譯用法。"},
+{k:"mc",t:"M0",q:"Academic integrity violations covered in the course include:",o:["*Plagiarism","*Fabrication","*Contract cheating","Proofreading","Networking"],e:"Plagiarism / Fabrication / Contract cheating。"},
+{k:"mc",t:"M0",q:"Which AI uses are normally acceptable (unless the assignment says otherwise)?",o:["*Grammar feedback","*Explaining citation formats","*Suggesting keywords for literature searches","Generating research results or data","Writing the whole discussion section"],e:"生成結果、寫整段 discussion → 不可以。"},
+{k:"mc",t:"M0",q:"Generative AI may produce:",o:["*Fabricated references","*Incorrect DOI numbers","*Invented quotations","*Inaccurate statistics","Guaranteed correct citations"],e:"Never trust a reference simply because AI generated it."},
+{k:"mc",t:"M0",q:"According To Wrap Up 11, which AI-use records should be retained?",o:["*The AI tool used","*The date of use","*Relevant prompts","*Relevant outputs","Your classmates' prompts"],e:"Retain：tool、date、purpose、prompts、outputs、significant revisions。"},
+{k:"mc",t:"M0",q:"Before submitting, the student should ask:",o:["*Can I explain this?","*Can I verify this?","*Can I identify the source?","*Did I make the final decision?","Will AI take responsibility?"],e:"12. The Student Remains Responsible 的四個問題。"},
+{k:"mc",t:"J",q:"Which are things journals WANT in a manuscript?",o:["*Fit with the journal's scope and readership","Unnecessary duplication","*Rigorous methods","*Research integrity and ethical compliance","Outdated research"],e:"Duplication、outdated 屬於 Not Wanted。"},
+{k:"mc",t:"J",q:"Which are Scopus-based metrics?",o:["*CiteScore","*SJR","*SNIP","JIF","JCI"],e:"WoS：JIF、JCI；Scopus：CiteScore、SJR、SNIP。"},
+{k:"mc",t:"J",q:"Using metrics responsibly means you should:",o:["*Compare journals in appropriate fields","*Consider more than one metric","*Combine metrics with expert judgement","Judge a researcher solely by where they publish","Assume higher JIF = better research"],e:"後兩個是 DO NOT。"},
+{k:"mc",t:"J",q:"Which should you check in a journal's Guide for Authors?",o:["*Article type and word limits","*Reference and citation style","*Figures and tables","*Required statements and declarations","The editor's home address"],e:"Write for the field. Format for the journal."},
+{k:"mc",t:"S",q:"Which should be AVOIDED in a title?",o:["*Unnecessary jargon or uncommon abbreviations","*Words that add little value such as \"A Study of…\"","Important searchable keywords","*Claims broader than the study supports","Terms familiar to the target readers"],e:"Do：清楚、具體、可搜尋的 keywords、用讀者熟悉的術語。"},
+{k:"mc",t:"S",q:"Which should be AVOIDED when choosing keywords?",o:["*Terms that are too broad","*Uncommon abbreviations","*Very long keyword phrases","Standard terminology","Specific and searchable terms"],e:"Do：standard terminology、specific and searchable。"},
+{k:"mc",t:"S",q:"Which are filler words that usually should be deleted or replaced?",o:["*really","*basically","*actually","*just","precisely"],e:"Really / Very / Just / Basically / Actually …"},
+{k:"mc",t:"R",q:"In the Discussion, findings can be compared with previous studies to show that they ___ earlier work.",o:["*support","*extend","*contradict","*qualify","repeat"],e:"support / extend / contradict / qualify。"},
+{k:"mc",t:"R",q:"Which should be AVOIDED in the Discussion?",o:["*Repeating the Results","*Confusing correlation with causation","*Ignoring unexpected findings","*Introducing new datasets or results","Discussing relevant limitations"],e:"Discussing limitations 是 Do。"},
+{k:"mc",t:"R",q:"Which should be AVOIDED in the Conclusion?",o:["*Repeating the Abstract or Discussion","*Introducing new data or claims","*Vague future work such as \"More research is needed.\"","Summarizing the main findings","Suggesting specific future research"],e:"後兩個是 Do。"},
+{k:"mc",t:"A",q:"Which are typically acknowledged (rather than given authorship)?",o:["*Programming support","*Data collection assistance","*Language or technical editing","*Funding agencies","A co-author who designed the study"],e:"設計研究的人是作者。"},
+{k:"mc",t:"A",q:"Which reference practices should be AVOIDED?",o:["*Citing sources you have not checked","*Excessive self-citation","*Citing secondary sources when the original is available","Using relevant, accurate, credible sources","*Irrelevant citations to increase citation counts"],e:"Use references that are relevant, accurate, credible, current, supportive。"},
+{k:"mc",t:"B",q:"Which are typical tenses for the Conclusion element of an abstract?",o:["*Present","*Modal verbs (may, can)","Past perfect","Future continuous","Present continuous"],e:"C：Present／Modal verbs。"},
+{k:"mc",t:"B",q:"Which are cautious language words recommended for abstracts?",o:["*suggest","*indicate","*may","*can","prove"],e:"suggest, indicate, may, can。"},
+
+// ===================== 填空 =====================
+{k:"fill",t:"S",q:"The 3C principle: Clear, Concise, and ______.",a:["coherent"],e:"Clear / Concise / Coherent。"},
+{k:"fill",t:"S",q:"Clear, ______, and Coherent. (\"no unnecessary words\")",a:["concise"],e:"Concise = no unnecessary words。"},
+{k:"fill",t:"S",q:"\"In order to\" can usually be shortened to \"______\".",a:["to"],e:"In order to → to。"},
+{k:"fill",t:"S",q:"\"Due to the fact that\" → \"______\".",a:["because"],e:"Due to the fact that → because。"},
+{k:"fill",t:"S",q:"Introduction: Context → What we know → What is ______ → What this study does.",a:["missing"],e:"What is missing = gap。"},
+{k:"fill",t:"S",q:"In the Introduction funnel, the step before \"Purpose, question, or hypothesis\" is the research ______.",a:["gap"],e:"…Problem → Research gap → Purpose → Contribution。"},
+{k:"fill",t:"S",q:"A good title = maximum ______ with no unnecessary words.",a:["clarity"],e:"Maximum clarity with no unnecessary words."},
+{k:"fill",t:"S",q:"A unique persistent identifier for researchers is the ______ iD.",a:["orcid"],e:"ORCID iD。"},
+{k:"fill",t:"S",q:"The ______ author is responsible for communication with the journal.",a:["corresponding"],e:"Corresponding author（通訊作者）。"},
+{k:"fill",t:"S",q:"The standard main-text structure of a research paper is abbreviated ______ (Introduction, Methods, Results, and Discussion).",a:["imrad"],e:"IMRaD。"},
+{k:"fill",t:"S",q:"Title, Abstract, and Keywords affect discoverability and ______.",a:["indexing"],e:"discoverability and indexing。"},
+{k:"fill",t:"J",q:"JIF and JCI come from the ______ database.",a:["web of science","wos"],e:"Web of Science。"},
+{k:"fill",t:"J",q:"CiteScore, SJR, and SNIP come from the ______ database.",a:["scopus"],e:"Scopus。"},
+{k:"fill",t:"J",q:"SNIP stands for Source Normalized Impact per ______.",a:["paper"],e:"Source Normalized Impact per Paper。"},
+{k:"fill",t:"J",q:"JIF stands for Journal ______ Factor.",a:["impact"],e:"Journal Impact Factor。"},
+{k:"fill",t:"J",q:"JCI stands for Journal Citation ______.",a:["indicator"],e:"Journal Citation Indicator。"},
+{k:"fill",t:"J",q:"JIF uses a ______-year publication window. (number)",a:["2","two"],e:"JIF 2 年。"},
+{k:"fill",t:"J",q:"CiteScore uses a ______-year window. (number)",a:["4","four"],e:"CiteScore 4 年。"},
+{k:"fill",t:"J",q:"Best journal = strong ______ between your paper, the journal, and its readers.",a:["fit"],e:"Fit first. Metrics second."},
+{k:"fill",t:"J",q:"Journals are ranked into four groups called ______ (Q1–Q4).",a:["quartiles","quartile"],e:"Quartile and percentile ranking。"},
+{k:"fill",t:"J",q:"Two trends: ______ of scientific publishing, and Rationalization in standardization and research evaluation.",a:["globalization","globalisation"],e:"Globalization。"},
+{k:"fill",t:"R",q:"Discussion: Finding → Interpretation → Comparison with previous research → ______ → Limitation.",a:["implication","implications"],e:"Implication。"},
+{k:"fill",t:"R",q:"Use figures for ______ and tables for exact values.",a:["trends","trend"],e:"figures for trends。"},
+{k:"fill",t:"R",q:"Removing parts of a model to test each part's contribution is called an ______ study.",a:["ablation"],e:"Ablation study（消融實驗）。"},
+{k:"fill",t:"R",q:"A standard method used for comparison with the proposed method is a ______.",a:["baseline"],e:"Baseline。"},
+{k:"fill",t:"R",q:"Methods must give enough detail for others to understand, evaluate, and ______ the study.",a:["reproduce"],e:"reproduce → reproducibility。"},
+{k:"fill",t:"R",q:"Two variables changing together does not prove causation; this is the difference between correlation and ______.",a:["causation"],e:"Don't confuse correlation with causation。"},
+{k:"fill",t:"R",q:"The extent to which results apply beyond the tested data is called ______.",a:["generalizability","generalisability"],e:"Generalizability。"},
+{k:"fill",t:"R",q:"Results = What did we find? Discussion = What do the findings ______?",a:["mean"],e:"Discussion = What do the findings mean, why do they matter…"},
+{k:"fill",t:"R",q:"The ______ section has the highest use of passive voice and the fewest citations.",a:["methods","method"],e:"Methods：passive high、citations low。"},
+{k:"fill",t:"A",q:"When acknowledging funding, include the funding agency and ______ number.",a:["grant"],e:"funding agency and grant number。"},
+{k:"fill",t:"A",q:"A permanent link to a publication is its ______ (Digital Object Identifier).",a:["doi"],e:"DOI。"},
+{k:"fill",t:"A",q:"Citing one's own previous work too often is called excessive ______.",a:["self-citation","self citation","selfcitation"],e:"Excessive self-citation → balance references。"},
+{k:"fill",t:"A",q:"Always check Originality, ______, and Coherence.",a:["readability"],e:"Originality, Readability, Coherence。"},
+{k:"fill",t:"M0",q:"Academic integrity violations: Plagiarism, ______, and Contract cheating.",a:["fabrication"],e:"Fabrication = 捏造。"},
+{k:"fill",t:"M0",q:"AI use disclosure: Tool, Purpose, ______, Modification, Verification.",a:["process"],e:"五要素第三個是 Process。"},
+{k:"fill",t:"M0",q:"AI use disclosure: Tool, Purpose, Process, Modification, ______.",a:["verification"],e:"Verification：你怎麼查證。"},
+{k:"fill",t:"M0",q:"Summarising: Read → Interpret → Summarise → Use AI to Check → Return to the ______.",a:["source"],e:"Return to the Source。"},
+{k:"fill",t:"M0",q:"Use AI to support the writing process, not to ______ the writing process.",a:["outsource"],e:"not to outsource。"},
+{k:"fill",t:"M0",q:"Rambling sentences → Apply the ______ principle.",a:["3c"],e:"Rambling → 3C。"},
+{k:"fill",t:"M0",q:"Overloaded tables/figures → Use ______ charts.",a:["summary"],e:"Use summary charts。"},
+{k:"fill",t:"M0",q:"GenAI should be used in a responsible, transparent, and ______ way.",a:["critical"],e:"responsible, transparent, and critical。"},
+{k:"fill",t:"B",q:"Present ______ tense is used for previous research that remains relevant (\"Several studies have investigated…\").",a:["perfect"],e:"Present perfect。"},
+{k:"fill",t:"B",q:"______ verbs (e.g., may) are used for cautious implications in the conclusion.",a:["modal"],e:"Modal verbs。"},
+{k:"fill",t:"B",q:"A good abstract must be able to ______ alone.",a:["stand"],e:"stand alone。"},
+{k:"fill",t:"B",q:"Abstract element order: B → P → ______ → R → C. (letter)",a:["m"],e:"M = Methods。"},
+{k:"fill",t:"B",q:"Choose tense according to ______ and level of generality, not section alone.",a:["function"],e:"function and level of generality。"},
+{k:"fill",t:"B",q:"Fix the verb: \"The results ______ improved efficiency.\" (shows → ?, past tense)",a:["showed"],e:"results 複數＋R 用過去式 → showed。"},
+{k:"fill",t:"B",q:"Fix the verb: \"Participants ______ to the system under different conditions.\" (speak → past)",a:["spoke"],e:"M：做過的步驟用過去式。"},
+{k:"fill",t:"B",q:"Fix the verb: \"This study ______ whether an imperfect system was useful.\" (tests → past)",a:["tested"],e:"P：已完成研究的目的用過去式。"},
+{k:"fill",t:"B",q:"Fix the verb: \"These findings ______ practical applications.\" (suggesting → ?)",a:["suggest"],e:"C：現在式 suggest。"},
+];
+
+const TERMS=[["Academic integrity", "學術誠信", "Honest and responsible conduct in research and writing, avoiding plagiarism, fabrication, and cheating."], ["Plagiarism", "抄襲", "Presenting someone else's words or ideas as your own without proper citation."], ["Fabrication", "捏造", "Inventing data, results, quotations, or references that do not exist."], ["Contract cheating", "代寫作弊", "Having another person or service complete academic work that is then submitted as one's own."], ["Cognitive offloading / outsourcing", "認知外包", "Handing the thinking work that students should do themselves over to generative AI."], ["Proofreading", "校對", "Checking a text for errors in grammar, spelling, and formatting before submission."], ["3C principle", "3C 原則", "Academic writing should be Clear, Concise, and Coherent."], ["Clear", "清楚", "Easy to understand; uses precise, direct, reader-friendly language."], ["Concise", "簡潔", "No unnecessary words; only words that contribute meaning."], ["Coherent", "連貫", "Easy to follow; ideas are logically connected, one main idea per paragraph."], ["Rambling sentence", "冗長雜亂句", "An overly long, unfocused sentence with too many conjunctions and too much information."], ["Filler words", "贅字", "Words that add no meaning, e.g., really, very, actually, basically."], ["Paraphrasing", "改述", "Restating a source's ideas in your own words, with a citation."], ["Synthesis", "綜合", "Combining ideas from several sources into a new, integrated understanding."], ["AI use declaration", "AI 使用聲明", "A statement disclosing the tool, purpose, process, modification, and verification of AI use."], ["Intellectual property (IP)", "智慧財產", "Protected creations such as unpublished work, data, inventions, and copyrighted material."], ["Submission", "投稿", "Sending a manuscript to a journal for consideration."], ["Manuscript", "稿件", "The author's version of a paper submitted for publication."], ["Originality", "原創性", "The quality of offering new ideas, data, or contributions not previously published."], ["Citation", "引用", "A reference in the text to a source that was used."], ["Globalization (of publishing)", "全球化", "Scientific publishing becoming international; Asia now produces nearly half of publications."], ["Rationalization", "合理化", "Standardized, metric-based evaluation of research focusing on quality and impact."], ["Peer review", "同儕審查", "Evaluation of a manuscript by experts in the same field before publication."], ["Aims and scope", "期刊宗旨與範圍", "The topics and article types a journal publishes."], ["Journal metrics", "期刊指標", "Quantitative indicators of a journal's citation influence, visibility, and position in a field."], ["Journal Impact Factor (JIF)", "影響係數", "Web of Science metric: citation rate over a 2-year publication window."], ["Journal Citation Indicator (JCI)", "—", "Web of Science metric: field-normalised citation impact."], ["CiteScore", "—", "Scopus metric: citation impact using a 4-year window."], ["SJR (SCImago Journal Rank)", "—", "Scopus metric: citation impact weighted by source prestige."], ["SNIP (Source Normalized Impact per Paper)", "—", "Scopus metric: citation impact adjusted for field differences."], ["Quartile", "分區", "Ranking of journals in a field into four groups (Q1 = top 25%)."], ["Guide for Authors", "作者須知", "A journal's rules on structure, length, style, references, figures, and declarations."], ["Discoverability / Indexing", "可被搜尋／收錄", "How easily a paper can be found by readers and included in databases."], ["Affiliation", "服務單位", "The institution an author belongs to, written with its official name."], ["ORCID iD", "研究者識別碼", "A unique, persistent identifier that distinguishes researchers and links their publications."], ["Corresponding author", "通訊作者", "The author responsible for communication with the journal and readers."], ["Abstract", "摘要", "A concise stand-alone summary of the paper's background, purpose, methods, results, and conclusion."], ["Keywords", "關鍵字", "Specific, searchable terms that represent the main concepts of a paper."], ["IMRaD", "—", "Introduction, Methods, Results, and Discussion: the standard structure of a research paper."], ["Research gap", "研究缺口", "What previous research has not yet addressed and the current study aims to fill."], ["Hypothesis", "假設", "A testable prediction about the relationship between variables."], ["Introduction funnel", "漏斗結構", "Moving from broad context to previous research, gap, purpose, and contribution."], ["Reproducibility", "可重現性", "Others can repeat the study with the same methods and obtain similar results."], ["Baseline", "基準方法", "A standard method used for comparison with the proposed method."], ["Ablation study", "消融實驗", "Removing parts of a model to test each part's contribution."], ["Hyperparameter", "超參數", "A setting chosen before training, e.g., learning rate or number of epochs."], ["Evaluation metrics", "評估指標", "Measures of performance, e.g., accuracy, precision, recall, F1-score, latency."], ["Supplementary material", "補充資料", "Additional data or analyses provided outside the main paper."], ["Generalizability", "可推廣性", "The extent to which results apply beyond the tested data or conditions."], ["Limitation", "研究限制", "A weakness of the study that affects interpretation or generalizability."], ["Correlation vs. causation", "相關 vs 因果", "Two variables changing together does not prove that one causes the other."], ["Implication", "意涵", "What the findings mean in technical, practical, or theoretical terms."], ["Acknowledgements", "致謝", "Credit for support that does not qualify for authorship, including funding."], ["Self-citation", "自我引用", "Citing one's own previous work; excessive self-citation should be avoided."], ["Secondary source", "二手來源", "A source that reports on original research, e.g., a blog or review summary."], ["Reference manager", "文獻管理工具", "Software that formats references; its output must still be checked manually."], ["DOI", "數位物件識別碼", "Digital Object Identifier: a permanent link to a publication."], ["Cautious language (hedging)", "保留語氣", "Words like suggest, indicate, may, can that avoid overstating claims."], ["Modal verbs", "情態動詞", "Verbs such as may, might, can, could used for cautious implications."], ["Present perfect", "現在完成式", "Used for previous research still relevant (Several studies have investigated…)."]];
+const KIND={tf:"是非",sc:"單選",mc:"複選",fill:"填空",term:"名詞解釋"};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/["“”.,;:!?()]/g,"").replace(/\s+/g," ").trim();
+BANK.forEach((q,i)=>q.id="q"+i);
+const store={get(k,d){try{const v=localStorage.getItem("rwst_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("rwst_"+k,JSON.stringify(v))}catch(e){}}};
+let wrong=new Set(store.get("wrong",[]));
+const saveWrong=()=>store.set("wrong",[...wrong]);
+let timer=null;
+const app=$("#app");
+const scrollTop=()=>window.scrollTo(0,0);
+
+// 把一題準備成可作答的物件（選項打亂）
+function prep(q){
+  const p={...q};
+  if(q.k==="sc"){const o=q.o.map((t,i)=>({t,c:i===0}));p.opts=shuffle(o)}
+  if(q.k==="mc"){p.opts=shuffle(q.o.map(t=>({t:t.replace(/^\*/,""),c:t.startsWith("*")})))}
+  if(q.k==="tf"){p.opts=[{t:"True",c:q.a===true},{t:"False",c:q.a===false}]}
+  return p;
+}
+function grade(p,ans){
+  if(p.k==="fill") return ans!=null && p.a.map(norm).includes(norm(ans));
+  if(p.k==="mc"){if(!ans||!ans.size)return false;return p.opts.every((o,i)=>o.c===ans.has(i))}
+  return ans!=null && p.opts[ans].c;
+}
+function answerText(p){
+  if(p.k==="fill") return p.a[0];
+  return p.opts.filter(o=>o.c).map(o=>o.t).join("；");
+}
+
+// ================= 首頁 =================
+function home(){
+  clearInterval(timer);
+  const cnt=k=>BANK.filter(q=>q.k===k).length;
+  app.innerHTML=`
+  <h1>科技論文寫作 期中測驗</h1>
+  <p class="sub">11/4（三）期中考：80 分鐘、50 題、100 分。題庫 ${BANK.length} 題＋術語 ${TERMS.length} 個，內容對應複習 PDF。</p>
+  <div class="modes">
+    <button class="mode" data-m="exam"><span class="n">50 題</span><b>📝 模擬考</b><span>照正式題型配分隨機出題，80 分鐘計時，交卷後看分數和詳解</span></button>
+    <button class="mode" data-m="practice"><span class="n">${BANK.length} 題</span><b>🎯 分章練習</b><span>選章節和題型，一題一題作答，馬上看對錯</span></button>
+    <button class="mode" data-m="cards"><span class="n">${TERMS.length} 張</span><b>🃏 術語卡</b><span>名詞解釋和填空要寫英文，用卡片背</span></button>
+    <button class="mode" data-m="wrong"><span class="n">${wrong.size} 題</span><b>📕 錯題本</b><span>練習和模擬考答錯的題目會自動收進來，答對就移出</span></button>
+  </div>
+  <h2>題庫組成</h2>
+  <table><tr><th>題型</th><th class="r">題庫</th><th class="r">正式考</th><th class="r">配分</th></tr>
+  <tr><td>名詞解釋</td><td class="r">${TERMS.length}</td><td class="r">10</td><td class="r">10</td></tr>
+  <tr><td>是非</td><td class="r">${cnt("tf")}</td><td class="r">10</td><td class="r">10</td></tr>
+  <tr><td>單選</td><td class="r">${cnt("sc")}</td><td class="r">15</td><td class="r">30</td></tr>
+  <tr><td>複選</td><td class="r">${cnt("mc")}</td><td class="r">5</td><td class="r">20</td></tr>
+  <tr><td>填空</td><td class="r">${cnt("fill")}</td><td class="r">10</td><td class="r">30</td></tr></table>
+  <p class="hint" style="margin-top:12px">紀錄（錯題本）只存在這台裝置的瀏覽器裡。</p>`;
+  app.querySelectorAll(".mode").forEach(b=>b.onclick=()=>({exam,practice:practiceSetup,cards:cardsSetup,wrong:wrongStart})[b.dataset.m]());
+  scrollTop();
+}
+
+// ================= 分章練習 =================
+let pSel={t:new Set(Object.keys(TOPICS)),k:new Set(["tf","sc","mc","fill"])};
+function practiceSetup(){
+  const n=()=>BANK.filter(q=>pSel.t.has(q.t)&&pSel.k.has(q.k)).length;
+  app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button><span class="grow"></span></div>
+  <h1>分章練習</h1><p class="sub">點選要練的範圍（可多選）</p>
+  <h2>章節</h2><div class="chips" id="ct">${Object.entries(TOPICS).map(([k,v])=>`<button class="chip" data-v="${k}" aria-pressed="${pSel.t.has(k)}">${v}</button>`).join("")}</div>
+  <h2>題型</h2><div class="chips" id="ck">${["tf","sc","mc","fill"].map(k=>`<button class="chip" data-v="${k}" aria-pressed="${pSel.k.has(k)}">${KIND[k]}</button>`).join("")}</div>
+  <div class="row"><button class="btn primary" id="go"></button></div>`;
+  const upd=()=>{const c=n();$("#go").textContent=`開始（${c} 題）`;$("#go").disabled=!c};
+  [["#ct","t"],["#ck","k"]].forEach(([sel,key])=>$(sel).querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
+    const s=pSel[key],v=c.dataset.v; s.has(v)?s.delete(v):s.add(v); c.setAttribute("aria-pressed",s.has(v)); upd();}));
+  $("#bk").onclick=home; upd();
+  $("#go").onclick=()=>runPractice(shuffle(BANK.filter(q=>pSel.t.has(q.t)&&pSel.k.has(q.k))),"分章練習");
+  scrollTop();
+}
+function wrongStart(){
+  const list=BANK.filter(q=>wrong.has(q.id));
+  if(!list.length){app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button></div><h1>錯題本</h1><p class="sub">目前沒有錯題 👍 去寫模擬考或分章練習吧。</p>`;$("#bk").onclick=home;return}
+  runPractice(shuffle(list),"錯題本");
+}
+function runPractice(list,title){
+  let i=0,ok=0,bad=0;
+  const show=()=>{
+    if(i>=list.length) return done();
+    const p=prep(list[i]);
+    app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button><span>${i+1}/${list.length}</span>
+      <div class="meter"><i class="g" style="width:${ok/list.length*100}%"></i><i class="b" style="width:${bad/list.length*100}%"></i></div><span>✓${ok} ✗${bad}</span></div>
+      <div id="qbox"></div>`;
+    $("#bk").onclick=home;
+    renderQ($("#qbox"),p,{instant:true,num:i+1,onDone:(right)=>{
+      right?ok++:bad++;
+      if(right) wrong.delete(p.id); else wrong.add(p.id); saveWrong();
+      const nx=document.createElement("div");nx.className="row";
+      nx.innerHTML=`<button class="btn primary" id="nx">${i+1<list.length?"下一題 →":"看結果"}</button>`;
+      $("#qbox .q").appendChild(nx);$("#nx").focus({preventScroll:true});
+      $("#nx").onclick=()=>{i++;show()};
+    }});
+    scrollTop();
+  };
+  const done=()=>{
+    app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button></div>
+    <div class="score"><div class="hint">${title}</div><div class="big">${ok} / ${list.length}</div><div class="hint">答對率 ${Math.round(ok/list.length*100)}%｜錯題本現在有 ${wrong.size} 題</div>
+    <div class="row"><button class="btn primary" id="again">再練一次（重新打亂）</button>${wrong.size?'<button class="btn" id="wr">練錯題</button>':""}</div></div>`;
+    $("#bk").onclick=home;$("#again").onclick=()=>runPractice(shuffle(list),title);
+    if($("#wr"))$("#wr").onclick=wrongStart;
+  };
+  show();
+}
+
+// 畫一題；instant=true 時作答後立刻顯示對錯
+function renderQ(box,p,{instant,num,onDone,onChange}){
+  const L="ABCDE";
+  const el=document.createElement("div");el.className="q";
+  el.innerHTML=`<div class="meta"><span>${num?num+". ":""}${KIND[p.k]}</span><span>${TOPICS[p.t]||""}</span></div><p class="stem">${esc(p.q)}</p>`;
+  const body=document.createElement("div");el.appendChild(body);box.appendChild(el);
+  p.ans=p.k==="mc"?new Set():null;
+  const finish=()=>{
+    const right=grade(p,p.ans);
+    showResult(el,p,right);
+    onDone&&onDone(right);
+  };
+  if(p.k==="fill"){
+    body.innerHTML=`<input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="輸入英文答案">${instant?'<div class="row"><button class="btn primary">確認</button></div>':""}`;
+    const inp=body.querySelector("input");
+    inp.oninput=()=>{p.ans=inp.value;onChange&&onChange()};
+    if(instant){const b=body.querySelector("button");const go=()=>{if(!inp.value.trim())return;inp.disabled=true;b.remove();finish()};b.onclick=go;inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go()}};setTimeout(()=>inp.focus({preventScroll:true}),50)}
+    p.finish=finish;return el;
+  }
+  const wrapO=document.createElement("div");wrapO.className=p.k==="tf"?"tfrow":"opts";body.appendChild(wrapO);
+  p.opts.forEach((o,idx)=>{
+    const b=document.createElement("button");b.className="opt";b.setAttribute("aria-pressed","false");
+    b.innerHTML=p.k==="tf"?`${o.t==="True"?"⭕ True":"❌ False"}`:`<span class="l">${L[idx]}</span><span>${esc(o.t)}</span>`;
+    b.onclick=()=>{
+      if(p.k==="mc"){p.ans.has(idx)?p.ans.delete(idx):p.ans.add(idx);b.setAttribute("aria-pressed",p.ans.has(idx));onChange&&onChange();return}
+      p.ans=idx;wrapO.querySelectorAll(".opt").forEach((x,j)=>x.setAttribute("aria-pressed",j===idx));onChange&&onChange();
+      if(instant){lock(el);finish()}
+    };
+    wrapO.appendChild(b);
+  });
+  if(p.k==="mc"){
+    const h=document.createElement("p");h.className="hint";h.style.margin="8px 0 0";h.textContent="複選：選出所有正確答案"+(instant?"，再按確認":"");body.appendChild(h);
+    if(instant){const r=document.createElement("div");r.className="row";r.innerHTML='<button class="btn primary">確認</button>';body.appendChild(r);
+      r.querySelector("button").onclick=()=>{if(!p.ans.size)return;lock(el);r.remove();finish()}}
+  }
+  p.finish=finish;return el;
+}
+function lock(el){el.querySelectorAll("button.opt,input,textarea").forEach(x=>x.disabled=true)}
+function showResult(el,p,right){
+  if(p.k==="fill"){const inp=el.querySelector("input");inp.disabled=true;inp.classList.add(right?"ok":"no")}
+  else el.querySelectorAll(".opt").forEach((b,i)=>{
+    const sel=p.k==="mc"?p.ans.has(i):p.ans===i,c=p.opts[i].c;
+    b.setAttribute("aria-pressed","false");
+    if(sel&&c)b.classList.add("ok");else if(sel&&!c)b.classList.add("no");else if(c)b.classList.add("miss");
+  });
+  const ex=document.createElement("div");ex.className="exp";
+  ex.innerHTML=`<span class="v ${right?"ok":"no"}">${right?"✓ 答對":"✗ 答錯"}</span>${right?"":`　正解：<b>${esc(answerText(p))}</b>`}<div>${esc(p.e)}</div>`;
+  el.appendChild(ex);
+}
+
+// ================= 模擬考 =================
+function pick(k,n){return shuffle(BANK.filter(q=>q.k===k)).slice(0,n).map(prep)}
+function exam(){
+  clearInterval(timer);
+  const secs=[
+    {k:"term",title:"I. Terminology 名詞解釋（10 × 1 分）",pts:1,items:shuffle(TERMS).slice(0,10).map(([t,zh,d])=>({k:"term",t:"",q:t,zh,def:d}))},
+    {k:"tf",title:"II. True / False 是非（10 × 1 分）",pts:1,items:pick("tf",10)},
+    {k:"sc",title:"III. Single Choice 單選（15 × 2 分）",pts:2,items:pick("sc",15)},
+    {k:"mc",title:"IV. Multiple Choice 複選（5 × 4 分）",pts:4,items:pick("mc",5)},
+    {k:"fill",title:"V. Fill in the Blanks 填空（10 × 3 分）",pts:3,items:pick("fill",10)},
+  ];
+  let left=80*60,submitted=false;
+  app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button><span id="tm">80:00</span><span class="grow"></span><span id="cnt">0/50</span><button class="btn primary" id="sub" style="min-height:36px;padding:6px 12px">交卷</button></div>
+  <div id="res"></div><div id="paper"></div>`;
+  const paper=$("#paper");
+  const answered=()=>secs.reduce((a,s)=>a+s.items.filter(p=>p.k==="term"?(p.txt||"").trim():p.k==="mc"?p.ans&&p.ans.size:p.k==="fill"?(p.ans||"").trim():p.ans!=null).length,0);
+  const upd=()=>{$("#cnt").textContent=answered()+"/50"};
+  let n=0;
+  secs.forEach(s=>{
+    const h=document.createElement("div");h.className="sec-title";h.textContent=s.title;paper.appendChild(h);
+    s.items.forEach(p=>{
+      n++;
+      if(p.k==="term"){
+        const el=document.createElement("div");el.className="q";
+        el.innerHTML=`<div class="meta"><span>${n}. 名詞解釋</span></div><p class="stem">Define: <b>${esc(p.q)}</b></p><textarea placeholder="用英文寫定義（交卷後對照參考答案自己評分）"></textarea>`;
+        const ta=el.querySelector("textarea");ta.oninput=()=>{p.txt=ta.value;upd()};
+        p.el=el;paper.appendChild(el);
+      } else p.el=renderQ(paper,p,{instant:false,num:n,onChange:upd});
+    });
+  });
+  const tick=()=>{left--;const m=Math.max(0,left)/60|0,sx=Math.max(0,left)%60;$("#tm").textContent=`${m}:${String(sx).padStart(2,"0")}`;if(left<=300)$("#tm").style.color="var(--bad)";if(left<=0)submit(true)};
+  timer=setInterval(tick,1000);
+  $("#bk").onclick=()=>{if(submitted||!answered()||confirmLeave())home()};
+  function confirmLeave(){ // 不用瀏覽器 confirm，改成按兩次
+    const b=$("#bk");if(b.dataset.armed){return true}b.dataset.armed=1;b.textContent="再按一次離開";setTimeout(()=>{b.textContent="← 首頁";delete b.dataset.armed},2500);return false}
+  $("#sub").onclick=()=>{
+    const b=$("#sub");const un=50-answered();
+    if(un>0&&!b.dataset.armed){b.dataset.armed=1;b.textContent=`還有 ${un} 題沒寫，再按一次交卷`;setTimeout(()=>{if(!submitted){b.textContent="交卷";delete b.dataset.armed}},3000);return}
+    submit(false);
+  };
+  function submit(auto){
+    if(submitted)return;submitted=true;clearInterval(timer);
+    $("#sub").remove();
+    const per={};let auto_=0;
+    secs.forEach(s=>{
+      per[s.k]={got:0,max:s.items.length*s.pts,ok:0,n:s.items.length,pts:s.pts};
+      s.items.forEach(p=>{
+        if(p.k==="term"){
+          const ta=p.el.querySelector("textarea");ta.disabled=true;
+          const ex=document.createElement("div");ex.className="exp";
+          ex.innerHTML=`<b>${esc(p.q)}</b>（${esc(p.zh)}）<div>${esc(p.def)}</div><label class="selfck"><input type="checkbox"> 我的定義有寫到重點（+1 分）</label>`;
+          p.el.appendChild(ex);ex.querySelector("input").onchange=e=>{p.self=e.target.checked;summary()};
+          return;
+        }
+        lock(p.el);const right=grade(p,p.ans);p.right=right;showResult(p.el,p,right);
+        if(right){per[s.k].ok++;per[s.k].got+=s.pts;wrong.delete(p.id)}else wrong.add(p.id);
+      });
+    });
+    saveWrong();
+    function summary(){
+      const t=secs[0].items.filter(p=>p.self).length;per.term.ok=t;per.term.got=t;
+      const total=Object.values(per).reduce((a,v)=>a+v.got,0);
+      $("#res").innerHTML=`<div class="score"><div class="hint">${auto?"時間到，自動交卷":"模擬考成績"}（用時 ${Math.round((80*60-Math.max(0,left))/60)} 分鐘）</div>
+      <div class="big">${total} <span style="font-size:1rem;color:var(--muted)">/ 100</span></div>
+      <table><tr><th>題型</th><th class="r">答對</th><th class="r">得分</th></tr>
+      ${secs.map(s=>`<tr><td>${KIND[s.k]}</td><td class="r">${per[s.k].ok}/${per[s.k].n}</td><td class="r">${per[s.k].got}/${per[s.k].max}</td></tr>`).join("")}</table>
+      <p class="hint">名詞解釋請往下對照參考答案，自己勾選有寫到重點的題目，分數會即時更新。答錯的題目已收進錯題本（${wrong.size} 題）。</p>
+      <div class="row"><button class="btn primary" id="again">再考一份（新題目）</button><button class="btn" id="home2">回首頁</button></div></div>`;
+      $("#again").onclick=exam;$("#home2").onclick=home;
+    }
+    summary();scrollTop();
+  }
+  scrollTop();
+}
+
+// ================= 術語卡 =================
+function cardsSetup(){
+  let dir="en";
+  app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button></div>
+  <h1>術語卡</h1><p class="sub">看正面想答案，點卡片翻面，再自評。</p>
+  <h2>正面顯示</h2><div class="chips" id="cd">
+  <button class="chip" data-v="en" aria-pressed="true">英文術語 → 想定義</button>
+  <button class="chip" data-v="def" aria-pressed="false">英文定義 → 想術語（練填空）</button></div>
+  <div class="row"><button class="btn primary" id="go">開始（${TERMS.length} 張）</button></div>`;
+  $("#cd").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{dir=c.dataset.v;$("#cd").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===c))});
+  $("#bk").onclick=home;
+  $("#go").onclick=()=>runCards(shuffle(TERMS),dir);
+  scrollTop();
+}
+function runCards(deck,dir){
+  let i=0,known=0;const again=[];
+  const show=()=>{
+    if(i>=deck.length){
+      app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button></div><div class="score"><div class="hint">術語卡</div><div class="big">${known} / ${deck.length}</div><div class="hint">會的比例 ${Math.round(known/deck.length*100)}%</div>
+      <div class="row">${again.length?`<button class="btn primary" id="ag">只複習不會的 ${again.length} 張</button>`:""}<button class="btn" id="all">全部重來</button></div></div>`;
+      $("#bk").onclick=home;if($("#ag"))$("#ag").onclick=()=>runCards(shuffle(again),dir);$("#all").onclick=()=>runCards(shuffle(TERMS),dir);return;
+    }
+    const [t,zh,d]=deck[i];let flipped=false;
+    app.innerHTML=`<div class="bar"><button class="btn back" id="bk">← 首頁</button><span>${i+1}/${deck.length}</span><div class="meter"><i class="g" style="width:${known/deck.length*100}%"></i></div><span>會 ${known}</span></div>
+    <button class="card" id="cd">${dir==="en"?`<div class="term">${esc(t)}</div>`:`<div class="def">${esc(d)}</div>`}<div class="hint" style="margin-top:14px">點一下翻面</div></button>
+    <div class="row" id="rate" hidden><button class="btn" id="no" style="flex:1">😵 不會</button><button class="btn primary" id="yes" style="flex:1">😎 會</button></div>`;
+    $("#bk").onclick=home;
+    $("#cd").onclick=()=>{if(flipped)return;flipped=true;$("#cd").innerHTML=`<div class="term">${esc(t)}</div><div class="zh">${esc(zh)}</div><div class="def">${esc(d)}</div>`;$("#rate").hidden=false};
+    $("#yes").onclick=()=>{known++;i++;show()};
+    $("#no").onclick=()=>{again.push(deck[i]);i++;show()};
+  };
+  show();
+}
+home();
+</script>
+</body>
+</html>
