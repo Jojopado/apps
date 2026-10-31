@@ -335,15 +335,34 @@
     const cy = wsc.wh <= SH ? (wsc.wh - SH) / 2 : Math.max(0, Math.min(wsc.wh - SH, sy - SH / 2));
     cam = [Math.round(cx), Math.round(cy)];
   }
+  // 把會動的物件插進已排序的靜態清單：放在「所有在它後面、畫面上有重疊的零件」之後，
+  // 「所有在它前面、畫面上有重疊的零件」之前；找不到合法位置時退回整體排序。
+  function overlapScr(a, b) { const s = a.spr, t = b.spr; return s.x < t.x + t.pix.w && t.x < s.x + s.pix.w && s.y < t.y + t.pix.h && t.y < s.y + s.pix.h; }
+  function insertDynamic(stat, dyn) {
+    let out = stat.slice();
+    for (const d of dyn) {
+      let lo = -1, hi = out.length;
+      for (let k = 0; k < out.length; k++) {
+        const o = out[k]; if (!overlapScr(o, d)) continue;
+        const ob = PX.behind(o, d), db = PX.behind(d, o);
+        if (ob && !db) lo = Math.max(lo, k); else if (db && !ob) hi = Math.min(hi, k);
+      }
+      if (lo >= hi) return depthSort(stat.concat(dyn));   // 有衝突：退回完整排序
+      out.splice(lo + 1, 0, d);
+    }
+    return out;
+  }
   function renderCity() {
     cityCam();
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = wsc.interior ? '#18161f' : '#7eb664'; ctx.fillRect(0, 0, SW, SH);
     ctx.drawImage(wsc.bgC, -cam[0], -cam[1]);
-    const list = wsc.parts.concat(pickupDrawables(wsc));
-    list.push(charDrawable(me, st.look, wsc.ox, wsc.oy));
-    for (const n of wsc.npcs || []) { const d = charDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; list.push(d); }
-    order = depthSort(list);
+    // 不會動的零件只排序一次；會動的（角色、NPC、撿拾物）每幀插到正確位置
+    if (!wsc.staticOrder || wsc.staticParts !== wsc.parts) { wsc.staticOrder = depthSort(wsc.parts); wsc.staticParts = wsc.parts; }
+    const dyn = pickupDrawables(wsc);
+    dyn.push(charDrawable(me, st.look, wsc.ox, wsc.oy));
+    for (const n of wsc.npcs || []) { const d = charDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; dyn.push(d); }
+    order = insertDynamic(wsc.staticOrder, depthSort(dyn));
     for (const d of order) {
       const s = d.spr, x = s.x - cam[0], y = s.y - cam[1];
       if (x > SW || y > SH || x + s.pix.w < 0 || y + s.pix.h < 0) continue;
@@ -1293,6 +1312,7 @@
 
   if (!st.name) openLook(true); else { daily(); checkLikes(); scheduleCloud(); }
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // 測試用
   window.__nook = { openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
