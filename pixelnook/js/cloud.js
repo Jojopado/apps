@@ -24,6 +24,18 @@
       await req('.json?print=silent', { method: 'PATCH', body: JSON.stringify(body) });
       return t;
     },
+    // 每週主題：報名要跟房間同一次寫入（證明是房間主人）
+    async submitTheme(week, id, pw, name, comfort, payload) {
+      const t = Date.now(), body = {};
+      body['rooms/' + id] = { pw, t, d: JSON.stringify(payload) };
+      body['idx/' + id] = { n: name, t, c: comfort };
+      body['theme/' + week + '/' + id] = { n: name, t, c: comfort };
+      await req('.json?print=silent', { method: 'PATCH', body: JSON.stringify(body) });
+      return t;
+    },
+    async themeList(week) { return (await req('/theme/' + encodeURIComponent(week) + '.json')) || {}; },
+    async themeVotes(week) { return (await req('/votes/' + encodeURIComponent(week) + '.json')) || {}; },
+    async vote(week, id, me, day) { await req('/votes/' + encodeURIComponent(week) + '/' + encodeURIComponent(id) + '/' + encodeURIComponent(me) + '.json?print=silent', { method: 'PUT', body: JSON.stringify(day) }); },
     async recent(n) {
       const o = await req('/idx.json?orderBy=%22t%22&limitToLast=' + (n || 40));
       return Object.entries(o || {}).map(([id, v]) => Object.assign({ id }, v)).sort((a, b) => b.t - a.t);

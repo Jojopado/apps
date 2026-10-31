@@ -43,6 +43,7 @@ for (let k = 0; k < 12; k++) { Q.on(st, 'JOB', { served: 4, correct: 4 }, D); Q.
 let got = 0; for (const id of ids) { const c = Q.claim(st, id, D); if (c) got += c.coins; t(Q.claim(st, id, D) === null, '每日 ' + id + ' 只能領一次'); }
 t(got > 0, '每日任務領到 ' + got + ' 金幣');
 t(Q.claim(st, 'w_job', D).coins === 300 && Q.claim(st, 'w_visit', D).coins === 200, '每週任務：打工 10 次 300、參觀 5 間 200');
+Q.on(st, 'THEME', {}, D); t(Q.claim(st, 'w_theme', D).coins === 150, '每週任務：提交主題 150');
 // 換日、換週
 Q.ensure(st, D + 1);
 t(st.q.daily.day === D + 1 && st.q.daily.list.every(x => !x.claimed && x.prog === 0), '隔天每日任務重置');

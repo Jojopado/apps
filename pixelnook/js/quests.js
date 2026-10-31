@@ -23,6 +23,7 @@
     { id: 'd_bakery', title: '麵包店幫手', desc: '幫 Leo 分類包裝 1 次', ev: 'JOB', match: d => d.job === 'bakery' && d.served > 0, need: 1, coins: 50 },
     { id: 'd_market', title: '收銀員', desc: '幫 Nora 結帳 1 次', ev: 'JOB', match: d => d.job === 'market' && d.served > 0, need: 1, coins: 50 },
     { id: 'd_deliver', title: '快遞員', desc: '幫麵包店外送 1 次', ev: 'JOB', match: d => d.job === 'delivery' && d.served > 0, need: 1, coins: 50 },
+    { id: 'd_vote', title: '評審時間', desc: '在「本週主題」投 1 票', ev: 'VOTE', need: 1, coins: 30 },
     { id: 'd_pick', title: '尋寶家', desc: '撿到 2 個閃光物品', ev: 'PICK', need: 2, coins: 40 },
     { id: 'd_harvest', title: '採集日', desc: '在公園採集 4 次', ev: 'HARVEST', need: 4, coins: 40 },
     { id: 'd_search', title: '好奇寶寶', desc: '調查 3 個地方', ev: 'SEARCH', need: 3, coins: 30 },
@@ -36,6 +37,7 @@
   const WEEKLY = [
     { id: 'w_job', title: '打工達人', desc: '這週完成 10 次打工', ev: 'JOB', match: d => d.served > 0, need: 10, coins: 300 },
     { id: 'w_visit', title: '社交高手', desc: '這週參觀 5 位玩家的房間', ev: 'VISIT', need: 5, coins: 200 },
+    { id: 'w_theme', title: '主題設計師', desc: '把房間提交到本週主題', ev: 'THEME', need: 1, coins: 150 },
   ];
   const DAILY_COUNT = 3;
 

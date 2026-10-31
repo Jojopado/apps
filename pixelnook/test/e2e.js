@@ -216,7 +216,7 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   check((await ev('__nook.st.q.main')) === 5 && (await ev('__nook.st.bag.poster')) >= 1, '買家具 → 主線完成，獲得禮物「星星海報」');
   await ev('__nook.openQuests()'); await sleep(300);
   const qcards = await ev(`document.querySelectorAll('#questList .qcard').length`);
-  check(qcards === 6, '任務面板：主線＋3 個每日＋2 個每週：' + qcards);
+  check(qcards === 7, '任務面板：主線＋3 個每日＋3 個每週：' + qcards);
   await shot('q1_panel.png');
   const before2 = await ev('__nook.st.coins');
   await ev(`[...document.querySelectorAll('#questList .qcard button')].filter(b=>!b.disabled).forEach(b=>b.click())`); await sleep(300);
@@ -320,6 +320,26 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   check((await ev(`__nook.st.req.mia`)) === 'done' && (await ev('__nook.st.mats.mat_flower')) === 2 && (await ev('__nook.st.bag.plant_cafe')) >= 1, '委託完成：扣 3 份花瓣、拿到咖啡廳盆栽');
   await opt('/不客氣/');
   await click('#bGoHome'); await settle();
+
+  console.log('6e. 社群：本週主題、投票、收藏');
+  await click('#bVisit'); await sleep(1500);
+  await ev(`document.querySelector('#visitTabs [data-v=theme]').click()`); await sleep(2000);
+  check(await ev(`!!document.querySelector('.themeHead') && document.querySelector('.themeHead .tn').textContent.length>0`), '本週主題分頁：' + (await ev(`document.querySelector('.themeHead .tn') && document.querySelector('.themeHead .tn').textContent`)));
+  const c2 = await ev('__nook.st.coins');
+  await ev(`document.querySelector('.themeHead button').click()`); await sleep(2500);
+  const mineIn = await ev(`[...document.querySelectorAll('#visitList .r .nm')].some(e=>e.textContent.includes('（我）'))`);
+  check(mineIn, '提交參賽 → 自己的房間出現在排行裡' + ((await ev('__nook.st.coins')) > c2 ? '（金幣 +50）' : '（本週已領過）'));
+  const selfBtn = await ev(`(()=>{const r=[...document.querySelectorAll('#visitList .r')].find(r=>r.querySelector('.nm').textContent.includes('（我）')); return r && r.querySelector('button').disabled;})()`);
+  check(selfBtn, '不能投給自己（按鈕停用）');
+  await shot('t1_theme.png');
+  await ev(`document.querySelector('#visitTabs [data-v=recent]').click()`); await sleep(1500);
+  await ev(`(()=>{const r=[...document.querySelectorAll('#visitList .r')].find(r=>r.textContent.includes('示範')); (r||document.querySelector('#visitList .r')).click();})()`); await sleep(2500);
+  await click('#bFav'); await sleep(200);
+  check((await ev('(__nook.st.favs||[]).length')) >= 1 && (await ev(`document.querySelector('#bFav').textContent`)).includes('已收藏'), '參觀時按收藏 → 已收藏');
+  await click('#bHome'); await sleep(500);
+  await click('#bVisit'); await sleep(1500); await ev(`document.querySelector('#visitTabs [data-v=fav]').click()`); await sleep(1500);
+  check((await ev(`document.querySelectorAll('#visitList .r').length`)) >= 1, '收藏分頁列出收藏的房間');
+  await click('#mVisit [data-close]');
 
   const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
   console.log('   城市走路時每秒畫面：', perf);

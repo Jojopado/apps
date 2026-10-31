@@ -98,6 +98,9 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
 .colc{border:2px solid var(--ink);border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;padding:4px;font-size:12px;text-align:center}
 .colc canvas{width:48px;height:48px}
 .colc.lock{background:#efe8da;color:#8a8270}
+.themeHead{display:flex;gap:10px;align-items:center;justify-content:space-between;border:2px solid var(--ink);border-radius:12px;background:#fff3d6;padding:8px 10px;margin-bottom:10px;flex-wrap:wrap}
+.themeHead .tn{font-size:17px;font-weight:700;color:#c0621b}
+.rank{font-weight:700;width:26px;text-align:center;font-size:16px}
 .talk{width:min(640px,100%);padding:12px 14px;gap:10px}
 .talkRow{display:flex;gap:12px;align-items:flex-start}
 .talkPic{flex:0 0 76px;height:76px;border:2px solid var(--ink);border-radius:12px;background:#f3e6cf;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -180,6 +183,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
 <div id="visitBar" class="hud">
   <div class="chip" id="vName">—</div>
   <button id="bLike">👍 按讚</button>
+  <button id="bFav">☆ 收藏</button>
   <button id="bHome" class="pri">🏠 回家</button>
 </div>
 
@@ -222,7 +226,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   <h2>👀 去別人家參觀 <span class="sp"></span><button data-close>關閉</button></h2>
   <div class="body">
     <div class="cats" id="visitTabs">
-      <button data-v="recent" class="on">最新</button><button data-v="pop">本週人氣</button><button data-v="rand">隨機</button>
+      <button data-v="recent" class="on">最新</button><button data-v="theme">🏆 本週主題</button><button data-v="pop">本週人氣</button><button data-v="fav">⭐ 收藏</button><button data-v="rand">隨機</button>
     </div>
     <div class="list" id="visitList"></div>
   </div>

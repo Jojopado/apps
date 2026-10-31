@@ -962,13 +962,26 @@
 
   // ---------------- 參觀 ----------------
   let visitTab = 'recent';
+  const THEMES = [
+    { name: '森林生活', hint: '多用綠植、木頭、藤編家具' }, { name: '粉色夢幻', hint: '粉彩風家具、粉紅壁紙地板' },
+    { name: '藍色現代', hint: '藍白配色、電器、簡潔線條' }, { name: '咖啡廳風', hint: '桌椅、植物、溫暖燈光' },
+    { name: '溫馨書房', hint: '書櫃、書桌、立燈' }, { name: '繽紛派對', hint: '越多顏色越好！' },
+    { name: '小小臥室', hint: '床、床頭櫃、地毯，舒服最重要' }, { name: '復古木頭', hint: '原木家具、格紋地毯、牆上層板' },
+  ];
+  const weekId = () => 'w' + Quests.weekNum(dayNum());
+  const themeNow = () => THEMES[Quests.weekNum(dayNum()) % THEMES.length];
+  function myVotes() { st.votes = st.votes || {}; if (st.votes.week !== weekId()) st.votes = { week: weekId(), ids: [] }; return st.votes; }
   $$('#visitTabs button').forEach(b => b.onclick = () => { visitTab = b.dataset.v; $$('#visitTabs button').forEach(x => x.classList.toggle('on', x === b)); loadVisitList(); });
   async function loadVisitList() {
     const list = $('#visitList'); list.innerHTML = '<div class="empty">讀取中…</div>';
     try {
       const recent = await Cloud.recent(200), byId = new Map(recent.map(r => [r.id, r]));
       let rows;
-      if (visitTab === 'recent') rows = recent.slice(0, 30);
+      if (visitTab === 'fav') {
+        rows = (st.favs || []).map(f => Object.assign({ n: f.n, c: 0 }, byId.get(f.id) || {}, { id: f.id }));
+        if (!rows.length) { list.innerHTML = '<div class="empty">還沒有收藏的房間。參觀時按「⭐ 收藏」就會出現在這裡。</div>'; return; }
+      } else if (visitTab === 'theme') { return loadTheme(list, byId); }
+      else if (visitTab === 'recent') rows = recent.slice(0, 30);
       else if (visitTab === 'rand') rows = recent.slice().sort(() => Math.random() - 0.5).slice(0, 15);
       else {
         const likes = await Cloud.likesAll(), wk = dayNum() - 7, cnt = [];
@@ -990,6 +1003,52 @@
     } catch (e) { list.innerHTML = '<div class="empty">連不上雲端，等一下再試試看</div>'; }
   }
   $('#bVisit').onclick = () => { $('#mVisit').classList.add('show'); loadVisitList(); };
+  async function loadTheme(list, byId) {
+    const wk = weekId(), th = themeNow();
+    const [entries, votes] = await Promise.all([Cloud.themeList(wk), Cloud.themeVotes(wk)]);
+    const mv = myVotes(), mine = !!entries[st.id];
+    list.innerHTML = '';
+    const head = document.createElement('div'); head.className = 'themeHead';
+    head.innerHTML = `<div><b>本週主題：</b><span class="tn"></span><div class="help"></div></div>`;
+    head.querySelector('.tn').textContent = th.name; head.querySelector('.help').textContent = `提示：${th.hint}。每人每週 3 票（剩 ${3 - mv.ids.length} 票），不能投自己。`;
+    const sb = document.createElement('button'); sb.className = 'pri'; sb.textContent = mine ? '更新我的參賽房間' : '提交我的房間參賽';
+    sb.onclick = async () => {
+      sb.disabled = true;
+      try {
+        await Cloud.submitTheme(wk, st.id, st.pw, st.name, S.comfortOf(st.room).total, { v: 1, name: st.name, look: st.look, room: st.room });
+        st.published = true; st.themeWeek = st.themeWeek || {};
+        if (!st.themeWeek[wk]) { st.themeWeek[wk] = 1; st.coins += 50; sfx('coin'); toast('參賽成功！金幣 +50（每週第一次）'); } else toast('已更新你的參賽房間');
+        emit('THEME', {}); save(false); refreshHud(); loadVisitList();
+      } catch (e) { toast('連不上雲端，等一下再試試看'); sb.disabled = false; }
+    };
+    head.appendChild(sb); list.appendChild(head);
+    const rows = Object.entries(entries).map(([id, v]) => ({ id, n: String(v.n || '').slice(0, 12), c: +v.c || 0, votes: Object.keys(votes[id] || {}).length }))
+      .sort((a, b) => b.votes - a.votes || b.c - a.c);
+    if (!rows.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '這週還沒有人參賽，當第一個吧！'; list.appendChild(e); return; }
+    rows.forEach((r, k) => {
+      const el = document.createElement('div'); el.className = 'r';
+      el.innerHTML = `<span class="rank">${k + 1}</span><span class="nm"></span><span class="st"></span>`;
+      el.querySelector('.nm').textContent = r.n + (r.id === st.id ? '（我）' : '');
+      el.querySelector('.st').textContent = `❤ ${r.c}　🗳 ${r.votes}`;
+      const vb = document.createElement('button'); const voted = mv.ids.includes(r.id);
+      vb.textContent = voted ? '已投票' : '投一票'; vb.disabled = voted || r.id === st.id || mv.ids.length >= 3;
+      vb.onclick = async ev => {
+        ev.stopPropagation(); if (!st.published) { await pushCloud(); }
+        try { await Cloud.vote(wk, r.id, st.id, dayNum()); mv.ids.push(r.id); sfx('coin'); toast('投票成功！'); emit('VOTE', {}); save(false); loadVisitList(); }
+        catch (e) { if (!mv.ids.includes(r.id)) mv.ids.push(r.id); save(false); toast('這間你已經投過了'); loadVisitList(); }
+      };
+      const go = document.createElement('button'); go.textContent = '去看看'; go.onclick = ev => { ev.stopPropagation(); goVisit(r.id, r.n); };
+      el.appendChild(vb); el.appendChild(go); el.onclick = () => goVisit(r.id, r.n);
+      list.appendChild(el);
+    });
+  }
+  function isFav(id) { return (st.favs || []).some(f => f.id === id); }
+  $('#bFav').onclick = () => {
+    if (!visit) return; st.favs = st.favs || [];
+    if (isFav(visit.id)) { st.favs = st.favs.filter(f => f.id !== visit.id); toast('已取消收藏'); }
+    else { st.favs.unshift({ id: visit.id, n: visit.name }); st.favs = st.favs.slice(0, 50); toast('已收藏！可以在參觀的「收藏」分頁找到'); sfx('coin'); }
+    save(false); updateVisitBar();
+  };
   async function goVisit(id, name) {
     $('#mVisit').classList.remove('show'); toast('前往 ' + name + ' 的小窩…');
     try {
@@ -1008,6 +1067,7 @@
     if (!visit) return;
     $('#vName').textContent = `🏠 ${visit.name} 的小窩　❤ ${S.comfortOf(visit.room).total}　👍 ${visit.likes}`;
     const b = $('#bLike'); b.disabled = likedToday(visit.id); b.textContent = b.disabled ? '👍 已讚過' : '👍 按讚';
+    $('#bFav').textContent = isFav(visit.id) ? '⭐ 已收藏' : '☆ 收藏';
   }
   $('#bLike').onclick = async () => {
     if (!visit || likedToday(visit.id)) return;
@@ -1188,5 +1248,5 @@
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();
