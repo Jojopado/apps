@@ -36,6 +36,13 @@
     async themeList(week) { return (await req('/theme/' + encodeURIComponent(week) + '.json')) || {}; },
     async themeVotes(week) { return (await req('/votes/' + encodeURIComponent(week) + '.json')) || {}; },
     async vote(week, id, me, day) { await req('/votes/' + encodeURIComponent(week) + '/' + encodeURIComponent(id) + '/' + encodeURIComponent(me) + '.json?print=silent', { method: 'PUT', body: JSON.stringify(day) }); },
+    // 存檔備份：位置是「存檔碼」的 SHA-256，不知道存檔碼就找不到
+    async hashCode(code) {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pixelnook:' + code.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+      return Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join('');
+    },
+    async backup(code, state) { const h = await this.hashCode(code); await req('/xfer/' + h + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ s: JSON.stringify(state), t: Date.now() }) }); },
+    async restore(code) { const h = await this.hashCode(code); const o = await req('/xfer/' + h + '.json'); if (!o || typeof o.s !== 'string') return null; try { return { state: JSON.parse(o.s), t: o.t }; } catch (e) { return null; } },
     async recent(n) {
       const o = await req('/idx.json?orderBy=%22t%22&limitToLast=' + (n || 40));
       return Object.entries(o || {}).map(([id, v]) => Object.assign({ id }, v)).sort((a, b) => b.t - a.t);

@@ -341,6 +341,27 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   check((await ev(`document.querySelectorAll('#visitList .r').length`)) >= 1, '收藏分頁列出收藏的房間');
   await click('#mVisit [data-close]');
 
+  console.log('6f. 存檔碼：備份 → 模擬換手機 → 還原');
+  await ev('__nook.openSettings()'); await sleep(300);
+  const code = await ev(`document.querySelector('#setCode').textContent`);
+  check(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code), '設定裡顯示存檔碼：' + code);
+  await ev(`document.querySelector('#backupNow').click()`); await sleep(2500);
+  const snap = await ev(`({name:__nook.st.name, coins:__nook.st.coins, col:Object.keys(__nook.st.col||{}).length, items:__nook.st.room.items.length, q:__nook.st.q.main})`);
+  await shot('v1_settings.png');
+  await ev('localStorage.clear()'); await send('Page.reload'); await sleep(2000);
+  check(await ev(`document.querySelector('#mLook').classList.contains('show') && document.querySelector('#lookRestore').offsetParent!==null`), '新手機：建立角色畫面有「我有存檔碼」');
+  await ev(`document.querySelector('#lookRestore').click()`); await sleep(300);
+  await ev(`(()=>{const i=document.querySelector('#restoreIn'); i.value='${code}'.toLowerCase();})()`);
+  await ev(`document.querySelector('#restoreBtn').click()`); await sleep(2500);
+  check(await ev(`document.querySelector('#restoreConfirm').style.display==='flex'`), '輸入存檔碼（小寫也可以）→ 找到備份：' + (await ev(`document.querySelector('#restoreInfo').textContent`)).slice(0, 40));
+  await ev(`document.querySelector('#restoreYes').click()`); await sleep(800);
+  const after = await ev(`({name:__nook.st.name, coins:__nook.st.coins, col:Object.keys(__nook.st.col||{}).length, items:__nook.st.room.items.length, q:__nook.st.q.main})`);
+  check(JSON.stringify(after) === JSON.stringify(snap), '還原後名字、金幣、收藏、家具、主線都一樣：' + JSON.stringify(after));
+  check(!(await ev(`document.querySelector('#mLook').classList.contains('show')`)) && (await ev('__nook.mode')) === 'home', '還原後直接回到自己的房間');
+  await ev(`(()=>{document.querySelector('#restoreIn').value='AAAA-BBBB-CCCC-DDDD'; document.querySelector('#restoreBtn').click();})()`); await sleep(2000);
+  check((await ev(`document.querySelector('#toast').textContent`)).includes('找不到'), '亂打的存檔碼 → 找不到');
+  await ev(`document.querySelector('#mSet').classList.remove('show')`);
+
   const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
   console.log('   城市走路時每秒畫面：', perf);
   await click('#bGoHome'); await settle();

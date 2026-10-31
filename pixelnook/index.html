@@ -101,6 +101,9 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
 .themeHead{display:flex;gap:10px;align-items:center;justify-content:space-between;border:2px solid var(--ink);border-radius:12px;background:#fff3d6;padding:8px 10px;margin-bottom:10px;flex-wrap:wrap}
 .themeHead .tn{font-size:17px;font-weight:700;color:#c0621b}
 .rank{font-weight:700;width:26px;text-align:center;font-size:16px}
+.setRow{border-bottom:2px dashed var(--line);padding:10px 0}
+.code{font-family:ui-monospace,Consolas,monospace;font-size:22px;font-weight:700;letter-spacing:2px;margin:4px 0;-webkit-user-select:text;user-select:text}
+.tgl{margin-left:14px;font-size:15px}
 .talk{width:min(640px,100%);padding:12px 14px;gap:10px}
 .talkRow{display:flex;gap:12px;align-items:flex-start}
 .talkPic{flex:0 0 76px;height:76px;border:2px solid var(--ink);border-radius:12px;background:#f3e6cf;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -172,7 +175,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   <button id="bVisit">👀 參觀</button>
   <button id="bBag">🎒 背包</button>
   <button id="bLook">🧑 角色</button>
-  <button id="bSound" title="音效開關">🔊</button>
+  <button id="bSet" title="設定">⚙</button>
 </div>
 <div class="hud" id="hudB">
   <button id="bOut">🚪 出門</button>
@@ -218,7 +221,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
         <div style="display:flex;gap:6px"><button id="pvL">◀</button><button id="pvR">▶</button></div></div>
       <div class="opts" id="lookOpts"></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="pri" id="lookOK">好了！</button></div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px"><button id="lookRestore">我有存檔碼</button><button class="pri" id="lookOK">好了！</button></div>
   </div>
 </div></div>
 
@@ -238,6 +241,21 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   <div id="talkOpts" class="talkOpts"></div>
 </div></div>
 <div class="modal" id="mJob"><div class="box job" id="jobRoot"></div></div>
+<div class="modal" id="mSet"><div class="box">
+  <h2>⚙ 設定 <span class="sp"></span><button data-close>關閉</button></h2>
+  <div class="body">
+    <div class="setRow"><b>我的存檔碼</b><div class="code" id="setCode">—</div>
+      <div class="help">換手機或清除瀏覽器資料時，用這組碼就能找回你的房間和所有進度。<b>請抄下來或截圖保存，不要給別人。</b></div>
+      <div class="help" id="setBackup"></div>
+      <div style="display:flex;gap:8px;margin-top:6px"><button id="copyCode">📋 複製</button><button id="backupNow">☁ 立即備份</button></div></div>
+    <div class="setRow"><b>從存檔碼還原</b>
+      <div style="display:flex;gap:8px;margin-top:6px"><input type="text" id="restoreIn" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" style="text-transform:uppercase"><button class="pri" id="restoreBtn">還原</button></div>
+      <div id="restoreConfirm" style="display:none;flex-direction:column;gap:6px;margin-top:8px;border:2px solid var(--bad);border-radius:10px;padding:8px;background:#fff1ef">
+        <div id="restoreInfo"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="restoreNo">取消</button><button class="pri" id="restoreYes">確定還原</button></div></div></div>
+    <div class="setRow"><b>聲音</b><label class="tgl"><input type="checkbox" id="setSfx"> 音效</label><label class="tgl"><input type="checkbox" id="setMusic"> 背景音樂</label></div>
+    <div class="setRow help">像素小窩 PixelNook・全部美術與音樂由程式即時繪製／合成</div>
+  </div>
+</div></div>
 <div class="modal" id="mQuest"><div class="box">
   <h2>📋 任務 <span class="sp"></span><button data-close>關閉</button></h2>
   <div class="body"><div id="questList"></div></div>

@@ -34,13 +34,17 @@
   }
   let st = load();
   st.room.door = Object.assign({}, HOME_DOOR);
+  const mkCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(16)); return Array.from(r, x => a[x % a.length]).join('').replace(/(.{4})(?=.)/g, '$1-'); };
+  if (!st.code) st.code = mkCode();
   let saveT = 0;
   function save(cloudToo) {
     try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
-    if (cloudToo !== false) scheduleCloud();
+    if (cloudToo !== false) scheduleCloud(); else scheduleBackup();
   }
   let cloudT = 0, cloudBusy = false, cloudPending = false;
-  function scheduleCloud() { clearTimeout(cloudT); cloudT = setTimeout(pushCloud, 1800); }
+  function scheduleCloud() { clearTimeout(cloudT); cloudT = setTimeout(pushCloud, 1800); scheduleBackup(); }
+  let backupT = 0;
+  function scheduleBackup() { clearTimeout(backupT); backupT = setTimeout(async () => { if (!st.name) return; try { await Cloud.backup(st.code, st); st.backupT = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} } catch (e) { setTimeout(scheduleBackup, 30000); } }, 10000); }
   async function pushCloud() {
     if (!st.name) return;
     if (cloudBusy) { cloudPending = true; return; }
@@ -917,6 +921,7 @@
   let draft = null, pvFacing = 0, creating = false;
   const FAC = ['SW', 'SE', 'NE', 'NW'];
   function openLook(isNew) {
+    $('#lookRestore').style.display = isNew ? '' : 'none';
     creating = !!isNew; draft = Object.assign({}, st.look, { name: st.name });
     $('#lookTitle').firstChild.textContent = isNew ? '👋 歡迎！先做一個你自己 ' : '🧑 我的角色 ';
     $('#lookClose').style.display = isNew ? 'none' : '';
@@ -959,6 +964,7 @@
     if (creating) { creating = false; daily(); toast('歡迎來到像素小窩！點地板走路、點家具互動'); }
   };
   $('#bLook').onclick = () => openLook(false);
+  $('#lookRestore').onclick = () => { $('#mLook').classList.remove('show'); creating = false; openSettings(); setTimeout(() => $('#restoreIn').focus(), 100); };
 
   // ---------------- 參觀 ----------------
   let visitTab = 'recent';
@@ -1158,6 +1164,48 @@
   }
   $$('#bagTabs button').forEach(b => b.onclick = () => { bagTab = b.dataset.t; openBag(); });
   $('#bBag').onclick = openBag;
+  // ---------------- 設定：存檔碼、還原、聲音 ----------------
+  function openSettings() {
+    sfx('open');
+    $('#setCode').textContent = st.code;
+    $('#setBackup').textContent = st.backupT ? '最近備份：' + new Date(st.backupT).toLocaleString() : '還沒備份（改動後 10 秒內會自動備份）';
+    $('#setSfx').checked = SFX.on; $('#setMusic').checked = SFX.musicOn;
+    $('#restoreIn').value = ''; $('#mSet').classList.add('show');
+  }
+  $('#bSet').onclick = openSettings;
+  $('#setSfx').onchange = e => SFX.setOn(e.target.checked);
+  $('#setMusic').onchange = e => SFX.setMusic(e.target.checked);
+  $('#copyCode').onclick = async () => { try { await navigator.clipboard.writeText(st.code); toast('已複製存檔碼，請存在安全的地方'); } catch (e) { toast('請手動抄下存檔碼：' + st.code); } };
+  $('#backupNow').onclick = async () => { try { await Cloud.backup(st.code, st); st.backupT = Date.now(); save(false); toast('已備份到雲端！'); openSettings(); } catch (e) { toast('連不上雲端，等一下再試試看'); } };
+  $('#restoreBtn').onclick = async () => {
+    const code = $('#restoreIn').value.trim().toUpperCase();
+    if (code.replace(/[^A-Z0-9]/g, '').length !== 16) { toast('存檔碼是 16 個英文或數字（可以有 - ）'); return; }
+    try {
+      const r = await Cloud.restore(code);
+      if (!r || !r.state || !r.state.id || !r.state.room) { toast('找不到這組存檔碼的備份'); return; }
+      const s2 = r.state;
+      if (!confirmRestore(s2, r.t)) return;
+    } catch (e) { toast('連不上雲端，等一下再試試看'); }
+  };
+  let pendingRestore = null;
+  function confirmRestore(s2, t) {
+    pendingRestore = s2;
+    $('#restoreInfo').textContent = `找到存檔：「${String(s2.name || '').slice(0, 12)}」，金幣 ${s2.coins | 0}，備份時間 ${new Date(t).toLocaleString()}。還原後，這支手機目前的進度會被取代。`;
+    $('#restoreConfirm').style.display = 'flex';
+    return false;
+  }
+  $('#restoreYes').onclick = () => {
+    if (!pendingRestore) return;
+    const s2 = pendingRestore; pendingRestore = null;
+    st = Object.assign(newState(), s2); st.room.door = Object.assign({}, HOME_DOOR); if (!st.code) st.code = mkCode();
+    try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+    $('#restoreConfirm').style.display = 'none'; $('#mSet').classList.remove('show');
+    partCache.clear(); bgCache.key = ''; for (const k in scenes) delete scenes[k];
+    if (mode !== 'home') { wsc = null; setMode('home'); }
+    me.path = []; ensureFree(me, st.room); refreshHud(); refreshQuest(); dirty = true;
+    toast('還原成功！歡迎回來，' + st.name);
+  };
+  $('#restoreNo').onclick = () => { pendingRestore = null; $('#restoreConfirm').style.display = 'none'; };
   // ---------------- HUD、雜項 ----------------
   const sfx = n => { try { window.SFX && SFX.play(n); } catch (e) {} };
   function emit(type, data) {
@@ -1214,7 +1262,7 @@
   }
   let toastT = 0;
   function toast(t) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', 2400); }
-  $$('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.remove('show'));
+  $$('[data-close]').forEach(b => b.onclick = () => { const m = b.closest('.modal'); m.classList.remove('show'); if (m.id === 'mSet' && !st.name) openLook(true); });
   $$('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m && !(m.id === 'mLook' && creating) && m.id !== 'mJob') m.classList.remove('show'); }));
   let rotDismissed = false;
   function fit() {
@@ -1242,11 +1290,10 @@
   ensureFree(me, st.room);
   fit(); refreshHud(); refreshQuest(); requestAnimationFrame(loop);
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) sfx('tap'); }, true);
-  const snd = $('#bSound'); const sndTxt = () => { snd.textContent = SFX.on ? '🔊' : '🔇'; }; sndTxt();
-  snd.onclick = () => { SFX.setOn(!SFX.on); sndTxt(); };
+
   if (!st.name) openLook(true); else { daily(); checkLikes(); scheduleCloud(); }
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();
