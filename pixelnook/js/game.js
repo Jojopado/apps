@@ -13,8 +13,9 @@
   const BAD = ['幹', '靠北', '白癡', '智障', '操你', 'fuck', 'shit', '屎', '屌', '雞掰', '機掰'];
 
   // ---------------- 存檔 ----------------
+  const HOME_DOOR = { side: 'R', u: 7 };
   function starterRoom() {
-    const r = S.newRoom();
+    const r = S.newRoom(); r.door = Object.assign({}, HOME_DOOR);
     r.items = [
       { t: 'bed_wood', i: 0, j: 0, r: 1 }, { t: 'rug_wood', i: 3, j: 3, r: 0 },
       { t: 'table_wood', i: 6, j: 4, r: 0 }, { t: 'chair_wood', i: 7, j: 4, r: 3 },
@@ -32,6 +33,7 @@
     return newState();
   }
   let st = load();
+  st.room.door = Object.assign({}, HOME_DOOR);
   let saveT = 0;
   function save(cloudToo) {
     try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
@@ -76,7 +78,10 @@
   }
 
   // ---------------- 狀態 ----------------
-  let mode = 'home';             // home | edit | visit
+  let mode = 'home';             // home | edit | visit | city
+  let wsc = null;                // 目前的城市／室內場景
+  const scenes = {};
+  let cam = [0, 0];
   let visit = null;              // {id, name, room, look, likes}
   const me = { i: 4.5, j: 5.5, facing: 'SW', step: 0, path: [], pose: 'stand', seatZ: 0, onArrive: null, walkT: 0, stand: null };
   const guest = { i: 4.5, j: 4.5, facing: 'SW', step: 0, path: [], pose: 'stand', walkT: 0, nextT: 0 };
@@ -93,11 +98,12 @@
     c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(pix.d.buffer.slice(0)), pix.w, pix.h), 0, 0);
     return c;
   }
-  function spriteOf(o, padTop) {
-    const x0 = Math.floor(OX + (o.i0 - o.j1) * TW / 2) - 3, x1 = Math.ceil(OX + (o.i1 - o.j0) * TW / 2) + 3;
-    const y0 = Math.floor(OY + (o.i0 + o.j0) * TH / 2 - o.z1) - (padTop || 4), y1 = Math.ceil(OY + (o.i1 + o.j1) * TH / 2 - o.z0) + 4;
+  function spriteOf(o, padTop, ox, oy) {
+    ox = ox === undefined ? OX : ox; oy = oy === undefined ? OY : oy;
+    const x0 = Math.floor(ox + (o.i0 - o.j1) * TW / 2) - 3, x1 = Math.ceil(ox + (o.i1 - o.j0) * TW / 2) + 3;
+    const y0 = Math.floor(oy + (o.i0 + o.j0) * TH / 2 - o.z1) - (padTop || 4), y1 = Math.ceil(oy + (o.i1 + o.j1) * TH / 2 - o.z0) + 4;
     const pix = new Pix(Math.max(1, x1 - x0), Math.max(1, y1 - y0));
-    o.draw(new Iso(pix, OX - x0, OY - y0));
+    o.draw(new Iso(pix, ox - x0, oy - y0));
     return { pix, c: toCanvas(pix), x: x0, y: y0 };
   }
   const partCache = new Map();
@@ -114,10 +120,10 @@
     if (key !== bgCache.key) { const pix = new Pix(SW, SH); S.drawBG(pix, room, { grid: mode === 'edit' }); bgCache = { key, c: toCanvas(pix) }; }
     return bgCache.c;
   }
-  function charDrawable(ch, look) {
+  function charDrawable(ch, look, ox, oy) {
     const cp = M.charParts(ch.i, ch.j, ch.facing, ch.step, look, ch.pose, ch.seatZ);
     const a = cp.aabb, o = { i0: a.i0, i1: a.i1, j0: a.j0, j1: a.j1, z0: a.z0, z1: a.z1, isChar: true, draw(iso) { for (const p of cp.parts) p.draw(iso); } };
-    o.spr = spriteOf(Object.assign({}, o, { z0: ch.pose === 'sit' ? 0 : a.z0 }), 16);
+    o.spr = spriteOf(Object.assign({}, o, { z0: ch.pose === 'sit' ? 0 : a.z0 }), 16, ox, oy);
     return o;
   }
   let order = [];
@@ -128,6 +134,7 @@
   let ghostWall = { key: '', c: null };
 
   function render() {
+    if (mode === 'city') return renderCity();
     const room = curRoom();
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bgCanvas(room), 0, 0);
@@ -241,6 +248,191 @@
     toast('走不過去，被擋住了');
   }
 
+  // ---------------- 城市（分區地圖、室內、攝影機、出入口） ----------------
+  const W_ = () => window.WORLD;
+  function getScene(id) {
+    if (!scenes[id]) {
+      const sc = W_().makeScene(id);
+      sc.bgC = toCanvas(W_().drawSceneBG(sc));
+      sc.parts = [];
+      for (const it of sc.items) if (I[it.t] && I[it.t].kind === 'floor') for (const pp of M.itemParts(it)) sc.parts.push(Object.assign(pp, { spr: spriteOf(pp, 4, sc.ox, sc.oy), item: it }));
+      scenes[id] = sc;
+    }
+    return scenes[id];
+  }
+  function cityBlocked() { return wsc.blocked; }
+  function cityPath(from, to) { return W_().bfs(cityBlocked(), wsc.ni, wsc.nj, from, to); }
+  function cityFree(near) {
+    const g = cityBlocked(); let best = null, bd = 1e9;
+    for (let i = 0; i < wsc.ni; i++) for (let j = 0; j < wsc.nj; j++) if (!g[i][j]) { const d = Math.abs(i - near[0]) + Math.abs(j - near[1]); if (d < bd) { bd = d; best = [i, j]; } }
+    return best;
+  }
+  function cityWalk(cell, cb) {
+    if (me.pose === 'sit') { me.pose = 'stand'; const c = me.stand || cityFree(cellOf(me)); me.i = c[0] + 0.5; me.j = c[1] + 0.5; }
+    const here = cellOf(me);
+    if (here[0] < 0 || here[1] < 0 || here[0] >= wsc.ni || here[1] >= wsc.nj || cityBlocked()[here[0]][here[1]]) { const f = cityFree(here); me.i = f[0] + 0.5; me.j = f[1] + 0.5; }
+    const path = cityPath(cellOf(me), cell);
+    if (!path) return false;
+    me.path = path.slice(1); me.onArrive = cb || null;
+    if (!me.path.length && cb) { me.onArrive = null; cb(); }
+    dirty = true; return true;
+  }
+  function nearCells(cells) {
+    const g = cityBlocked(), out = [], own = new Set(cells.map(c => c + ''));
+    for (const [a, b] of cells) for (const [di, dj] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const c = [a + di, b + dj];
+      if (c[0] < 0 || c[1] < 0 || c[0] >= wsc.ni || c[1] >= wsc.nj || g[c[0]][c[1]] || ((di || dj) && own.has(c + ''))) continue;
+      out.push(c);
+    }
+    const h = cellOf(me);
+    return out.sort((x, y) => Math.abs(x[0] - h[0]) + Math.abs(x[1] - h[1]) - Math.abs(y[0] - h[0]) - Math.abs(y[1] - h[1]));
+  }
+  function walkNear(cells, cb) { for (const c of nearCells(cells)) if (cityWalk(c, cb)) return true; toast('走不過去'); return false; }
+  let fading = false;
+  function fadeTo(fn) {
+    if (fading) return; fading = true;
+    const f = $('#fade'); f.style.opacity = 1;
+    setTimeout(() => { try { fn(); } finally { f.style.opacity = 0; fading = false; dirty = true; } }, 220);
+  }
+  function enterScene(id, cell, facing) {
+    wsc = getScene(id); order = [];
+    if (mode !== 'city') setMode('city');
+    const c = cell && cell[0] >= 0 && cell[1] >= 0 && cell[0] < wsc.ni && cell[1] < wsc.nj && !wsc.blocked[cell[0]][cell[1]] ? cell : cityFree(cell || [Math.floor(wsc.ni / 2), Math.floor(wsc.nj / 2)]);
+    me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.path = []; me.pose = 'stand'; me.step = 0; me.facing = facing || 'SW'; me.onArrive = null;
+    $('#place').textContent = '📍 ' + wsc.name;
+    st.where = id; dirty = true;
+  }
+  function goOut() {
+    const central = getScene('central'), house = central.items.find(o => o.home);
+    fadeTo(() => enterScene('central', house ? W_().doorCellOf(house) : null, 'SE'));
+  }
+  function goHome() {
+    fadeTo(() => {
+      wsc = null; order = []; setMode('home');
+      const c = S.doorCell(st.room.door); me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.facing = 'SW'; me.path = []; me.pose = 'stand';
+      ensureFree(me, st.room); st.where = 'home';
+    });
+  }
+  function leaveInterior() {
+    const back = wsc.back, out = getScene(back.to), b = out.items.find(o => o.t === back.obj);
+    fadeTo(() => enterScene(back.to, b ? W_().doorCellOf(b) : null, 'SW'));
+  }
+  function cityCam() {
+    if (!wsc || wsc.fixed) { cam = [0, 0]; return; }
+    const sx = wsc.ox + (me.i - me.j) * TW / 2, sy = wsc.oy + (me.i + me.j) * TH / 2 - 40;
+    const cx = wsc.ww <= SW ? (wsc.ww - SW) / 2 : Math.max(0, Math.min(wsc.ww - SW, sx - SW / 2));
+    const cy = wsc.wh <= SH ? (wsc.wh - SH) / 2 : Math.max(0, Math.min(wsc.wh - SH, sy - SH / 2));
+    cam = [Math.round(cx), Math.round(cy)];
+  }
+  function renderCity() {
+    cityCam();
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = wsc.interior ? '#18161f' : '#7eb664'; ctx.fillRect(0, 0, SW, SH);
+    ctx.drawImage(wsc.bgC, -cam[0], -cam[1]);
+    const list = wsc.parts.slice();
+    list.push(charDrawable(me, st.look, wsc.ox, wsc.oy));
+    for (const n of wsc.npcs || []) { const d = charDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; list.push(d); }
+    order = depthSort(list);
+    for (const d of order) {
+      const s = d.spr, x = s.x - cam[0], y = s.y - cam[1];
+      if (x > SW || y > SH || x + s.pix.w < 0 || y + s.pix.h < 0) continue;
+      ctx.drawImage(s.c, x, y);
+    }
+  }
+  function cityTap(x, y) {
+    if (fading) return;
+    const wx = x + cam[0], wy = y + cam[1];
+    const h = hitAt(wx, wy);
+    if (h && h.npc) return walkNear(h.npc.talkFrom, () => { const n = h.npc; me.facing = 'NE'; dirty = true; talkTo(n.id); });
+    if (h && h.item) return cityInteract(h.item);
+    if (h && h.isChar) { toast('嗨，' + st.name + '！'); return; }
+    if (wsc.interior) {
+      const w = toWallAt(wx, wy, wsc.ox, wsc.oy), dr = wsc.room.door;
+      if (w && w.side === dr.side && w.u >= dr.u && w.u <= dr.u + S.DOOR_W && w.z <= S.DOOR_H + 6) { walkNear([S.doorCell(dr)], leaveInterior); return; }
+    }
+    const a = (wx - wsc.ox) / (TW / 2), b = (wy - wsc.oy) / (TH / 2), c = [Math.floor((a + b) / 2), Math.floor((b - a) / 2)];
+    if (c[0] < 0 || c[1] < 0 || c[0] >= wsc.ni || c[1] >= wsc.nj) return;
+    const ex = (wsc.exits || []).find(e => e.cells.some(q => q[0] === c[0] && q[1] === c[1]));
+    if (ex) { if (!cityWalk(c, () => fadeTo(() => enterScene(ex.to, ex.spawn, ex.facing)))) toast('那裡走不過去'); return; }
+    if (!cityWalk(c)) toast('那裡走不過去');
+  }
+  function cityInteract(o) {
+    const d = I[o.t];
+    // 點櫃台這類家具時，如果緊鄰著 NPC，就去跟 NPC 說話（NPC 常被櫃台擋住下半身）
+    for (const n of wsc.npcs || []) {
+      const ni = Math.floor(n.i), nj = Math.floor(n.j);
+      if (S.cellsOf(o).some(([a, b]) => Math.max(Math.abs(a - ni), Math.abs(b - nj)) === 1)) return walkNear(n.talkFrom, () => { me.facing = 'NE'; dirty = true; talkTo(n.id); });
+    }
+    const door = W_().doorCellOf(o);
+    if (o.home) return walkNear([door], goHome);
+    if (o.enter) return walkNear([door], () => fadeTo(() => enterScene(o.enter, [1, 0], 'SW')));
+    if (o.closed) return walkNear(door ? [door] : S.cellsOf(o), () => toast(o.closed));
+    if (d.seat && wsc.interior) {
+      const sp = M.seatSpot(o, 0), fv = M.DIRS[sp.facing], front = [Math.floor(sp.i + fv[0] * 0.8), Math.floor(sp.j + fv[1] * 0.8)];
+      for (const c of nearCells([front].concat(S.cellsOf(o)))) if (cityWalk(c, () => { me.pose = 'sit'; me.i = sp.i; me.j = sp.j; me.facing = sp.facing; me.seatZ = sp.z; me.stand = c; dirty = true; })) return;
+      toast('走不過去'); return;
+    }
+    walkNear(S.cellsOf(o), () => toast(o.talk || d.name));
+  }
+  // ---------------- NPC 對話 ----------------
+  const MIA_CHAT = ['這附近的公園聽說快整理好了，到時候一起去走走吧！', '拿鐵和卡布奇諾的差別？卡布奇諾多了一層綿綿的奶泡喔。', '早上的客人最多，大家都要一杯熱美式才醒得過來。', '你的房間佈置得怎麼樣了？有空帶我去參觀！', '焦糖拿鐵是我的私房招牌，等你更熟練再教你。'];
+  function jobState() { st.jobs = st.jobs || {}; const j = st.jobs.cafe = st.jobs.cafe || { xp: 0, day: 0, paid: 0 }; if (j.day !== dayNum()) { j.day = dayNum(); j.paid = 0; } return j; }
+  function portrait(look) {
+    const pix = new Pix(70, 70), iso = new Iso(pix, 35, 100);   // 取景：頭＋上半身
+    for (const pp of M.charParts(0, 0, 'SW', 0, look, 'stand').parts) pp.draw(iso);
+    return toCanvas(pix);
+  }
+  function talkTo(id) {
+    const n = W_().NPCS[id]; st.met = st.met || {};
+    const first = !st.met[id], j = jobState();
+    let text, opts;
+    if (first) {
+      text = `嗨，你是新搬來的吧？我是 ${n.name}，這間咖啡廳的老闆。最近客人好多，我一個人忙不過來……要不要來幫忙打工？做得好薪水就高喔！`;
+      opts = [['好啊，我來幫忙！', 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']];
+      st.met[id] = 1; save(false);
+    } else {
+      text = j.paid >= CafeJob.DAILY_PAID ? '今天辛苦啦！完整薪水明天再發，不過想練習的話還是可以來喔。' : ['歡迎光臨～今天也來幫忙嗎？', '你來得正好，外面排了好多客人！', '嗨！今天想打工還是坐下來休息？'][Math.floor(Math.random() * 3)];
+      opts = [['我要打工', 'job'], ['聊聊天', 'chat'], ['再見', 'bye']];
+    }
+    showTalk(n, text, opts);
+  }
+  function showTalk(n, text, opts) {
+    const box = $('#mTalk');
+    const pc = $('#talkPic'); pc.innerHTML = ''; pc.appendChild(portrait(n.look));
+    $('#talkName').textContent = n.name; $('#talkRole').textContent = n.role; $('#talkText').textContent = text;
+    const ob = $('#talkOpts'); ob.innerHTML = '';
+    for (const [label, act] of opts) {
+      const b = document.createElement('button'); b.textContent = label; if (act === 'job') b.className = 'pri';
+      b.onclick = () => {
+        if (act === 'bye') { box.classList.remove('show'); return; }
+        if (act === 'chat') { showTalk(n, MIA_CHAT[Math.floor(Math.random() * MIA_CHAT.length)], [['我要打工', 'job'], ['再見', 'bye']]); return; }
+        if (act === 'job') { box.classList.remove('show'); startJob(n); }
+      };
+      ob.appendChild(b);
+    }
+    box.classList.add('show');
+  }
+  let jobRun = null;
+  function startJob(n) {
+    const j = jobState(), m = $('#mJob');
+    m.classList.add('show');
+    jobRun = CafeJob.open($('#jobRoot'), { xp: j.xp, paidToday: j.paid }, r => {
+      m.classList.remove('show'); jobRun = null;
+      j.xp += r.xp; if (r.paid) j.paid++;
+      st.coins += r.coins; st.stats = st.stats || {}; st.stats.jobs = (st.stats.jobs || 0) + (r.served ? 1 : 0);
+      save(); refreshHud(); dirty = true;
+      const line = r.coins ? `辛苦了！這是今天的薪水 ${r.coins} 金幣，拿去買喜歡的家具吧！` : (r.served ? '謝謝你來幫忙！今天的薪水已經發完了，明天再來喔。' : '沒關係，下次再來試試看！');
+      showTalk(n, line + (r.levelUp ? `\n你越來越熟練了，升到 Lv.${CafeJob.levelOf(j.xp)}！` : ''), [['再打一次工', 'job'], ['好的，再見', 'bye']]);
+    });
+  }
+  function toWallAt(x, y, ox, oy) {
+    let u = (x - ox) / (TW / 2);
+    if (u >= 0 && u <= NI) { const z = oy + u * TH / 2 - y; if (z >= -10 && z <= WALL + 10) return { side: 'R', u, z }; }
+    u = (ox - x) / (TW / 2);
+    if (u >= 0 && u <= NJ) { const z = oy + u * TH / 2 - y; if (z >= -10 && z <= WALL + 10) return { side: 'L', u, z }; }
+    return null;
+  }
+
   // ---------------- 輸入 ----------------
   function toLogical(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * SW, (e.clientY - r.top) / r.height * SH]; }
   function toGrid(x, y) { const a = (x - OX) / (TW / 2), b = (y - OY) / (TH / 2); return [(a + b) / 2, (b - a) / 2]; }
@@ -317,16 +509,24 @@
       return;
     }
     if (!tap) return;
+    if (mode === 'city') { cityTap(x, y); return; }
     if (mode === 'visit') { const [gi, gj] = toGrid(x, y); walkTo(guest, visit.room, [Math.floor(gi), Math.floor(gj)]); guest.nextT = performance.now() + 6000; return; }
     const h = hitAt(x, y);
     if (h && h.item) { interact(h.item); return; }
     if (h && h.isChar) { toast('嗨，' + st.name + '！'); return; }
+    { const tw = toWall(x, y), dr = st.room.door; if (tw && dr && tw.side === dr.side && tw.u >= dr.u && tw.u <= dr.u + S.DOOR_W && tw.z <= S.DOOR_H + 6) { walkToDoor(); return; } }
     const w = wallHit(x, y); if (w) { toast(I[w.t].name); return; }
     const [gi, gj] = toGrid(x, y), c = [Math.floor(gi), Math.floor(gj)];
     if (c[0] >= 0 && c[1] >= 0 && c[0] < NI && c[1] < NJ) { if (!walkTo(me, st.room, c)) toast('那裡走不過去'); }
   });
   cv.addEventListener('pointercancel', () => { down = null; if (drag) { drag = null; showSelBar(); dirty = true; } });
 
+  function walkToDoor() {
+    const c = S.doorCell(st.room.door), g = S.blockedGrid(st.room);
+    const cands = [c, [c[0] - 1, c[1]], [c[0] + 1, c[1]], [c[0], c[1] + 1], [c[0] - 1, c[1] + 1], [c[0] + 1, c[1] + 1]].filter(q => q[0] >= 0 && q[1] >= 0 && q[0] < NI && q[1] < NJ && !g[q[0]][q[1]]);
+    for (const q of cands) if (walkTo(me, st.room, q, () => { me.facing = 'NE'; goOut(); })) return;
+    toast('門口被家具擋住了，先挪開吧');
+  }
   function tryPlaceHold() {
     const g = hold, d = I[g.t];
     if (d.kind === 'wall' ? g.side === undefined : g.i === undefined) return;
@@ -346,11 +546,15 @@
     $('#hudR').style.display = m === 'home' ? 'flex' : 'none';
     $('#visitBar').style.display = m === 'visit' ? 'flex' : 'none';
     $('#hudL').style.display = m === 'visit' ? 'none' : 'flex';
+    $('#hudCity').style.display = m === 'city' ? 'flex' : 'none';
+    $('#place').style.display = m === 'city' ? '' : 'none';
     if (m === 'edit') { standUp(me); me.path = []; renderBag(); }
     if (m === 'home') ensureFree(me, st.room);
     hideSelBar(); fit(); dirty = true;
   }
   $('#bEdit').onclick = () => setMode('edit');
+  $('#bOut').onclick = () => walkToDoor();
+  $('#bGoHome').onclick = () => goHome();
   $('#bDone').onclick = () => { setMode('home'); save(); };
   $$('#edit .tabs button[data-tab]').forEach(b => b.onclick = () => {
     editTab = b.dataset.tab; hold = null; $$('#edit .tabs button[data-tab]').forEach(x => x.classList.toggle('on', x === b)); renderBag(); dirty = true;
@@ -425,7 +629,7 @@
   // ---------------- 商店 ----------------
   let shopCat = 'all';
   function saleIds() {
-    const ids = Object.keys(I).sort(); let s = dayNum() * 9301 + 49297; const out = [];
+    const ids = Object.keys(I).filter(id => !I[id].hidden).sort(); let s = dayNum() * 9301 + 49297; const out = [];
     while (out.length < 4) { s = (s * 9301 + 49297) % 233280; const id = ids[Math.floor(s / 233280 * ids.length)]; if (!out.includes(id)) out.push(id); }
     return out;
   }
@@ -437,7 +641,7 @@
     });
     const grid = $('#shopGrid'); grid.innerHTML = ''; $('#shopCoins').textContent = st.coins;
     const sale = saleIds();
-    let ids = Object.keys(I).filter(id => shopCat === 'all' || (shopCat === 'sale' ? sale.includes(id) : I[id].cat === shopCat));
+    let ids = Object.keys(I).filter(id => !I[id].hidden).filter(id => shopCat === 'all' || (shopCat === 'sale' ? sale.includes(id) : I[id].cat === shopCat));
     ids.sort((a, b) => (sale.includes(b) - sale.includes(a)) || I[a].price - I[b].price);
     for (const id of ids) {
       const d = I[id], pr = priceOf(id), card = document.createElement('div'); card.className = 'card';
@@ -606,7 +810,7 @@
   let toastT = 0;
   function toast(t) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', 2400); }
   $$('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.remove('show'));
-  $$('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m && !(m.id === 'mLook' && creating)) m.classList.remove('show'); }));
+  $$('.modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m && !(m.id === 'mLook' && creating) && m.id !== 'mJob') m.classList.remove('show'); }));
   let rotDismissed = false;
   function fit() {
     const bottom = mode === 'edit' ? ($('#edit').offsetHeight || 130) : 0;
@@ -636,5 +840,5 @@
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();

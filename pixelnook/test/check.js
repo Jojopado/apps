@@ -21,6 +21,8 @@ for (const id in M.ITEMS) {
 for (const f of ['SW', 'SE', 'NE', 'NW']) for (const st of [-1, 0, 1]) for (const hair of M.HAIRS) {
   checkParts('char ' + f + st + hair, M.charParts(0, 0, f, st, { hair }, 'stand').parts);
   checkParts('charSit ' + f + hair, M.charParts(0, 0, f, 0, { hair, shirt: 1, pants: 1 }, 'sit', 19).parts);
+  checkParts('charApron ' + f + st + hair, M.charParts(0, 0, f, st, { hair, shirt: 1, pants: 1, apron: [120, 80, 60] }, 'stand').parts);
+  checkParts('charApronSit ' + f + hair, M.charParts(0, 0, f, 0, { hair, apron: [120, 80, 60] }, 'sit', 19).parts);
 }
 console.log(bad ? `重疊 ${bad} 處` : '零件重疊檢查：全部通過');
 

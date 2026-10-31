@@ -39,6 +39,7 @@
     const A0 = P(0, 0); pix.line(A0[0], A0[1], A[0], A[1], shade(W.a, 0.8));
     // 牆面裝飾
     for (const w of room.walls) drawWallItem(pix, iso, w);
+    if (room.door) drawDoor(pix, iso, room.door);
     // 地板
     pix.fill([P(0, 0), P(NI, 0), P(NI, NJ), P(0, NJ)], F.a);
     if (F.plank) {
@@ -82,6 +83,21 @@
       ? (u0, u1, z0, z1, c, o) => pix.poly([iso.P(base + u0, 0, z0), iso.P(base + u1, 0, z0), iso.P(base + u1, 0, z1), iso.P(base + u0, 0, z1)], c, o === undefined ? OUT : o)
       : (u0, u1, z0, z1, c, o) => pix.poly([iso.P(0, base + u0, z0), iso.P(0, base + u1, z0), iso.P(0, base + u1, z1), iso.P(0, base + u0, z1)], c, o === undefined ? OUT : o);
   }
+  // 出入口的門：畫在牆上（side R/L、u 起點，寬 1 格、高 92）
+  const DOOR_W = 1, DOOR_H = 92;
+  function drawDoor(pix, iso, door) {
+    const q = wallQ(pix, iso, door.side, door.u);
+    q(0.08, DOOR_W - 0.08, 0, DOOR_H, [250, 246, 238]);                 // 門框
+    q(0.16, DOOR_W - 0.16, 0, DOOR_H - 7, door.color || [150, 98, 64]);  // 門板
+    q(0.22, DOOR_W - 0.22, 48, DOOR_H - 14, shade(door.color || [150, 98, 64], 1.12), null);
+    q(0.22, DOOR_W - 0.22, 8, 40, shade(door.color || [150, 98, 64], 1.12), null);
+    q(DOOR_W - 0.3, DOOR_W - 0.24, 40, 46, [250, 210, 100]);            // 門把
+    // 門口地墊
+    const i = door.side === 'R' ? door.u : 0, j = door.side === 'R' ? 0 : door.u;
+    if (door.side === 'R') iso.flat(i + 0.12, j + 0.05, DOOR_W - 0.24, 0.5, [200, 90, 80]);
+    else iso.flat(i + 0.05, j + 0.12, 0.5, DOOR_W - 0.24, [200, 90, 80]);
+  }
+  function doorCell(door) { return door.side === 'R' ? [door.u, 0] : [0, door.u]; }
   function drawWallItem(pix, iso, w) {
     const d = M.ITEMS[w.t]; if (!d || d.kind !== 'wall') return;
     d.paint(wallQ(pix, iso, w.side, w.u), d.W);
@@ -98,6 +114,10 @@
     if (d.kind === 'wall') {
       const N = it.side === 'R' ? NI : NJ;
       if (it.u < 0 || it.u + d.W > N) return false;
+      if (room.door && room.door.side === it.side) {
+        const sepU = it.u + d.W <= room.door.u || room.door.u + DOOR_W <= it.u, sepZ = d.z0 >= DOOR_H;
+        if (!sepU && !sepZ) return false;
+      }
       for (const w of room.walls) if (w !== ignore && w.side === it.side) {
         const o = M.ITEMS[w.t]; if (!o) continue;
         const sepU = it.u + d.W <= w.u || w.u + o.W <= it.u, sepZ = d.z1 <= o.z0 || o.z1 <= d.z0;
@@ -165,5 +185,5 @@
     return pix;
   }
 
-  G.SCENE = { NI, NJ, WALL, SW, SH, OX, OY, newRoom, drawBG, drawWallItem, drawRug, wallQ, cellsOf, canPlace, blockedGrid, findPath, comfortOf, drawables, renderFull };
+  G.SCENE = { NI, NJ, WALL, SW, SH, OX, OY, DOOR_W, DOOR_H, newRoom, drawBG, drawDoor, doorCell, drawWallItem, drawRug, wallQ, cellsOf, canPlace, blockedGrid, findPath, comfortOf, drawables, renderFull };
 })(typeof window !== 'undefined' ? window : globalThis);

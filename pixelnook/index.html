@@ -82,6 +82,42 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   padding:8px 16px;border-radius:12px;font-size:14px;display:none;max-width:90%;text-align:center}
 #rot{position:fixed;inset:0;z-index:40;background:#18161f;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
 .help{font-size:13px;color:#6b6450;line-height:1.7}
+.talk{width:min(640px,100%);padding:12px 14px;gap:10px}
+.talkRow{display:flex;gap:12px;align-items:flex-start}
+.talkPic{flex:0 0 76px;height:76px;border:2px solid var(--ink);border-radius:12px;background:#f3e6cf;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.talkPic canvas{width:70px;height:70px;image-rendering:pixelated}
+.talkBody{flex:1;min-width:0}
+.talkBody .role{font-size:12px;color:#6b6450;border:1.5px solid var(--ink);border-radius:6px;padding:0 5px;margin-left:4px}
+.talkText{margin-top:6px;line-height:1.7;white-space:pre-line}
+.talkOpts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.job{width:min(760px,100%);padding:10px 12px;gap:8px}
+.jobTop{display:flex;gap:12px;align-items:center;font-size:15px}
+.jobTop .sp{flex:1}
+.jobMain{display:flex;gap:10px;flex-wrap:wrap}
+.jobCust,.jobCup{flex:1 1 260px;border:2px solid var(--ink);border-radius:12px;background:var(--card);padding:8px;display:flex;gap:8px;align-items:center}
+.jobCup{flex-direction:column;align-items:stretch}
+.jobCust .face canvas{width:64px;height:64px}
+.bubble{flex:1;display:flex;gap:8px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:6px 8px}
+.bubble canvas{width:48px;height:48px}
+.bubble b{font-size:18px}
+.hint{font-size:12px;color:#6b6450;margin-top:2px}
+.ico{image-rendering:pixelated}
+.cup{display:flex;gap:4px;flex-wrap:wrap;min-height:58px;align-items:center;color:#7a735f;font-size:13px}
+.ci{display:flex;flex-direction:column;align-items:center;font-size:11px}
+.ci canvas{width:36px;height:36px}
+.acts{display:flex;gap:8px;justify-content:flex-end}
+.jobIngs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.ing{display:flex;flex-direction:column;align-items:center;padding:4px 8px;min-width:70px}
+.ing canvas{width:40px;height:40px}
+.ing span{font-size:12px}
+.jobMsg{text-align:center;min-height:22px;font-weight:700}
+.jobMsg.good{color:var(--good)}.jobMsg.bad{color:var(--bad)}
+.jobEnd{display:flex;flex-direction:column;gap:6px;padding:6px}
+.jobEnd h3{margin:0 0 4px}
+.jobEnd .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:3px 0}
+.jobEnd .row.big b{font-size:20px;color:#c07a12}
+.jobEnd .note{font-size:13px;color:#6b6450}
+.jobEnd button{align-self:flex-end;margin-top:6px}
 </style>
 </head>
 <body>
@@ -89,6 +125,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
 
 <div class="hud" id="hudL">
   <div class="chip" id="name">—</div>
+  <div class="chip" id="place" style="display:none">📍</div>
   <div style="display:flex;gap:6px">
     <div class="chip"><i class="coin"></i> <span id="coins">0</span></div>
     <div class="chip" title="舒適度：家具越多、同系列湊滿 3 件越高；每天領的金幣跟著變多">❤ <span id="comfort">0</span></div>
@@ -99,9 +136,11 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   <button id="bLook">🧑 角色</button>
 </div>
 <div class="hud" id="hudB">
+  <button id="bOut">🚪 出門</button>
   <button id="bEdit" class="pri">🛠 佈置</button>
   <button id="bShop" class="blue">🛒 商店</button>
 </div>
+<div class="hud" id="hudCity" style="display:none;bottom:calc(10px + var(--sb));right:calc(10px + var(--sr))"><button id="bGoHome" class="pri">🏠 回家</button></div>
 <div id="visitBar" class="hud">
   <div class="chip" id="vName">—</div>
   <button id="bLike">👍 按讚</button>
@@ -153,12 +192,23 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
   </div>
 </div></div>
 
+<div class="modal" id="mTalk"><div class="box talk">
+  <div class="talkRow"><div id="talkPic" class="talkPic"></div>
+    <div class="talkBody"><div><b id="talkName"></b> <span class="role" id="talkRole"></span></div><div id="talkText" class="talkText"></div></div></div>
+  <div id="talkOpts" class="talkOpts"></div>
+</div></div>
+<div class="modal" id="mJob"><div class="box job" id="jobRoot"></div></div>
 <div id="toast"></div>
+<div id="fade" style="position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .2s;z-index:25"></div>
 <div id="rot"><div style="font-size:48px">📱↻</div><div>把手機轉成橫的比較好玩！</div><button id="rotOK">直的也沒關係</button></div>
 
 <script src="js/raster.js"></script>
 <script src="js/models.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/art/city.js"></script>
+<script src="js/art/cafe.js"></script>
+<script src="js/world.js"></script>
+<script src="js/cafejob.js"></script>
 <script src="js/cloud.js"></script>
 <script src="js/game.js"></script>
 </body>

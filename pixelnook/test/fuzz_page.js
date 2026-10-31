@@ -6,7 +6,7 @@ async function (N) {
   const S = __nook.S;
   const fire = (el, type, x, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 7, pointerType: 'touch', isPrimary: true }));
   const at = (x, y) => document.elementFromPoint(x, y) || document.body;
-  const btns = ['#bEdit', '#bShop', '#bLook', '#bVisit', '#bDone', '#bRot', '#bStore', '#bDesel', '[data-close]', '#pvL', '#pvR', '#lookOK', '#bHome', '#bLike', '#rotOK'];
+  const btns = ['#bEdit', '#bShop', '#bLook', '#bVisit', '#bDone', '#bRot', '#bStore', '#bDesel', '[data-close]', '#pvL', '#pvR', '#lookOK', '#bHome', '#bLike', '#rotOK', '#bOut', '#bGoHome', '#bOut', '#bOut'];
   const stats = { tap: 0, drag: 0, btn: 0, ui: 0 };
   const origError = console.error; console.error = (...a) => { errs.push('CONSOLE ' + a.map(String).join(' ').slice(0, 200)); origError.apply(console, a); };
   for (let k = 0; k < N; k++) {

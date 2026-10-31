@@ -125,6 +125,79 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   await click('#bHome'); await sleep(500);
   check((await ev('__nook.mode')) === 'home', '回家');
 
+  console.log('6b. 城市：出門、換區域、進咖啡廳、回家');
+  const W2L = async (i, j, z = 0) => { const v = await ev(`(()=>{const w=__nook.wsc, c=__nook.cam; return [w.ox+(${i}-${j})*32-c[0], w.oy+(${i}+${j})*16-${z}-c[1]];})()`); return L(v[0], v[1]); };
+  const scene = () => ev('__nook.wsc && __nook.wsc.id');
+  const freeNear = (i, j) => ev(`(()=>{const w=__nook.wsc,b=w.blocked; let best=null,bd=1e9; for(let a=0;a<w.ni;a++)for(let c=0;c<w.nj;c++) if(!b[a][c]){const d=Math.abs(a-${Math.floor(i)})+Math.abs(c-${Math.floor(j)}); if(d<bd){bd=d;best=[a+0.5,c+0.5];}} return best;})()`);
+  const hop = async (i, j) => { const f = await freeNear(i, j); [x, y] = await W2L(f[0], f[1]); await tap(x, y); await settle(); };
+  const settle = async () => { await idle(); await sleep(500); };
+  await click('#bOut'); await settle();
+  check((await ev('__nook.mode')) === 'city' && (await scene()) === 'central', '按「出門」走到門口、來到中央廣場：' + (await scene()));
+  await shot('c1_central.png');
+  for (const [i, j] of [[12.5, 8.5], [18.5, 8.5]]) await hop(i, j);
+  [x, y] = await W2L(23.5, 8.5); await tap(x, y); await settle(); await settle();
+  check((await scene()) === 'commercial', '走到右下出口 → 商業街：' + (await scene()));
+  await shot('c2_commercial.png');
+  const cafeDoor = await ev(`(()=>{const o=__nook.wsc.items.find(o=>o.t==='cafe_building'); const [w,d]=__nook.M.footprint(__nook.M.ITEMS[o.t],o.r); return [o.i+w/2, o.j+d/2];})()`);
+  [x, y] = await W2L(cafeDoor[0], cafeDoor[1], 60); await tap(x, y); await settle(); await settle();
+  check((await scene()) === 'cafe', '點咖啡廳 → 走到門口進去：' + (await scene()));
+  await shot('c3_cafe.png');
+  // Mia：對話 → 打工 → 領薪水
+  const miaPos = await ev(`(()=>{const n=__nook.wsc.npcs[0]; return [n.i, n.j];})()`);
+  [x, y] = await W2L(miaPos[0], miaPos[1], 50); await tap(x, y); await settle();
+  check(await ev(`document.querySelector('#mTalk').classList.contains('show') && document.querySelector('#talkName').textContent==='Mia'`), '點 Mia → 走過去、跳出對話');
+  console.log('   診斷', JSON.stringify(await ev(`({me:[__nook.me.i,__nook.me.j,__nook.me.pose], path:__nook.me.path, toast:document.querySelector('#toast').textContent, scene:__nook.wsc&&__nook.wsc.id, hit:(()=>{const o=__nook.order; return o.length})(), err:__nook.loopErr, xy:[${x},${y}], el:(document.elementFromPoint(${x},${y})||{}).id})`)), errors.slice(-3));
+  await shot('c4_talk.png');
+  const coinsBefore = await ev('__nook.st.coins');
+  await ev(`[...document.querySelectorAll('#talkOpts button')].find(b=>/打工|幫忙/.test(b.textContent)).click()`); await sleep(300);
+  check(await ev(`document.querySelector('#mJob').classList.contains('show')`), '選「打工」→ 打開咖啡廳打工');
+  // 做 4 杯對的、1 杯錯的
+  const made = await ev(`(async()=>{
+    const J=CafeJob, sl=ms=>new Promise(r=>setTimeout(r,ms)), q=s=>document.querySelector(s);
+    const btn=name=>[...document.querySelectorAll('#jIngs .ing')].find(b=>b.textContent.trim()===name);
+    const nameOf=id=>J.INGS.find(x=>x.id===id).name; let ok=0;
+    for(let k=0;k<5;k++){
+      const ord=q('#jOrder').textContent, key=Object.keys(J.RECIPES).find(k=>J.RECIPES[k].name===ord), r=J.RECIPES[key];
+      btn(r.cup==='hot'?'熱杯':'冰杯').click();
+      const items = k===4 ? r.items.concat(['milk']) : r.items;
+      for(const it of items) btn(nameOf(it)).click();
+      q('#jServe').click(); await sl(800);
+    }
+    return q('#jOk').textContent;
+  })()`);
+  check(made === '4', '做了 5 杯、對 4 杯：' + made);
+  await shot('c5_job.png');
+  await ev(`document.querySelector('#jQuit').click()`); await sleep(300);
+  await shot('c6_result.png');
+  const result = await ev(`document.querySelector('.jobEnd').textContent`);
+  await ev(`document.querySelector('#jBack').click()`); await sleep(400);
+  const coinsAfter = await ev('__nook.st.coins');
+  // 分數：A=80、T=50、C=80 → 0.7*80+0.2*50+0.1*80 = 74 → 100*(0.6+0.4*0.74)=89.6 → 90
+  check(coinsAfter - coinsBefore === 90 && result.includes('74 分'), `薪水依公式計算（74 分 → 90 金幣）：實際 +${coinsAfter - coinsBefore}`);
+  check(await ev(`document.querySelector('#mTalk').classList.contains('show') && document.querySelector('#talkText').textContent.includes('薪水')`), '下班後 Mia 發薪水的對話');
+  check((await ev('__nook.jobState().paid')) === 1 && (await ev('__nook.jobState().xp')) === 45, '紀錄：今天領薪 1 次、熟練度 +45');
+  await ev(`[...document.querySelectorAll('#talkOpts button')].find(b=>b.textContent.includes('再見')).click()`); await sleep(200);
+  // 點室內的門出去
+  [x, y] = await W2L(1.5, 0, 40); await tap(x, y); await settle(); await settle();
+  check((await scene()) === 'commercial', '點咖啡廳的門 → 回到商業街：' + (await scene()));
+  const near = await ev(`(()=>{const o=__nook.wsc.items.find(o=>o.t==='cafe_building'); const m=__nook.me; return Math.abs(m.j-(o.j+__nook.M.footprint(__nook.M.ITEMS[o.t],o.r)[1]))<2;})()`);
+  check(near, '出來時站在咖啡廳門口');
+  // 走回中央廣場、點自己的家
+  for (const [i, j] of [[8.5, 9.5], [3.5, 9.5]]) await hop(i, j);
+  [x, y] = await W2L(0.5, 9.5); await tap(x, y); await settle(); await settle();
+  check((await scene()) === 'central', '走左邊出口 → 回中央廣場：' + (await scene()));
+  for (const [i, j] of [[16.5, 9.5], [9.5, 8.5], [5.5, 7.5]]) await hop(i, j);
+  const house = await ev(`(()=>{const o=__nook.wsc.items.find(o=>o.home); const [w,d]=__nook.M.footprint(__nook.M.ITEMS[o.t],o.r); return [o.i+w/2, o.j+d/2];})()`);
+  [x, y] = await W2L(house[0], house[1], 50); await tap(x, y); await settle(); await settle();
+  check((await ev('__nook.mode')) === 'home', '點自己的家 → 回到房間：' + (await ev('__nook.mode')));
+  if ((await ev('__nook.mode')) !== 'home') console.log('   診斷', JSON.stringify(await ev(`({me:[__nook.me.i,__nook.me.j], scene:__nook.wsc&&__nook.wsc.id, toast:document.querySelector('#toast').textContent, cam:__nook.cam, house:${JSON.stringify(house)}})`)));
+  // 「回家」按鈕
+  await click('#bOut'); await settle(); await click('#bGoHome'); await settle();
+  check((await ev('__nook.mode')) === 'home', '城市裡按「回家」→ 回到房間');
+  const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
+  console.log('   城市走路時每秒畫面：', perf);
+  await click('#bGoHome'); await settle();
+
   console.log(`7. 小孩亂點亂拖 ${FUZZ} 下`);
   const fuzzSrc = fs.readFileSync(path.join(__dirname, 'fuzz_page.js'), 'utf8');
   const poll = setInterval(async () => { const r = await Promise.race([send('Runtime.evaluate', { expression: 'window.__fz', returnByValue: true }), sleep(3000).then(() => null)]); process.stdout.write(' [' + (r && r.result ? r.result.value : '無回應') + ']'); }, 10000);
@@ -134,9 +207,11 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   await ev(`document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'))`);
   if ((await ev('__nook.mode')) === 'edit') await click('#bDone');
   if ((await ev('__nook.mode')) === 'visit') await click('#bHome');
+  if ((await ev('__nook.mode')) === 'city') { await click('#bGoHome'); await sleep(800); }
   await sleep(500); await shot('e7_fuzz.png');
   const free = await ev(`!__nook.S.blockedGrid(__nook.st.room)[4][4]`);
   if (free) { [x, y] = await G(4.5, 4.5); await tap(x, y); await idle(); const p = await ev('[Math.floor(__nook.me.i),Math.floor(__nook.me.j)]'); check(p[0] === 4 && p[1] === 4, '亂點之後還能正常走路：' + p); if (!(p[0] === 4 && p[1] === 4)) console.log('   診斷', JSON.stringify(await ev(`({mode:__nook.mode, pose:__nook.me.pose, path:__nook.me.path, el:(document.elementFromPoint(${x},${y})||{}).id, toast:document.querySelector('#toast').textContent, modals:[...document.querySelectorAll('.modal.show')].map(m=>m.id), rot:getComputedStyle(document.querySelector('#rot')).display, frames:__nook.frames, loopErr:__nook.loopErr, vis:document.visibilityState, blocked44:__nook.S.blockedGrid(__nook.st.room)[4][4]})`))); }
+  for (let k = errors.length - 1; k >= 0; k--) if (/message channel closed|Receiving end does not exist/.test(errors[k])) errors.splice(k, 1);   // 瀏覽器擴充功能的訊息，跟遊戲無關
   console.log(errors.length ? '問題：\n' + [...new Set(errors)].join('\n') : '全部通過，沒有錯誤');
   ws.close(); done(errors.length ? 1 : 0);
 })().catch(e => { console.log('FATAL', e.message); done(2); });

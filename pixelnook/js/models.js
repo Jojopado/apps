@@ -11,12 +11,13 @@
   const CLOTH = [[250, 200, 80], [240, 110, 100], [120, 180, 240], [130, 200, 140], [244, 246, 250], [60, 64, 80], [240, 150, 190], [180, 140, 220], [250, 160, 80], [110, 90, 70]];
   const PANTS = [[70, 90, 150], [50, 54, 66], [180, 150, 110], [230, 230, 236], [120, 160, 110], [200, 90, 90], [240, 170, 200], [100, 80, 140]];
   const SHOES = [[60, 50, 60], [244, 246, 250], [200, 70, 70], [80, 120, 200], [150, 100, 60], [250, 200, 80]];
-  const HAIRS = ['short', 'long', 'spiky', 'bald'];
-  const HAIR_NAMES = { short: '短髮', long: '長髮', spiky: '刺刺頭', bald: '光頭' };
+  const HAIRS = ['short', 'long', 'bun', 'spiky', 'bald'];
+  const HAIR_NAMES = { short: '短髮', long: '長髮', bun: '包包頭', spiky: '刺刺頭', bald: '光頭' };
   const DEFAULT_LOOK = { skin: 1, hair: 'short', hairC: 0, shirt: 0, pants: 0, shoes: 0 };
 
   // 回傳角色的可排序零件（已排好內部層級）＋整體 AABB。pose: 'stand' | 'sit'（seatZ 為座面高度）
   function charParts(ci, cj, facing, step, look, pose, seatZ) {
+    step = step || 0; seatZ = seatZ || 0;
     look = Object.assign({}, DEFAULT_LOOK, look || {});
     const skin = SKINS[look.skin] || SKINS[1];
     const hair = look.hair === 'bald' ? null : (HAIRC[look.hairC] || HAIRC[0]);
@@ -57,6 +58,7 @@
     if (!shirt && !pants) tb = [[zb, zb + 10, [240, 240, 244]]];
     else if (shirt && pants) tb = [[zb, zb + 6, pants]];
     part(0, 0, 0.17, 0.44, BODY, topc, zb, true, tb);
+    if (look.apron) { const az = sit ? zb + 10 : zb + 1; part(0.085 + 0.015, 0, 0.03, 0.36, zb + BODY - 6 - az, look.apron, az, false, [[az, az + 5, shade(look.apron, 0.85)]]); }
     // 手臂（從頭下面垂到大腿；手掌是色帶）
     const armLen = sit ? 26 : 34;
     for (const [sgn, mv] of [[-1, -sw], [1, sw]]) {
@@ -67,6 +69,7 @@
     if (look.hair === 'long' && hair) part(-HD / 2 - 0.035, 0, 0.07, HW + 0.04, HEAD + 12, hair, zh - 12, false);
     // 頭（俯視正方形）＋臉＋頭髮，當成一個零件（裝飾畫在頭的表面）
     const wi = HD, wj = HW, i0 = ci - wi / 2, j0 = cj - wj / 2, top = zh + HEAD;
+    if (look.hair === 'bun' && hair) part(-0.08, 0, 0.18, 0.18, 8, hair, zh + HEAD + 3, false);
     const head = {
       i0, i1: i0 + wi, j0, j1: j0 + wj, z0: zh, z1: top + (hair ? 3 : 0),
       draw(iso) {
