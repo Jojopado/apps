@@ -266,6 +266,61 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   await click('#mBag [data-close]');
   await click('#bGoHome'); await settle();
 
+  console.log('6d. 麵包店、外送、超市、委託');
+  const talkNpc = async (scn) => { await ev(`__nook.enterScene('${scn}', null, 'SW')`); await sleep(600); const n = await ev(`(()=>{const n=__nook.wsc.npcs[0]; return [n.i,n.j,n.id];})()`); [x, y] = await W2L(n[0], n[1], 55); await tap(x, y); await settle(); return n[2]; };
+  const opt = re => ev(`(()=>{const b=[...document.querySelectorAll('#talkOpts button')].find(b=>${re}.test(b.textContent)); if(b) b.click(); return !!b;})()`);
+  // 麵包店
+  let who = await talkNpc('bakery');
+  check(who === 'leo' && await ev(`document.querySelector('#talkName').textContent==='Leo'`), '麵包店：點 Leo → 對話');
+  await opt('/分類|幫忙/'); await sleep(400);
+  const sorted = await ev(`(async()=>{const J=Jobs2, sl=ms=>new Promise(r=>setTimeout(r,ms)); let n=0;
+    for(let k=0;k<8;k++){ const nm=document.querySelector('#bBelt .bi.first div').textContent; const key=Object.keys(J.BREADS).find(k=>J.BREADS[k].name===nm); const b=J.BREADS[key].basket;
+      const btn=[...document.querySelectorAll('#bBaskets .basket')].find(x=>x.querySelector('.bn').textContent===J.BASKETS[b].name); btn.click(); n++; await sl(120);} return document.querySelector('#bOk').textContent;})()`);
+  check(sorted === '8', '麵包分類：8 個都放對：' + sorted);
+  await shot('s1_bakery.png');
+  await ev(`document.querySelector('#bQuit').click()`); await sleep(300); await ev(`document.querySelector('#jBack').click()`); await sleep(400);
+  check((await ev(`__nook.jobState('bakery').paid`)) === 1, '麵包店薪水已發（今天第 1 次）');
+  // 外送
+  await opt('/再見|好的/'); await sleep(200);
+  [x, y] = await W2L((await ev('__nook.wsc.npcs[0].i')), (await ev('__nook.wsc.npcs[0].j')), 55); await tap(x, y); await settle();
+  await opt('/外送/'); await sleep(300);
+  check(!!(await ev('__nook.deliver')), '接下外送單：' + (await ev('__nook.deliver && __nook.deliver.sp.name')));
+  await opt('/出發/');
+  const dsp = await ev('__nook.deliver.sp');
+  const c1 = await ev('__nook.st.coins');
+  await ev(`__nook.enterScene('${dsp.scene}', [${dsp.cell[0]}, ${dsp.cell[1]}+1], 'NE')`); await sleep(600);
+  check(await ev(`__nook.wsc.pickups.some(p=>p.kind==='deliver')`), '目的地出現外送標記');
+  await ev(`__nook.tapPickup(__nook.wsc.pickups.find(p=>p.kind==='deliver'))`); await settle();
+  check(!(await ev('__nook.deliver')) && (await ev('__nook.st.coins')) > c1, '包裹送達、拿到外送費 +' + ((await ev('__nook.st.coins')) - c1));
+  // 超市
+  who = await talkNpc('market');
+  check(who === 'nora', '超市：點 Nora → 對話');
+  await opt('/結帳|交給/'); await sleep(400);
+  const cashed = await ev(`(async()=>{const J=Jobs2, sl=ms=>new Promise(r=>setTimeout(r,ms)), q=s=>document.querySelector(s);
+    for(let k=0;k<3;k++){
+      const goods=[...document.querySelectorAll('#cGoods .good')]; let total=0;
+      for(const g of goods){ const t=g.querySelector('span').textContent; total+=+t.split(' ').pop(); g.click(); await sl(60); }
+      const paid=+q('#cPaid').textContent; let ch=paid-total;
+      const coins=[...document.querySelectorAll('#cCoins .coinb')].map(b=>[+b.querySelector('span').textContent,b]).sort((a,b)=>b[0]-a[0]);
+      for(const [v,b] of coins){ while(ch>=v){ b.click(); ch-=v; await sl(20);} }
+      q('#cDone').click(); await sl(300);
+    } return q('#cOk').textContent; })()`);
+  check(cashed === '3', '收銀：3 位客人都找對錢：' + cashed);
+  await shot('s2_market.png');
+  await ev(`document.querySelector('#cQuit').click()`); await sleep(300); await ev(`document.querySelector('#jBack').click()`); await sleep(400);
+  check((await ev(`__nook.jobState('market').paid`)) === 1, '超市薪水已發（今天第 1 次）');
+  await opt('/再見|好的/');
+  // 委託：Mia 要 3 份花瓣
+  await ev(`__nook.st.mats.mat_flower = 5`);
+  await talkNpc('cafe');
+  check(await opt('/幫忙|委託/'), '跟 Mia 說話出現「委託」選項');
+  await sleep(200);
+  check(await opt('/交給你/'), '材料夠了 → 可以交付');
+  await sleep(300);
+  check((await ev(`__nook.st.req.mia`)) === 'done' && (await ev('__nook.st.mats.mat_flower')) === 2 && (await ev('__nook.st.bag.plant_cafe')) >= 1, '委託完成：扣 3 份花瓣、拿到咖啡廳盆栽');
+  await opt('/不客氣/');
+  await click('#bGoHome'); await settle();
+
   const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
   console.log('   城市走路時每秒畫面：', perf);
   await click('#bGoHome'); await settle();

@@ -1,12 +1,12 @@
 // 城市場景算圖＋檢查：地圖配置、物件不重疊、出入口走得到、門口走得到
 require('../js/raster.js'); require('../js/models.js'); require('../js/scene.js');
 const fs = require('fs'), path = require('path');
-for (const f of ['../js/art/city.js', '../js/art/cafe.js', '../js/art/park.js']) { try { require(f); } catch (e) { } }
+for (const f of ['../js/art/city.js', '../js/art/cafe.js', '../js/art/park.js', '../js/art/shops.js']) { try { require(f); } catch (e) { } }
 require('../js/world.js');
 const { Pix, Iso, depthSort, toPNG } = PX, M = MODELS, W = WORLD, S = SCENE;
 const out = path.join(__dirname, 'out');
 let bad = 0; const ok = (c, m) => { if (!c) { bad++; console.log('  ✗ ' + m); } };
-for (const id of ['central', 'commercial', 'park', 'cafe']) {
+for (const id of ['central', 'commercial', 'park', 'cafe', 'bakery', 'market']) {
   const sc = W.makeScene(id);
   // 物件互不重疊、在地圖內
   const occ = {};

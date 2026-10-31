@@ -297,7 +297,7 @@
   function enterScene(id, cell, facing) {
     if (park && id !== 'park') endParkJob(true);
     wsc = getScene(id); order = [];
-    wsc.pickups = scenePickups(wsc); refreshHarvest(wsc);
+    wsc.pickups = scenePickups(wsc).concat(deliverPickups(wsc)); refreshHarvest(wsc);
     if (mode !== 'city') setMode('city');
     const c = cell && cell[0] >= 0 && cell[1] >= 0 && cell[0] < wsc.ni && cell[1] < wsc.nj && !wsc.blocked[cell[0]][cell[1]] ? cell : cityFree(cell || [Math.floor(wsc.ni / 2), Math.floor(wsc.nj / 2)]);
     me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.path = []; me.pose = 'stand'; me.step = 0; me.facing = facing || 'SW'; me.onArrive = null;
@@ -402,6 +402,26 @@
   }
   // ---------------- NPC 對話 ----------------
   const NPC_TALK = {
+    leo: {
+      first: '歡迎光臨！我是 Leo，這間麵包店的師傅。每天早上要烤好幾百個麵包，分類包裝常常忙不過來……可以來幫忙嗎？偶爾也要外送喔。',
+      greet: ['剛出爐的可頌，香吧？', '今天也來幫忙分類嗎？', '外送單又來了，有空的話幫我跑一趟！'],
+      tired: '今天的麵包都賣完啦，謝謝你！明天再來。',
+      chat: ['法棍要放長籃，不然會折斷喔。', '扭結麵包的形狀，是我師父教我的。', '每天第一爐麵包，我都會留一個給 Mia。', '烤箱需要好的柴火，公園的大樹下有時候撿得到樹枝。'],
+      jobLabel: '我來分類包裝', firstJob: '好，我來幫忙！', extra: [['有外送單嗎？', 'deliver']],
+    },
+    nora: {
+      first: '嗨嗨！我是 Nora，在超市顧收銀。客人一多就排好長的隊……你算數好嗎？要不要來幫忙結帳？',
+      greet: ['歡迎光臨～要買什麼嗎？', '收銀台今天也很忙喔！', '嗨！要不要來幫忙結帳？'],
+      tired: '今天的班都排滿了，謝謝你幫忙！明天見。',
+      chat: ['蘋果今天特價喔！', '找錢的時候先用大的硬幣，會比較快。', '我其實很想去公園的涼亭野餐。', '聽說公園的倒木上長了好多蘑菇。'],
+      jobLabel: '我來幫忙結帳', firstJob: '交給我吧！',
+    },
+    ethan: {
+      first: '欸，你好！我是 Ethan，住在這附近。我很喜歡在城市裡到處亂逛，常常撿到奇怪的東西……也常常把東西弄丟就是了。',
+      greet: ['今天有什麼新發現嗎？', '嘿！又見面了。', '這座城市每天都有不一樣的地方。'],
+      tired: '', chat: ['噴水池裡好像有人丟過古金幣許願。', '晚上的時候我喜歡坐在廣場看星星。', '信箱裡偶爾會卡著舊明信片，不知道是誰寄的。', '我白天常在公園池塘邊發呆。'],
+      jobLabel: '', firstJob: '',
+    },
     mia: {
       first: '嗨，你是新搬來的吧？我是 Mia，這間咖啡廳的老闆。最近客人好多，我一個人忙不過來……要不要來幫忙打工？做得好薪水就高喔！',
       greet: ['歡迎光臨～今天也來幫忙嗎？', '你來得正好，外面排了好多客人！', '嗨！今天想打工還是坐下來休息？'],
@@ -432,8 +452,10 @@
     const n = W_().NPCS[id], T = NPC_TALK[id]; st.met = st.met || {};
     const first = !st.met[id], j = jobState(n.job);
     let text, opts;
-    if (first) { text = T.first; opts = [[T.firstJob, 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']]; st.met[id] = 1; save(false); }
-    else { text = j.paid >= CafeJob.DAILY_PAID ? T.tired : T.greet[Math.floor(Math.random() * T.greet.length)]; opts = [[T.jobLabel, 'job'], ['聊聊天', 'chat'], ['再見', 'bye']]; }
+    if (first) { text = T.first; opts = n.job ? [[T.firstJob, 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']] : [['聊聊天', 'chat'], ['你好！', 'bye']]; st.met[id] = 1; save(false); }
+    else { text = n.job && j.paid >= CafeJob.DAILY_PAID ? T.tired : T.greet[Math.floor(Math.random() * T.greet.length)]; opts = (n.job ? [[T.jobLabel, 'job']] : []).concat(T.extra || [], [['聊聊天', 'chat']]); }
+    st.req = st.req || {}; if (!first && REQS[id] && st.req[id] !== 'done') opts.push([st.req[id] === 'active' ? '委託：' + REQS[id].title : '有什麼需要幫忙的嗎？', 'req']);
+    if (!first) opts.push(['再見', 'bye']);
     showTalk(n, text, opts);
     sfx('talk'); emit('TALK', { npc: id });
   }
@@ -446,7 +468,10 @@
       const b = document.createElement('button'); b.textContent = label; if (act === 'job') b.className = 'pri';
       b.onclick = () => {
         if (act === 'bye') { box.classList.remove('show'); return; }
-        if (act === 'chat') { showTalk(n, T.chat[Math.floor(Math.random() * T.chat.length)], [[T.jobLabel, 'job'], ['再見', 'bye']]); return; }
+        if (act === 'chat') { showTalk(n, T.chat[Math.floor(Math.random() * T.chat.length)], (n.job ? [[T.jobLabel, 'job']] : []).concat([['再見', 'bye']])); return; }
+        if (act === 'req') { talkReq(n); return; }
+        if (act === 'reqdone') { finishReq(n); return; }
+        if (act === 'deliver') { if (deliver) { showTalk(n, '你手上已經有一個包裹在送了喔！送到「' + deliver.sp.name + '」。', [['好', 'bye']]); return; } startDelivery(n); return; }
         if (act === 'job') { box.classList.remove('show'); startJob(n); }
       };
       ob.appendChild(b);
@@ -470,9 +495,65 @@
   }
   function startJob(n) {
     if (n.job === 'park') return startParkJob(n);
+    if (n.job === 'bakery' || n.job === 'market') {
+      const jb = jobState(n.job), m2 = $('#mJob'); m2.classList.add('show');
+      const open = n.job === 'bakery' ? Jobs2.openBakery : Jobs2.openCashier;
+      jobRun = open($('#jobRoot'), { xp: jb.xp, paidToday: jb.paid }, r => { m2.classList.remove('show'); jobRun = null; payJob(n, n.job, r); });
+      return;
+    }
     const j = jobState('cafe'), m = $('#mJob');
     m.classList.add('show');
     jobRun = CafeJob.open($('#jobRoot'), { xp: j.xp, paidToday: j.paid }, r => { m.classList.remove('show'); jobRun = null; payJob(n, 'cafe', r); });
+  }
+  // ---------------- NPC 委託（一次性） ----------------
+  const REQS = {
+    mia: { title: '花瓣裝飾', ask: '店裡想擺點花，可以幫我帶 3 份花瓣嗎？公園的花叢可以採喔。', need: { mat: 'mat_flower', n: 3 }, coins: 120, item: 'plant_cafe', thanks: '好漂亮！店裡看起來更溫馨了，這盆植物送你！' },
+    oliver: { title: '幸運的四葉草', ask: '傳說公園裡有四葉草……如果你找到了，可以給我看看嗎？（看看就好，不會拿走）', need: { col: 'clover4' }, coins: 200, item: 'sapling', thanks: '真的是四葉草！太幸運了。這棵小樹苗送你，種在房間裡吧。' },
+    ethan: { title: '弄丟的鑰匙', ask: '我好像把一把舊鑰匙弄丟了……可能掉在長椅附近？如果你找到了告訴我！', need: { col: 'key_old' }, coins: 150, item: 'street_lamp', thanks: '就是這把！謝謝你～這盞路燈是我做的，放在你房間吧。' },
+    leo: { title: '烤箱的柴火', ask: '烤箱的柴火快用完了，可以幫我撿 3 根樹枝嗎？公園的大樹可以搖搖看。', need: { mat: 'mat_wood', n: 3 }, coins: 120, item: 'bread_basket', thanks: '太好了，明天的麵包有著落了！這個麵包籃送你。' },
+    nora: { title: '新鮮蘑菇', ask: '超市想進一批蘑菇，你能幫我採 2 份嗎？公園倒木上就有。', need: { mat: 'mat_mushroom', n: 2 }, coins: 120, item: 'basket_stack', thanks: '好新鮮！謝謝你～這疊購物籃送你當擺設，很可愛喔。' },
+  };
+  function reqOk(r) { return r.need.mat ? (st.mats && st.mats[r.need.mat] || 0) >= r.need.n : !!(st.col && st.col[r.need.col]); }
+  function reqProgress(r) { return r.need.mat ? `（目前 ${(st.mats && st.mats[r.need.mat]) || 0} / ${r.need.n}）` : (st.col && st.col[r.need.col] ? '（你已經有了！）' : '（還沒找到）'); }
+  function talkReq(n) {
+    const r = REQS[n.id]; st.req = st.req || {};
+    if (!r || st.req[n.id] === 'done') { showTalk(n, '目前沒有什麼需要幫忙的，謝謝你！', [['再見', 'bye']]); return; }
+    if (!st.req[n.id]) { st.req[n.id] = 'active'; save(false); }
+    if (reqOk(r)) { showTalk(n, r.ask + '\n' + reqProgress(r), [['交給你！', 'reqdone'], ['等一下', 'bye']]); return; }
+    showTalk(n, r.ask + '\n' + reqProgress(r), [['好，我去找找看', 'bye']]);
+  }
+  function finishReq(n) {
+    const r = REQS[n.id]; if (!r || !reqOk(r) || st.req[n.id] === 'done') return;
+    if (r.need.mat) st.mats[r.need.mat] -= r.need.n;
+    st.req[n.id] = 'done'; st.coins += r.coins; if (r.item && I[r.item]) st.bag[r.item] = (st.bag[r.item] || 0) + 1;
+    sfx('level'); save(); refreshHud();
+    emit('REQ', { npc: n.id });
+    showTalk(n, r.thanks + `\n（金幣 +${r.coins}${r.item && I[r.item] ? '、獲得 ' + I[r.item].name : ''}）`, [['不客氣！', 'bye']]);
+  }
+  // ---------------- 外送（Leo） ----------------
+  let deliver = null;
+  const DELIVER_TIME = 180;
+  function startDelivery(n) {
+    const j = jobState('delivery');
+    const spots = W_().DELIVERY, sp = spots[Math.floor(Math.random() * spots.length)];
+    deliver = { n, sp, left: DELIVER_TIME, timer: setInterval(() => { if (!deliver) return; deliver.left--; deliverBar(); if (deliver.left <= 0) endDelivery(false); }, 1000) };
+    $('#jobBar').style.display = 'flex'; deliverBar();
+    showTalk(n, `謝謝！這個包裹要送到「${sp.name}」。地上會有亮亮的標記，走過去點它就好。3 分鐘內送到喔！`, [['出發！', 'bye']]);
+  }
+  function deliverBar() { if (!deliver) return; const m = Math.floor(deliver.left / 60), s = deliver.left % 60; $('#jobInfo').textContent = `📦 外送到：${deliver.sp.name}　⏱ ${m}:${String(s).padStart(2, '0')}`; }
+  function deliverPickups(sc) { return deliver && deliver.sp.scene === sc.id ? [{ kind: 'deliver', t: I.delivery_spot ? 'delivery_spot' : 'sparkle', i: deliver.sp.cell[0], j: deliver.sp.cell[1], key: 'dv' }] : []; }
+  function endDelivery(ok) {
+    if (!deliver) return;
+    const D = deliver; deliver = null; clearInterval(D.timer); $('#jobBar').style.display = 'none';
+    if (wsc && wsc.pickups) wsc.pickups = wsc.pickups.filter(p => p.kind !== 'deliver');
+    const j = jobState('delivery');
+    if (!ok) { toast('時間到了，包裹沒送到……下次再加油！'); emit('JOB', { job: 'delivery', served: 0, correct: 0, coins: 0 }); return; }
+    const T = Math.min(100, D.left / (DELIVER_TIME * 0.5) * 100), score = Math.round(70 + 0.2 * T + 10);
+    const paid = j.paid < CafeJob.DAILY_PAID, coins = paid ? CafeJob.pay(score, 120) : 0;
+    j.xp += 20; if (paid) j.paid++; st.coins += coins; sfx('coin');
+    emit('JOB', { job: 'delivery', served: 1, correct: 1, coins });
+    save(); refreshHud(); floatText(coins ? '+' + coins : '送達', me.i, me.j);
+    toast(coins ? `包裹送達！外送費 ${coins} 金幣（分數 ${score}）` : '包裹送達！今天的外送費已經領完了，謝謝你幫忙');
   }
   // ---------------- 清理公園（在地圖上撿垃圾） ----------------
   let park = null;
@@ -503,7 +584,7 @@
     toast(`${quit ? '提早結束' : all ? '全部清乾淨了！' : '時間到！'}　撿了 ${P.picked}/${P.total}　分數 ${score}`);
     payJob(P.n, 'park', { served: P.picked, correct: P.picked, score, coins, xp, paid, levelUp });
   }
-  $('#jobQuit').onclick = () => endParkJob(true);
+  $('#jobQuit').onclick = () => { if (park) endParkJob(true); else if (deliver) endDelivery(false); };
   // ---------------- 探索：閃光物品、採集、調查 ----------------
   const floats = [];
   function floatText(text, i, j) { floats.push({ text, i, j, t0: performance.now() }); dirty = true; }
@@ -558,6 +639,7 @@
     walkNear([[p.i, p.j]], () => {
       if (!wsc.pickups || !wsc.pickups.includes(p)) return;
       wsc.pickups = wsc.pickups.filter(x => x !== p); dirty = true;
+      if (p.kind === 'deliver') { endDelivery(true); return; }
       if (p.kind === 'trash') {
         if (!park) return;
         park.picked++; parkBar(); sfx('pickup'); floatText('🗑 ' + park.picked + '/' + park.total, p.i, p.j);
@@ -1106,5 +1188,5 @@
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();

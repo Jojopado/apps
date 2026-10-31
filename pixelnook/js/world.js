@@ -58,9 +58,11 @@
   function cafeArt() { return (G.ART && G.ART.cafe) || {}; }
   function registerArt() {
     for (const k in PH) if (!I[k]) I[k] = PH[k];
-    const a = art(), c = cafeArt(), pk = (G.ART && G.ART.park) || {};
-    for (const src of [a.OBJS, c.OBJS, pk.OBJS]) if (src) for (const k in src) I[k] = Object.assign({}, src[k], { hidden: true, kind: src[k].kind || 'floor' });
+    const a = art(), c = cafeArt(), pk = (G.ART && G.ART.park) || {}, sh = (G.ART && G.ART.shops) || {};
+    for (const src of [a.OBJS, c.OBJS, pk.OBJS, sh.OBJS]) if (src) for (const k in src) I[k] = Object.assign({}, src[k], { hidden: true, kind: src[k].kind || 'floor' });
     if (c.WALLDECO) for (const k in c.WALLDECO) I[k] = Object.assign({}, c.WALLDECO[k], { hidden: true, kind: 'wall' });
+    if (sh.WALLDECO) for (const k in sh.WALLDECO) I[k] = Object.assign({}, sh.WALLDECO[k], { hidden: true, kind: 'wall' });
+    for (const [src, tag] of [[sh.WALLS, 'shop'], [sh.FLOORS, 'shop']]) if (src) { const arr = src === sh.WALLS ? M.WALLS : M.FLOORS; for (const w of src) if (!arr.some(x => x.name === w.name)) arr.push(Object.assign({ shop: 1 }, w)); }
     // 咖啡廳壁紙／地板接在房間清單後面（玩家也能用）
     if (c.WALLS && !M.WALLS.some(w => w.cafe)) for (const w of c.WALLS) M.WALLS.push(Object.assign({ cafe: 1 }, w));
     if (c.FLOORS && !M.FLOORS.some(w => w.cafe)) for (const w of c.FLOORS) M.FLOORS.push(Object.assign({ cafe: 1 }, w));
@@ -103,7 +105,7 @@
     rect(T, 0, 9, 23, 9, 'road_i_a'); rect(T, 0, 10, 23, 10, 'road_i_b'); rect(T, 0, 7, 23, 8, 'sidewalk'); rect(T, 0, 11, 23, 12, 'sidewalk');
     rect(T, 7, 9, 7, 10, 'crosswalk_i');
     let i = 2;
-    for (const [t, open] of [['cafe_building', 'cafe'], ['bakery_building', null], ['market_building', null]]) {
+    for (const [t, open] of [['cafe_building', 'cafe'], ['bakery_building', 'bakery'], ['market_building', 'market']]) {
       const [w, d] = fp(t, 0);
       O.push({ t, i, j: 7 - d, r: 0, enter: open, closed: open ? null : I[t].name + '還在準備中，之後開放！' });
       i += w + 1;
@@ -141,6 +143,37 @@
       npcs: [{ id: 'oliver', i: 14.5, j: 4.5, facing: 'SW', talkFrom: [[14, 5], [13, 4], [15, 4]] }],
       exits: [{ cells: [[11, 0], [12, 0]], to: 'central', spawn: [11, 16], facing: 'NE' }] };
   }
+  // 麵包店、超市室內（房間系統畫，門在右牆）
+  function buildShop(kind) {
+    const sh = (G.ART && G.ART.shops) || {}, has = id => I[id] && !PH[id];
+    const room = S.newRoom();
+    const wi = M.WALLS.findIndex(w => w.shop), fi = M.FLOORS.findIndex(w => w.shop);
+    const wl = M.WALLS.filter(w => w.shop), fl = M.FLOORS.filter(w => w.shop);
+    room.door = { side: 'R', u: 1, color: kind === 'bakery' ? [150, 96, 60] : [90, 140, 110] };
+    const put = (t, i, j, r) => { if (!I[t]) return null; const it = { t, i, j, r }; if (S.canPlace(room, it)) { room.items.push(it); return it; } return null; };
+    let npc, counter;
+    if (kind === 'bakery') {
+      room.wall = wi >= 0 ? wi : 1; room.floor = fi >= 0 ? fi : 1;
+      if (has('bakery_counter')) {
+        counter = put('bakery_counter', 3, 2, 0); put('bakery_oven', 5, 0, 0); put('bread_shelf', 3, 0, 0); put('flour_sacks', 8, 0, 0); put('cake_stand', 7, 3, 0);
+        put('bread_basket', 0, 4, 0); put('bread_shelf', 0, 5, 1);
+        for (const [i, j] of [[3, 6], [6, 6]]) { put('bakery_table', i, j, 0); put('bakery_chair', i + 1, j, 3); put('bakery_chair', i - 1, j, 1); }
+      } else { counter = put('desk_wood', 3, 2, 0); put('shelf_wood', 3, 0, 0); put('table_wood', 5, 6, 0); put('chair_wood', 6, 6, 3); }
+      if (I.bread_sign_wall) room.walls.push({ t: 'bread_sign_wall', side: 'L', u: 3 }); if (I.wheat_deco) room.walls.push({ t: 'wheat_deco', side: 'R', u: 5 });
+    } else {
+      room.wall = wi >= 0 ? M.WALLS.indexOf(wl[wl.length - 1]) : 3; room.floor = fi >= 0 ? M.FLOORS.indexOf(fl[fl.length - 1]) : 2;
+      if (has('checkout_counter')) {
+        counter = put('checkout_counter', 3, 2, 0); put('fridge_case', 6, 0, 0); put('fridge_case', 3, 0, 0);
+        put('market_shelf', 0, 4, 1); put('market_shelf', 4, 5, 0); put('market_shelf', 4, 7, 0); put('produce_stand', 7, 4, 3);
+        put('basket_stack', 8, 0, 0); put('cart', 2, 6, 0); put('freezer_chest', 7, 7, 0);
+      } else { counter = put('desk_modern', 3, 2, 0); put('shelf_modern', 6, 0, 0); put('shelf_modern', 0, 4, 1); put('fridge_modern', 8, 0, 0); }
+      if (I.sale_banner) room.walls.push({ t: 'sale_banner', side: 'L', u: 2 }); if (I.market_clock) room.walls.push({ t: 'market_clock', side: 'R', u: 5 });
+    }
+    const cw = counter ? M.footprint(I[counter.t], counter.r)[0] : 2;
+    const mi = counter ? counter.i + cw : 5, mj = counter ? counter.j - 1 : 1;
+    npc = { id: kind === 'bakery' ? 'leo' : 'nora', i: mi + 0.5, j: mj + 0.5, facing: 'SW', talkFrom: [[mi, mj + 1], [mi + 1, mj + 1], [mi, mj + 2]] };
+    return { id: kind, name: kind === 'bakery' ? '麵包店' : '超市', interior: true, room, npcs: [npc], ni: S.NI, nj: S.NJ, back: { to: 'commercial', obj: kind === 'bakery' ? 'bakery_building' : 'market_building' } };
+  }
   // 咖啡廳室內（房間系統畫，門在右牆）
   function buildCafe() {
     const c = cafeArt(), has = id => hasObj(id) && !PH[id];
@@ -171,13 +204,20 @@
 
   // ---------------- NPC ----------------
   const NPCS = {
+    leo: { id: 'leo', name: 'Leo', role: '麵包師傅', job: 'bakery', look: { skin: 3, hair: 'short', hairC: 0, shirt: 4, pants: 2, shoes: 0, apron: [244, 246, 250], hat: [250, 250, 250] } },
+    nora: { id: 'nora', name: 'Nora', role: '超市店員', job: 'market', look: { skin: 1, hair: 'long', hairC: 2, shirt: 3, pants: 0, shoes: 1, apron: [96, 168, 110] } },
+    ethan: { id: 'ethan', name: 'Ethan', role: '城市居民', job: null, look: { skin: 1, hair: 'spiky', hairC: 6, shirt: 2, pants: 1, shoes: 3 } },
     oliver: { id: 'oliver', name: 'Oliver', role: '公園管理員', job: 'park',
       look: { skin: 2, hair: 'short', hairC: 1, shirt: 3, pants: 2, shoes: 4, hat: [96, 140, 84] } },
     mia: { id: 'mia', name: 'Mia', role: '咖啡廳老闆', job: 'cafe',
       look: { skin: 0, hair: 'bun', hairC: 4, shirt: 4, pants: 1, shoes: 4, apron: [126, 86, 60] } },
   };
   // ---------------- 場景物件 ----------------
-  const BUILDERS = { central: buildCentral, commercial: buildCommercial, park: buildPark, cafe: buildCafe };
+  const BUILDERS = { central: buildCentral, commercial: buildCommercial, park: buildPark, cafe: buildCafe, bakery: () => buildShop('bakery'), market: () => buildShop('market') };
+  // 外送地點（場景、格子、名稱）
+  const DELIVERY = [{ scene: 'central', cell: [5, 11], name: '中央廣場的信箱旁' }, { scene: 'central', cell: [15, 5], name: '中央廣場的長椅旁' }, { scene: 'park', cell: [16, 14], name: '公園涼亭前' }, { scene: 'park', cell: [6, 8], name: '公園池塘邊' }, { scene: 'commercial', cell: [12, 13], name: '商業街對面的花圃' }];
+  // NPC 作息：Ethan 傍晚到晚上在中央廣場，白天在公園
+  function ethanSpot(hour) { return (hour >= 17 || hour < 6) ? { scene: 'central', i: 15.5, j: 8.5, facing: 'SW', talkFrom: [[15, 9], [14, 8], [16, 8]] } : { scene: 'park', i: 6.5, j: 6.5, facing: 'SE', talkFrom: [[7, 6], [6, 7], [5, 6]] }; }
   function makeScene(id) {
     registerArt();
     const a = BUILDERS[id]();
@@ -192,6 +232,7 @@
     a.top = 240; a.ox = a.nj * TW / 2 + 20; a.oy = a.top;
     a.ww = (a.ni + a.nj) * TW / 2 + 40; a.wh = (a.ni + a.nj) * TH / 2 + a.top + 30;
     a.items = a.objs.filter(o => I[o.t]);
+    const es = ethanSpot(new Date().getHours()); if (es.scene === a.id) { a.npcs = (a.npcs || []).concat([{ id: 'ethan', i: es.i, j: es.j, facing: es.facing, talkFrom: es.talkFrom }]); }
     // 擋路：物件佔的格子、水
     a.blocked = grid(a.ni, a.nj, false);
     for (let i = 0; i < a.ni; i++) for (let j = 0; j < a.nj; j++) if (a.tiles[i][j] === 'water') a.blocked[i][j] = true;
@@ -233,5 +274,5 @@
     const out = []; let c = to; while (c) { out.push(c); c = prev.get(key(c[0], c[1])); } return out.reverse();
   }
 
-  G.WORLD = { makeScene, drawSceneBG, doorCellOf, bfs, registerArt, PH, NPCS };
+  G.WORLD = { makeScene, drawSceneBG, doorCellOf, bfs, registerArt, PH, NPCS, DELIVERY, ethanSpot };
 })(typeof window !== 'undefined' ? window : globalThis);
