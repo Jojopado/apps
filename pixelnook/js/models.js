@@ -69,13 +69,14 @@
     if (look.hair === 'long' && hair) part(-HD / 2 - 0.035, 0, 0.07, HW + 0.04, HEAD + 12, hair, zh - 12, false);
     // 頭（俯視正方形）＋臉＋頭髮，當成一個零件（裝飾畫在頭的表面）
     const wi = HD, wj = HW, i0 = ci - wi / 2, j0 = cj - wj / 2, top = zh + HEAD;
-    if (look.hair === 'bun' && hair) part(-0.08, 0, 0.18, 0.18, 8, hair, zh + HEAD + 3, false);
+    if (look.hair === 'bun' && hair && !look.hat) part(-0.08, 0, 0.18, 0.18, 8, hair, zh + HEAD + 3, false);
+    if (look.hat) { part(0, 0, 0.36, 0.36, 7, look.hat, zh + HEAD + 3, true); part(0.275, 0, 0.12, 0.4, 2, look.hat, zh + HEAD + 1, false); }
     const head = {
       i0, i1: i0 + wi, j0, j1: j0 + wj, z0: zh, z1: top + (hair ? 3 : 0),
       draw(iso) {
         iso.box(i0, j0, wi, wj, HEAD, skin, zh, true);
         if (hair) iso.box(i0 - 0.015, j0 - 0.015, wi + 0.03, wj + 0.03, 3, hair, top, false);
-        if (look.hair === 'spiky' && hair) {
+        if (look.hair === 'spiky' && hair && !look.hat) {
           iso.box(i0 + 0.04, j0 + 0.04, 0.14, 0.14, 5, hair, top + 3, false);
           iso.box(i0 + 0.22, j0 + 0.22, 0.14, 0.14, 4, hair, top + 3, false);
           iso.box(i0 + 0.22, j0 + 0.04, 0.12, 0.12, 6, hair, top + 3, false);

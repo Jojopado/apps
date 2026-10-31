@@ -33,6 +33,22 @@
   small('fence_j', '施工圍欄', 1, 1, [p(0, 0, 0.12, 1, 30, 0, [250, 180, 60], [[10, 18, [60, 60, 70]]])]);
   small('sign_arrow', '路標', 1, 1, [p(0, 0, 0.08, 0.08, 50, 0, [120, 120, 130], null, false), p(0, 0, 0.1, 0.7, 16, 50, [90, 150, 210])]);
 
+  small('pond_rock', '大石頭', 1, 1, [p(0, 0, 0.6, 0.6, 14, 0, [150, 150, 160])]);
+  small('reeds', '蘆葦', 1, 1, [p(0, 0, 0.5, 0.5, 26, 0, [120, 160, 90])]);
+  small('lily_pad', '荷葉', 1, 1, [p(0, 0, 0.6, 0.6, 2, 0, [90, 170, 90])]);
+  small('picnic_table', '野餐桌', 2, 1, [p(0, 0, 0.8, 1.8, 20, 0, [180, 130, 90])]);
+  small('gazebo', '涼亭', 3, 3, [p(0, 0, 2.8, 2.8, 6, 0, [210, 190, 160]), p(0, 0, 2.9, 2.9, 12, 70, [180, 90, 70])]);
+  small('park_sign', '公園木牌', 1, 1, [p(0, 0, 0.1, 0.8, 40, 0, [160, 110, 70])]);
+  small('herb_bush', '香草叢', 1, 1, [p(0, 0, 0.6, 0.6, 14, 0, [110, 170, 100])]);
+  small('mushroom_log', '倒木', 2, 1, [p(0, 0, 0.5, 1.8, 14, 0, [150, 100, 70])]);
+  small('tree_big', '大樹', 2, 2, [p(0, 0, 0.3, 0.3, 30, 0, [140, 94, 62]), p(0, 0, 1.8, 1.8, 50, 30, [90, 160, 90])]);
+  small('trash_can_park', '公園垃圾桶', 1, 1, [p(0, 0, 0.4, 0.4, 26, 0, [100, 140, 110])]);
+  small('hedge_i', '樹籬', 1, 1, [p(0, 0, 0.9, 0.9, 16, 0, [90, 150, 90])]);
+  for (const [k, c] of [['red', [230, 90, 90]], ['yellow', [250, 210, 90]], ['blue', [110, 150, 230]]])
+    PH['flower_patch_' + k] = { id: 'flower_patch_' + k, name: '花叢', W: 1, D: 1, kind: 'floor', hidden: true, model: on => on ? [p(0, 0, 0.6, 0.6, 6, 0, [100, 160, 90])] : [p(0, 0, 0.6, 0.6, 6, 0, [100, 160, 90]), p(0, 0, 0.4, 0.4, 5, 6, c)] };
+  for (const [k, c] of [['trash_bag', [60, 64, 80]], ['trash_bottle', [140, 200, 220]], ['trash_paper', [240, 240, 236]]])
+    PH[k] = { id: k, name: '垃圾', W: 1, D: 1, kind: 'floor', hidden: true, model: () => [p(0, 0, 0.3, 0.3, k === 'trash_paper' ? 2 : 8, 0, c)] };
+  PH.sparkle = { id: 'sparkle', name: '閃光物品', W: 1, D: 1, kind: 'floor', hidden: true, model: on => [p(0, 0, 0.12, 0.12, on ? 10 : 6, 0, [255, 240, 140], null, false)] };
   const TILEC = { grass: [140, 196, 110], road_i: [96, 100, 112], road_j: [96, 100, 112], sidewalk: [214, 206, 192], crosswalk_i: [96, 100, 112], crosswalk_j: [96, 100, 112], plaza: [226, 214, 190], dirt: [196, 160, 110], water: [120, 190, 230] };
   const PH_TILES = {};
   for (const k in TILEC) PH_TILES[k] = (iso, i, j) => iso.flat(i, j, 1, 1, TILEC[k], 0, shade(TILEC[k], 0.92));
@@ -42,8 +58,8 @@
   function cafeArt() { return (G.ART && G.ART.cafe) || {}; }
   function registerArt() {
     for (const k in PH) if (!I[k]) I[k] = PH[k];
-    const a = art(), c = cafeArt();
-    for (const src of [a.OBJS, c.OBJS]) if (src) for (const k in src) I[k] = Object.assign({}, src[k], { hidden: true, kind: src[k].kind || 'floor' });
+    const a = art(), c = cafeArt(), pk = (G.ART && G.ART.park) || {};
+    for (const src of [a.OBJS, c.OBJS, pk.OBJS]) if (src) for (const k in src) I[k] = Object.assign({}, src[k], { hidden: true, kind: src[k].kind || 'floor' });
     if (c.WALLDECO) for (const k in c.WALLDECO) I[k] = Object.assign({}, c.WALLDECO[k], { hidden: true, kind: 'wall' });
     // 咖啡廳壁紙／地板接在房間清單後面（玩家也能用）
     if (c.WALLS && !M.WALLS.some(w => w.cafe)) for (const w of c.WALLS) M.WALLS.push(Object.assign({ cafe: 1 }, w));
@@ -69,15 +85,16 @@
     O.push({ t: 'house_player', i: 0, j: 6, r: 1, home: true });
     const [fw, fh] = fp('fountain', 0);
     O.push({ t: 'fountain', i: 12 - Math.floor(fw / 2), j: 8 - Math.floor(fh / 2), r: 0 });
-    O.push({ t: 'bulletin_board', i: 8, j: 4, r: 0, talk: '公告欄：歡迎來到小鎮！咖啡廳正在招募店員，往右下的商業街走就到了。' });
+    O.push({ t: 'bulletin_board', i: 8, j: 4, r: 0, search: 'bulletin_board', talk: '公告欄：歡迎來到小鎮！咖啡廳正在招募店員，往右下的商業街走就到了。' });
     for (const [i, j, r] of [[9, 7, 1], [9, 10, 1], [16, 6, 3], [16, 11, 3]]) O.push({ t: 'bench', i, j, r });
     for (const [i, j] of [[6, 3], [17, 3], [6, 13], [17, 13]]) O.push({ t: 'street_lamp', i, j, r: 0 });
     for (const [i, j, t] of [[4, 2, 'tree_round'], [2, 12, 'tree_pine'], [8, 15, 'tree_round'], [15, 16, 'tree_pine'], [20, 3, 'tree_round'], [21, 14, 'tree_round'], [1, 2, 'tree_pine'], [19, 16, 'bush'], [5, 15, 'bush'], [14, 1, 'flower_bed'], [10, 1, 'flower_bed'], [22, 5, 'bush']]) O.push({ t, i, j, r: 0 });
-    O.push({ t: 'fence_i', i: 11, j: 16, r: 1, talk: '公園正在整理中，過陣子就會開放囉！' }, { t: 'fence_i', i: 12, j: 16, r: 1, talk: '公園正在整理中，過陣子就會開放囉！' });
+    O.push({ t: 'sign_arrow', i: 13, j: 15, r: 0, talk: '路標：↙ 城市公園（池塘、花圃、涼亭）' });
     O.push({ t: 'sign_arrow', i: 18, j: 6, r: 0, talk: '路標：→ 商業街（咖啡廳、麵包店、超市）' });
-    O.push({ t: 'mailbox', i: 4, j: 10, r: 1 });
+    O.push({ t: 'mailbox', i: 4, j: 10, r: 1, search: 'mailbox' });
+    for (const o of O) { if (o.t === 'fountain') o.search = 'fountain'; if (o.t === 'bench') o.search = 'bench'; if (o.t === 'tree_round') o.search = 'tree_round'; }
     return { id: 'central', name: '中央廣場', ni: NI_, nj: NJ_, tiles: T, objs: O,
-      exits: [{ cells: [[23, 8], [23, 9]], to: 'commercial', spawn: [1, 9], facing: 'SE' }],
+      exits: [{ cells: [[23, 8], [23, 9]], to: 'commercial', spawn: [1, 9], facing: 'SE' }, { cells: [[11, 17], [12, 17]], to: 'park', spawn: [11, 1], facing: 'SW' }],
       spawns: { house: null } };
   }
   // 商業街：建築在後排、面向人行道；中間是馬路；對面是樹和長椅
@@ -97,6 +114,32 @@
     O.push({ t: 'sign_arrow', i: 1, j: 12, r: 3, talk: '路標：← 中央廣場' });
     return { id: 'commercial', name: '商業街', ni: NI_, nj: NJ_, tiles: T, objs: O,
       exits: [{ cells: [[0, 9], [0, 10]], to: 'central', spawn: [22, 9], facing: 'NW' }] };
+  }
+  // 城市公園：池塘、涼亭、花叢（可採集）、步道；Oliver 在入口附近
+  function buildPark() {
+    const NI_ = 24, NJ_ = 18, T = grid(NI_, NJ_, 'grass'), O = [];
+    rect(T, 11, 0, 12, 6, 'dirt'); rect(T, 5, 6, 20, 7, 'dirt'); rect(T, 18, 7, 19, 15, 'dirt'); rect(T, 8, 14, 18, 15, 'dirt'); rect(T, 5, 7, 6, 12, 'dirt');
+    rect(T, 8, 9, 13, 12, 'water');                       // 池塘
+    const put = (t, i, j, r, extra) => { if (!I[t]) return; const [w, d] = fp(t, r || 0); for (let x = 0; x < w; x++) for (let y = 0; y < d; y++) if (!T[i + x] || T[i + x][j + y] === undefined) return; O.push(Object.assign({ t, i, j, r: r || 0 }, extra || {})); };
+    put('park_sign', 13, 1, 0, { talk: '城市公園：請愛護花草，垃圾請丟垃圾桶。' });
+    put('gazebo', 14, 9, 0, { search: 'gazebo' });
+    put('picnic_table', 20, 3, 0, { search: 'picnic_table' }); put('picnic_table', 2, 14, 1, { search: 'picnic_table' });
+    for (const [i, j] of [[7, 9], [14, 13], [7, 13]]) put('pond_rock', i, j, 0, { search: 'pond_rock' });
+    for (const [i, j] of [[9, 13], [12, 8], [13, 13], [8, 8]]) put('reeds', i, j, 0);
+    let fk = 0;
+    for (const [i, j] of [[3, 3], [8, 3], [15, 3], [21, 9], [22, 12], [3, 9], [14, 16], [6, 16], [16, 1], [1, 6]]) { const c = ['red', 'yellow', 'blue'][fk++ % 3]; put('flower_patch_' + c, i, j, 0, { harvest: 'flower_patch_' + c }); }
+    for (const [i, j] of [[2, 4], [21, 15], [10, 16]]) put('herb_bush', i, j, 0, { harvest: 'herb_bush' });
+    put('mushroom_log', 1, 11, 1, { harvest: 'mushroom_log' });
+    for (const [i, j] of [[3, 0], [20, 0], [22, 6], [0, 15], [16, 16]]) put('tree_big', i, j, 0, { harvest: 'tree_big' });
+    for (const [i, j] of [[7, 1], [9, 4], [17, 12], [4, 13]]) put('tree_round', i, j, 0, { search: 'tree_round' });
+    for (const [i, j] of [[10, 5], [16, 5]]) put('bench', i, j, 2, { search: 'bench' });
+    for (const [i, j] of [[10, 2], [17, 8], [7, 15]]) put('street_lamp', i, j, 0);
+    for (const [i, j] of [[13, 5], [17, 14]]) put('trash_can_park', i, j, 0);
+    for (const [i, j] of [[0, 0], [1, 0], [23, 17], [22, 17]]) put('hedge_i', i, j, 0);
+    for (const [i, j] of [[10, 10], [11, 11], [9, 11]]) if (T[i][j] === 'water') O.push({ t: 'lily_pad', i, j, r: 0, deco: true });
+    return { id: 'park', name: '城市公園', ni: NI_, nj: NJ_, tiles: T, objs: O, outdoor: true,
+      npcs: [{ id: 'oliver', i: 14.5, j: 4.5, facing: 'SW', talkFrom: [[14, 5], [13, 4], [15, 4]] }],
+      exits: [{ cells: [[11, 0], [12, 0]], to: 'central', spawn: [11, 16], facing: 'NE' }] };
   }
   // 咖啡廳室內（房間系統畫，門在右牆）
   function buildCafe() {
@@ -128,11 +171,13 @@
 
   // ---------------- NPC ----------------
   const NPCS = {
+    oliver: { id: 'oliver', name: 'Oliver', role: '公園管理員', job: 'park',
+      look: { skin: 2, hair: 'short', hairC: 1, shirt: 3, pants: 2, shoes: 4, hat: [96, 140, 84] } },
     mia: { id: 'mia', name: 'Mia', role: '咖啡廳老闆', job: 'cafe',
       look: { skin: 0, hair: 'bun', hairC: 4, shirt: 4, pants: 1, shoes: 4, apron: [126, 86, 60] } },
   };
   // ---------------- 場景物件 ----------------
-  const BUILDERS = { central: buildCentral, commercial: buildCommercial, cafe: buildCafe };
+  const BUILDERS = { central: buildCentral, commercial: buildCommercial, park: buildPark, cafe: buildCafe };
   function makeScene(id) {
     registerArt();
     const a = BUILDERS[id]();
@@ -151,6 +196,7 @@
     a.blocked = grid(a.ni, a.nj, false);
     for (let i = 0; i < a.ni; i++) for (let j = 0; j < a.nj; j++) if (a.tiles[i][j] === 'water') a.blocked[i][j] = true;
     for (const o of a.items) { const [w, d] = fp(o.t, o.r); for (let x = 0; x < w; x++) for (let y = 0; y < d; y++) if (a.blocked[o.i + x]) a.blocked[o.i + x][o.j + y] = true; }
+    for (const n of a.npcs || []) a.blocked[Math.floor(n.i)][Math.floor(n.j)] = true;
     return a;
   }
   function drawSceneBG(sc) {

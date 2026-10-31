@@ -27,9 +27,12 @@ Q.on(st, 'JOB', { served: 3, correct: 2 }, D); t(Q.claim(st, 'm3', D).coins === 
 Q.on(st, 'HOME', {}, D); Q.claim(st, 'm4', D);
 Q.on(st, 'BUY', { item: 'plant_s' }, D); const r5 = Q.claim(st, 'm5', D);
 t(r5 && r5.item === 'poster', 'm5 買家具 → 獎勵特別裝飾（海報）');
+Q.on(st, 'JOB', { job: 'cafe', served: 2, correct: 2 }, D); t(Q.current(st, D).prog === 0, 'm6 只算公園工作，咖啡廳不算');
+Q.on(st, 'JOB', { job: 'park', served: 5, correct: 5 }, D); t(Q.claim(st, 'm6', D).coins === 50, 'm6 清理公園 +50');
+Q.on(st, 'COLLECT', { n: 1 }, D); Q.on(st, 'COLLECT', { n: 2 }, D); t(Q.claim(st, 'm7', D).coins === 80, 'm7 收集 3 種收藏品 +80');
 t(Q.current(st, D) === null, '主線全部完成');
-Q.addMain({ id: 'm6', title: '新步驟', desc: '', ev: 'TALK', match: d => d.npc === 'oliver', need: 1, coins: 50 });
-t(Q.current(st, D).def.id === 'm6', '之後新增的主線步驟會自動接上');
+Q.addMain({ id: 'm99', title: '新步驟', desc: '', ev: 'TALK', match: d => d.npc === 'oliver', need: 1, coins: 50 });
+t(Q.current(st, D).def.id === 'm99', '之後新增的主線步驟會自動接上');
 // 每日、每週
 st = {}; Q.ensure(st, D);
 const ids = st.q.daily.list.map(x => x.id);

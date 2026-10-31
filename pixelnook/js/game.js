@@ -295,7 +295,9 @@
     setTimeout(() => { try { fn(); } finally { f.style.opacity = 0; fading = false; dirty = true; } }, 220);
   }
   function enterScene(id, cell, facing) {
+    if (park && id !== 'park') endParkJob(true);
     wsc = getScene(id); order = [];
+    wsc.pickups = scenePickups(wsc); refreshHarvest(wsc);
     if (mode !== 'city') setMode('city');
     const c = cell && cell[0] >= 0 && cell[1] >= 0 && cell[0] < wsc.ni && cell[1] < wsc.nj && !wsc.blocked[cell[0]][cell[1]] ? cell : cityFree(cell || [Math.floor(wsc.ni / 2), Math.floor(wsc.nj / 2)]);
     me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.path = []; me.pose = 'stand'; me.step = 0; me.facing = facing || 'SW'; me.onArrive = null;
@@ -310,6 +312,7 @@
   }
   function goHome() {
     fadeTo(() => {
+      if (park) endParkJob(true);
       wsc = null; order = []; setMode('home');
       const c = S.doorCell(st.room.door); me.i = c[0] + 0.5; me.j = c[1] + 0.5; me.facing = 'SW'; me.path = []; me.pose = 'stand';
       ensureFree(me, st.room); st.where = 'home';
@@ -333,7 +336,7 @@
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = wsc.interior ? '#18161f' : '#7eb664'; ctx.fillRect(0, 0, SW, SH);
     ctx.drawImage(wsc.bgC, -cam[0], -cam[1]);
-    const list = wsc.parts.slice();
+    const list = wsc.parts.concat(pickupDrawables(wsc));
     list.push(charDrawable(me, st.look, wsc.ox, wsc.oy));
     for (const n of wsc.npcs || []) { const d = charDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; list.push(d); }
     order = depthSort(list);
@@ -342,11 +345,24 @@
       if (x > SW || y > SH || x + s.pix.w < 0 || y + s.pix.h < 0) continue;
       ctx.drawImage(s.c, x, y);
     }
+    // 浮動文字（撿到東西）
+    const now = performance.now();
+    for (let k = floats.length - 1; k >= 0; k--) {
+      const f = floats[k], t = (now - f.t0) / 1000; if (t > 1.2) { floats.splice(k, 1); continue; }
+      const x = wsc.ox + (f.i - f.j) * TW / 2 - cam[0], y = wsc.oy + (f.i + f.j) * TH / 2 - 100 - t * 30 - cam[1];
+      ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.globalAlpha = Math.min(1, 1.6 - t);
+      ctx.lineWidth = 4; ctx.strokeStyle = '#22283f'; ctx.strokeText(f.text, x, y); ctx.fillStyle = '#ffe680'; ctx.fillText(f.text, x, y); ctx.globalAlpha = 1;
+    }
+    if (floats.length || (wsc.pickups && wsc.pickups.length)) dirty = true;   // 閃爍動畫、浮動文字
   }
   function cityTap(x, y) {
     if (fading) return;
     const wx = x + cam[0], wy = y + cam[1];
+    { const a0 = (wx - wsc.ox) / (TW / 2), b0 = (wy - wsc.oy) / (TH / 2), gi = (a0 + b0) / 2, gj = (b0 - a0) / 2;
+      const pk = (wsc.pickups || []).find(p => Math.abs(p.i + 0.5 - gi) < 0.75 && Math.abs(p.j + 0.5 - gj) < 0.75);
+      if (pk) return tapPickup(pk); }
     const h = hitAt(wx, wy);
+    if (h && h.pickup) return tapPickup(h.pickup);
     if (h && h.npc) return walkNear(h.npc.talkFrom, () => { const n = h.npc; me.facing = 'NE'; dirty = true; talkTo(n.id); });
     if (h && h.item) return cityInteract(h.item);
     if (h && h.isChar) { toast('嗨，' + st.name + '！'); return; }
@@ -356,6 +372,9 @@
     }
     const a = (wx - wsc.ox) / (TW / 2), b = (wy - wsc.oy) / (TH / 2), c = [Math.floor((a + b) / 2), Math.floor((b - a) / 2)];
     if (c[0] < 0 || c[1] < 0 || c[0] >= wsc.ni || c[1] >= wsc.nj) return;
+    // 撿拾物很小：點到它所在（或旁邊）的格子也算點到
+    const pk = (wsc.pickups || []).find(p => Math.abs(p.i - c[0]) <= 0 && Math.abs(p.j - c[1]) <= 0) || (wsc.pickups || []).find(p => Math.abs(p.i + 0.5 - (a + b) / 2) < 0.9 && Math.abs(p.j + 0.5 - (b - a) / 2) < 0.9);
+    if (pk) return tapPickup(pk);
     const ex = (wsc.exits || []).find(e => e.cells.some(q => q[0] === c[0] && q[1] === c[1]));
     if (ex) { if (!cityWalk(c, () => fadeTo(() => enterScene(ex.to, ex.spawn, ex.facing)))) toast('那裡走不過去'); return; }
     if (!cityWalk(c)) toast('那裡走不過去');
@@ -376,33 +395,50 @@
       for (const c of nearCells([front].concat(S.cellsOf(o)))) if (cityWalk(c, () => { me.pose = 'sit'; me.i = sp.i; me.j = sp.j; me.facing = sp.facing; me.seatZ = sp.z; me.stand = c; dirty = true; })) return;
       toast('走不過去'); return;
     }
+    if (o.harvest) return tapHarvest(o);
+    if (o.search) return tapSearch(o);
+    if (o.deco) return;
     walkNear(S.cellsOf(o), () => toast(o.talk || d.name));
   }
   // ---------------- NPC 對話 ----------------
-  const MIA_CHAT = ['這附近的公園聽說快整理好了，到時候一起去走走吧！', '拿鐵和卡布奇諾的差別？卡布奇諾多了一層綿綿的奶泡喔。', '早上的客人最多，大家都要一杯熱美式才醒得過來。', '你的房間佈置得怎麼樣了？有空帶我去參觀！', '焦糖拿鐵是我的私房招牌，等你更熟練再教你。'];
-  function jobState() { st.jobs = st.jobs || {}; const j = st.jobs.cafe = st.jobs.cafe || { xp: 0, day: 0, paid: 0 }; if (j.day !== dayNum()) { j.day = dayNum(); j.paid = 0; } return j; }
+  const NPC_TALK = {
+    mia: {
+      first: '嗨，你是新搬來的吧？我是 Mia，這間咖啡廳的老闆。最近客人好多，我一個人忙不過來……要不要來幫忙打工？做得好薪水就高喔！',
+      greet: ['歡迎光臨～今天也來幫忙嗎？', '你來得正好，外面排了好多客人！', '嗨！今天想打工還是坐下來休息？'],
+      tired: '今天辛苦啦！完整薪水明天再發，不過想練習的話還是可以來喔。',
+      chat: ['城市公園已經開放了！池塘邊的花叢可以採花喔。', '拿鐵和卡布奇諾的差別？卡布奇諾多了一層綿綿的奶泡。', '早上的客人最多，大家都要一杯熱美式才醒得過來。', '你的房間佈置得怎麼樣了？有空帶我去參觀！', '焦糖拿鐵是我的私房招牌，等你更熟練再教你。', '常來打工的話，說不定會拿到我做的點心喔。'],
+      jobLabel: '我要打工', firstJob: '好啊，我來幫忙！',
+    },
+    oliver: {
+      first: '喔，新面孔！我是 Oliver，負責照顧這座公園。最近遊客亂丟垃圾，我一個人撿不完……可以幫我清理一下嗎？當然會付你薪水。',
+      greet: ['今天的公園也很漂亮吧？', '嘿！要幫忙清理公園嗎？', '花叢的花每天都會重新開，記得來採喔。'],
+      tired: '今天已經很乾淨了，謝謝你！明天再來幫忙吧。',
+      chat: ['池塘邊的大石頭底下，聽說有人撿過古老的羅盤。', '大樹下有時候會掉橡實，搖一搖試試看。', '涼亭是這座城市最老的建築之一喔。', '四葉草很難找，但香草叢裡偶爾會冒出來。', '晚上的公園偶爾會有閃閃發亮的星星碎片。'],
+      jobLabel: '我來幫忙清理', firstJob: '交給我吧！',
+    },
+  };
+  function jobState(job) {
+    job = job || 'cafe'; st.jobs = st.jobs || {};
+    const j = st.jobs[job] = st.jobs[job] || { xp: 0, day: 0, paid: 0 };
+    if (j.day !== dayNum()) { j.day = dayNum(); j.paid = 0; }
+    return j;
+  }
   function portrait(look) {
     const pix = new Pix(70, 70), iso = new Iso(pix, 35, 100);   // 取景：頭＋上半身
     for (const pp of M.charParts(0, 0, 'SW', 0, look, 'stand').parts) pp.draw(iso);
     return toCanvas(pix);
   }
   function talkTo(id) {
-    const n = W_().NPCS[id]; st.met = st.met || {};
-    const first = !st.met[id], j = jobState();
+    const n = W_().NPCS[id], T = NPC_TALK[id]; st.met = st.met || {};
+    const first = !st.met[id], j = jobState(n.job);
     let text, opts;
-    if (first) {
-      text = `嗨，你是新搬來的吧？我是 ${n.name}，這間咖啡廳的老闆。最近客人好多，我一個人忙不過來……要不要來幫忙打工？做得好薪水就高喔！`;
-      opts = [['好啊，我來幫忙！', 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']];
-      st.met[id] = 1; save(false);
-    } else {
-      text = j.paid >= CafeJob.DAILY_PAID ? '今天辛苦啦！完整薪水明天再發，不過想練習的話還是可以來喔。' : ['歡迎光臨～今天也來幫忙嗎？', '你來得正好，外面排了好多客人！', '嗨！今天想打工還是坐下來休息？'][Math.floor(Math.random() * 3)];
-      opts = [['我要打工', 'job'], ['聊聊天', 'chat'], ['再見', 'bye']];
-    }
+    if (first) { text = T.first; opts = [[T.firstJob, 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']]; st.met[id] = 1; save(false); }
+    else { text = j.paid >= CafeJob.DAILY_PAID ? T.tired : T.greet[Math.floor(Math.random() * T.greet.length)]; opts = [[T.jobLabel, 'job'], ['聊聊天', 'chat'], ['再見', 'bye']]; }
     showTalk(n, text, opts);
     sfx('talk'); emit('TALK', { npc: id });
   }
   function showTalk(n, text, opts) {
-    const box = $('#mTalk');
+    const box = $('#mTalk'), T = NPC_TALK[n.id];
     const pc = $('#talkPic'); pc.innerHTML = ''; pc.appendChild(portrait(n.look));
     $('#talkName').textContent = n.name; $('#talkRole').textContent = n.role; $('#talkText').textContent = text;
     const ob = $('#talkOpts'); ob.innerHTML = '';
@@ -410,7 +446,7 @@
       const b = document.createElement('button'); b.textContent = label; if (act === 'job') b.className = 'pri';
       b.onclick = () => {
         if (act === 'bye') { box.classList.remove('show'); return; }
-        if (act === 'chat') { showTalk(n, MIA_CHAT[Math.floor(Math.random() * MIA_CHAT.length)], [['我要打工', 'job'], ['再見', 'bye']]); return; }
+        if (act === 'chat') { showTalk(n, T.chat[Math.floor(Math.random() * T.chat.length)], [[T.jobLabel, 'job'], ['再見', 'bye']]); return; }
         if (act === 'job') { box.classList.remove('show'); startJob(n); }
       };
       ob.appendChild(b);
@@ -418,18 +454,139 @@
     box.classList.add('show');
   }
   let jobRun = null;
+  function payJob(n, job, r) {
+    const j = jobState(job);
+    j.xp += r.xp; if (r.paid) j.paid++;
+    if (r.coins) sfx('coin'); if (r.levelUp) sfx('level');
+    st.coins += r.coins; st.stats = st.stats || {}; st.stats.jobs = (st.stats.jobs || 0) + (r.served ? 1 : 0);
+    emit('JOB', { job, served: r.served, correct: r.correct, coins: r.coins });
+    let bonus = '';
+    const b = r.served ? Explore.jobBonus(st, job, r.score) : null;
+    if (b && b.first) emit('COLLECT', { n: 1 });
+    if (b) { bonus = `\n（還送你一個${Explore.COLLECT[b.item].name}！${b.first ? '已加入收藏圖鑑' : ''}）`; sfx('pickup'); }
+    save(); refreshHud(); dirty = true;
+    const line = r.coins ? `辛苦了！這是你的薪水 ${r.coins} 金幣。` : (r.served ? '謝謝你來幫忙！今天的薪水已經發完了，明天再來喔。' : '沒關係，下次再來試試看！');
+    showTalk(n, line + bonus + (r.levelUp ? `\n你越來越熟練了，升到 Lv.${CafeJob.levelOf(j.xp)}！` : ''), [['再做一次', 'job'], ['好的，再見', 'bye']]);
+  }
   function startJob(n) {
-    const j = jobState(), m = $('#mJob');
+    if (n.job === 'park') return startParkJob(n);
+    const j = jobState('cafe'), m = $('#mJob');
     m.classList.add('show');
-    jobRun = CafeJob.open($('#jobRoot'), { xp: j.xp, paidToday: j.paid }, r => {
-      m.classList.remove('show'); jobRun = null;
-      j.xp += r.xp; if (r.paid) j.paid++;
-      if (r.coins) sfx('coin'); if (r.levelUp) sfx('level');
-      emit('JOB', { served: r.served, correct: r.correct, coins: r.coins });
-      st.coins += r.coins; st.stats = st.stats || {}; st.stats.jobs = (st.stats.jobs || 0) + (r.served ? 1 : 0);
-      save(); refreshHud(); dirty = true;
-      const line = r.coins ? `辛苦了！這是今天的薪水 ${r.coins} 金幣，拿去買喜歡的家具吧！` : (r.served ? '謝謝你來幫忙！今天的薪水已經發完了，明天再來喔。' : '沒關係，下次再來試試看！');
-      showTalk(n, line + (r.levelUp ? `\n你越來越熟練了，升到 Lv.${CafeJob.levelOf(j.xp)}！` : ''), [['再打一次工', 'job'], ['好的，再見', 'bye']]);
+    jobRun = CafeJob.open($('#jobRoot'), { xp: j.xp, paidToday: j.paid }, r => { m.classList.remove('show'); jobRun = null; payJob(n, 'cafe', r); });
+  }
+  // ---------------- 清理公園（在地圖上撿垃圾） ----------------
+  let park = null;
+  const PARK_TIME = 150, PARK_TRASH = 8;
+  function startParkJob(n) {
+    if (!wsc || wsc.id !== 'park') return;
+    const free = visibleFree(wsc, (i, j) => Math.abs(i - me.i) + Math.abs(j - me.j) <= 3 || (wsc.pickups || []).some(p => p.i === i && p.j === j));
+    const kinds = ['trash_bag', 'trash_bottle', 'trash_paper'], trash = [];
+    while (trash.length < PARK_TRASH && free.length) { const k = Math.floor(Math.random() * free.length), c = free.splice(k, 1)[0]; trash.push({ kind: 'trash', t: kinds[trash.length % 3], i: c[0], j: c[1], key: 'tr' + trash.length }); }
+    park = { n, left: PARK_TIME, picked: 0, total: trash.length, trash, timer: setInterval(parkTick, 1000) };
+    wsc.pickups = (wsc.pickups || []).filter(p => p.kind !== 'trash').concat(trash);
+    $('#jobBar').style.display = 'flex'; parkBar(); dirty = true;
+    toast('公園裡有 ' + trash.length + ' 個垃圾，點垃圾就會走過去撿起來！');
+  }
+  function parkBar() { if (!park) return; const m = Math.floor(park.left / 60), s = park.left % 60; $('#jobInfo').textContent = `🧹 清理公園　⏱ ${m}:${String(s).padStart(2, '0')}　🗑 ${park.picked} / ${park.total}`; }
+  function parkTick() { if (!park) return; park.left--; parkBar(); if (park.left <= 0) endParkJob(false); }
+  function endParkJob(quit) {
+    if (!park) return;
+    const P = park; park = null; clearInterval(P.timer); $('#jobBar').style.display = 'none';
+    if (wsc && wsc.pickups) wsc.pickups = wsc.pickups.filter(p => p.kind !== 'trash');
+    const all = P.picked >= P.total;
+    const A = P.picked / P.total * 100, T = all ? Math.min(100, P.left / (PARK_TIME * 0.5) * 100) : 0, C = all ? 100 : A;
+    const score = Math.round(0.7 * A + 0.2 * T + 0.1 * C), j = jobState('park');
+    const paid = j.paid < CafeJob.DAILY_PAID && P.picked > 0, coins = paid ? CafeJob.pay(score, 80) : 0, xp = P.picked * 10;
+    const levelUp = CafeJob.levelOf(j.xp + xp) > CafeJob.levelOf(j.xp);
+    dirty = true;
+    if (!P.n || !wsc || wsc.id !== 'park') { payJob(P.n, 'park', { served: P.picked, correct: P.picked, score, coins, xp, paid, levelUp }); $('#mTalk').classList.remove('show'); toast(`清理中斷：撿了 ${P.picked} 個，薪水 ${coins} 金幣`); return; }
+    toast(`${quit ? '提早結束' : all ? '全部清乾淨了！' : '時間到！'}　撿了 ${P.picked}/${P.total}　分數 ${score}`);
+    payJob(P.n, 'park', { served: P.picked, correct: P.picked, score, coins, xp, paid, levelUp });
+  }
+  $('#jobQuit').onclick = () => endParkJob(true);
+  // ---------------- 探索：閃光物品、採集、調查 ----------------
+  const floats = [];
+  function floatText(text, i, j) { floats.push({ text, i, j, t0: performance.now() }); dirty = true; }
+  const colName = id => (Explore.COLLECT[id] || Explore.MATS[id] || {}).name || id;
+  function gotItem(res, where) {
+    if (!res) return;
+    if (res.coins) { st.coins += res.coins; sfx('coin'); floatText('+' + res.coins, me.i, me.j); toast(`撿到 ${res.coins} 金幣！`); }
+    if (res.mat) { floatText(colName(res.mat) + ' ×' + res.n, me.i, me.j); }
+    if (res.item) { sfx('pickup'); toast(`${where || '找到了'}：${colName(res.item)}！${res.first ? '（新收藏！已加入圖鑑）' : ''}`); }
+    if (res.item && res.first) emit('COLLECT', { n: 1 });
+    else if (res.mat) { sfx('pickup'); toast(`採到 ${colName(res.mat)} ×${res.n}`); }
+    save(); refreshHud();
+  }
+  // 看得到的空格：自己能走、不是水、不是出口，而且前方三格沒有擋住視線的東西
+  function visibleFree(sc, avoid) {
+    const out = [], B = sc.blocked, ok = (i, j) => i >= sc.ni || j >= sc.nj || !B[i][j];
+    for (let i = 0; i < sc.ni; i++) for (let j = 0; j < sc.nj; j++) {
+      if (B[i][j] || sc.tiles[i][j] === 'water' || (sc.exits || []).some(e => e.cells.some(c => c[0] === i && c[1] === j))) continue;
+      if (!ok(i + 1, j) || !ok(i, j + 1) || !ok(i + 1, j + 1)) continue;
+      if (avoid && avoid(i, j)) continue;
+      out.push([i, j]);
+    }
+    return out;
+  }
+  function scenePickups(sc) {
+    if (sc.interior) return [];
+    const free = visibleFree(sc);
+    return Explore.sparkles(st, sc.id, free).map(s => Object.assign({ kind: 'sparkle', t: 'sparkle' }, s));
+  }
+  function refreshHarvest(sc) {
+    let changed = false;
+    for (const o of sc.items) if (o.harvest) { const on = Explore.harvested(st, sc.id + ':' + o.i + ',' + o.j); if (!!o.on !== on) { o.on = on; changed = true; } }
+    if (changed) rebuildParts(sc);
+  }
+  function rebuildParts(sc) {
+    sc.parts = [];
+    for (const it of sc.items) if (I[it.t] && I[it.t].kind === 'floor') for (const pp of M.itemParts(it)) sc.parts.push(Object.assign(pp, { spr: spriteOf(pp, 4, sc.ox, sc.oy), item: it }));
+  }
+  const pickSprites = new Map();
+  function pickupDrawables(sc) {
+    const out = [], frame = Math.floor(performance.now() / 400) % 2 === 1;
+    for (const p of sc.pickups || []) {
+      const it = { t: p.t, i: p.i, j: p.j, r: 0, on: p.kind === 'sparkle' ? frame : false };
+      const k = sc.id + it.t + it.i + ',' + it.j + (it.on ? 1 : 0);
+      let parts = pickSprites.get(k);
+      if (!parts) { parts = M.itemParts(it).map(pp => Object.assign(pp, { spr: spriteOf(pp, 4, sc.ox, sc.oy) })); pickSprites.set(k, parts); }
+      for (const pp of parts) out.push(Object.assign(Object.create(pp), { pickup: p }));
+    }
+    return out;
+  }
+  function tapPickup(p) {
+    walkNear([[p.i, p.j]], () => {
+      if (!wsc.pickups || !wsc.pickups.includes(p)) return;
+      wsc.pickups = wsc.pickups.filter(x => x !== p); dirty = true;
+      if (p.kind === 'trash') {
+        if (!park) return;
+        park.picked++; parkBar(); sfx('pickup'); floatText('🗑 ' + park.picked + '/' + park.total, p.i, p.j);
+        if (park.picked >= park.total) endParkJob(false);
+        return;
+      }
+      const res = Explore.pickSparkle(st, p.key, wsc.id);
+      gotItem(res, '撿到閃光物品'); emit('PICK', {});
+    });
+  }
+  function tapHarvest(o) {
+    const key = wsc.id + ':' + o.i + ',' + o.j;
+    walkNear(S.cellsOf(o), () => {
+      const res = Explore.harvest(st, o.harvest, key);
+      if (!res) { toast(o.t.startsWith('tree') ? '今天已經搖過這棵樹了，明天再來吧' : '今天已經採過了，明天會再長出來'); return; }
+      o.on = true; rebuildParts(wsc); dirty = true;
+      gotItem(res, '採集時發現'); emit('HARVEST', {});
+    });
+  }
+  function tapSearch(o) {
+    const key = wsc.id + ':' + o.t + ':' + o.i + ',' + o.j, d = I[o.t];
+    walkNear(S.cellsOf(o), () => {
+      if (o.talk) toast(o.talk);
+      const res = Explore.search(st, o.search, key);
+      setTimeout(() => {
+        if (!res || res.again) { if (!o.talk) toast(d.name + '：今天已經調查過了'); return; }
+        if (res.nothing) { if (!o.talk) toast('調查了' + d.name + '……什麼都沒有發現'); return; }
+        gotItem(res, '調查' + d.name + '時發現'); emit('SEARCH', {});
+      }, o.talk ? 1600 : 0);
     });
   }
   function toWallAt(x, y, ox, oy) {
@@ -811,6 +968,54 @@
     } catch (e) {}
   }
 
+  // ---------------- 背包與收藏圖鑑 ----------------
+  let bagTab = 'col';
+  function itemIcon(id) {
+    const icons = (window.ART && ART.park && ART.park.ICONS) || {}, c = document.createElement('canvas'); c.width = 32; c.height = 32; c.className = 'ico';
+    if (icons[id]) { try { const pix = new Pix(32, 32); icons[id](pix, 0, 0); c.getContext('2d').drawImage(toCanvas(pix), 0, 0); return c; } catch (e) {} }
+    const g2 = c.getContext('2d'), e = (Explore.COLLECT[id] || Explore.MATS[id] || {}).emoji || '❔';
+    g2.font = '24px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(e, 16, 17); return c;
+  }
+  function lockedIcon() {
+    const icons = (window.ART && ART.park && ART.park.ICONS) || {};
+    if (icons.locked) return itemIcon('locked');
+    const c = document.createElement('canvas'); c.width = 32; c.height = 32; const g2 = c.getContext('2d');
+    g2.fillStyle = '#cfc6b2'; g2.fillRect(6, 6, 20, 20); g2.fillStyle = '#8a8270'; g2.font = 'bold 18px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('?', 16, 17); return c;
+  }
+  function openBag() {
+    Explore.ensure(st); sfx('open');
+    $$('#bagTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === bagTab));
+    const box = $('#bagBody'); box.innerHTML = '';
+    if (bagTab === 'mat') {
+      const grid = document.createElement('div'); grid.className = 'colgrid';
+      for (const id in Explore.MATS) { const el = document.createElement('div'); el.className = 'colc'; el.appendChild(itemIcon(id)); const n = document.createElement('div'); n.textContent = `${Explore.MATS[id].name} ×${st.mats[id] || 0}`; el.appendChild(n); grid.appendChild(el); }
+      box.appendChild(grid);
+      const h = document.createElement('div'); h.className = 'help'; h.textContent = '材料在城市公園採集得到（花叢、香草叢、倒木、大樹）。之後可以用來做家具。'; box.appendChild(h);
+    } else {
+      for (const s in Explore.SERIES) {
+        const p = Explore.seriesProgress(st, s), S2 = Explore.SERIES[s];
+        const head = document.createElement('div'); head.className = 'colhead';
+        head.innerHTML = `<b></b><span>${p.have} / ${p.total}</span>`; head.querySelector('b').textContent = S2.name;
+        if (p.have >= p.total) {
+          const b = document.createElement('button'); b.className = 'pri';
+          b.textContent = st.seriesDone[s] ? '已領獎' : '領取系列獎勵'; b.disabled = !!st.seriesDone[s];
+          b.onclick = () => { const r = Explore.claimSeries(st, s); if (!r) return; st.coins += r.coins || 0; if (r.item) st.bag[r.item] = (st.bag[r.item] || 0) + 1; sfx('level'); toast(`集滿${S2.name}！獲得 ${r.coins} 金幣${r.item ? '＋' + I[r.item].name : ''}`); save(); refreshHud(); openBag(); };
+          head.appendChild(b);
+        } else { const sm = document.createElement('small'); sm.textContent = '集滿獎勵：' + S2.reward.coins + ' 金幣' + (S2.reward.item ? '＋' + I[S2.reward.item].name : ''); head.appendChild(sm); }
+        box.appendChild(head);
+        const grid = document.createElement('div'); grid.className = 'colgrid';
+        for (const id of p.ids) {
+          const have = st.col[id], el = document.createElement('div'); el.className = 'colc' + (have ? '' : ' lock');
+          el.appendChild(have ? itemIcon(id) : lockedIcon());
+          const n = document.createElement('div'); n.textContent = have ? Explore.COLLECT[id].name : '？？？'; el.appendChild(n); grid.appendChild(el);
+        }
+        box.appendChild(grid);
+      }
+    }
+    $('#mBag').classList.add('show');
+  }
+  $$('#bagTabs button').forEach(b => b.onclick = () => { bagTab = b.dataset.t; openBag(); });
+  $('#bBag').onclick = openBag;
   // ---------------- HUD、雜項 ----------------
   const sfx = n => { try { window.SFX && SFX.play(n); } catch (e) {} };
   function emit(type, data) {
@@ -901,5 +1106,5 @@
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
 
   // 測試用
-  window.__nook = { emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();

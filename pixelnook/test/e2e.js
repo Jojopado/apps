@@ -129,7 +129,19 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   const W2L = async (i, j, z = 0) => { const v = await ev(`(()=>{const w=__nook.wsc, c=__nook.cam; return [w.ox+(${i}-${j})*32-c[0], w.oy+(${i}+${j})*16-${z}-c[1]];})()`); return L(v[0], v[1]); };
   const scene = () => ev('__nook.wsc && __nook.wsc.id');
   const freeNear = (i, j) => ev(`(()=>{const w=__nook.wsc,b=w.blocked; let best=null,bd=1e9; for(let a=0;a<w.ni;a++)for(let c=0;c<w.nj;c++) if(!b[a][c]){const d=Math.abs(a-${Math.floor(i)})+Math.abs(c-${Math.floor(j)}); if(d<bd){bd=d;best=[a+0.5,c+0.5];}} return best;})()`);
-  const hop = async (i, j) => { const f = await freeNear(i, j); [x, y] = await W2L(f[0], f[1]); await tap(x, y); await settle(); };
+  const hop = async (i, j) => {
+    for (let k = 0; k < 8; k++) {
+      const f = await freeNear(i, j);
+      // 目標在畫面內就直接點；不在就往那個方向、在畫面邊緣找一格先走過去
+      const v = await ev(`(()=>{const w=__nook.wsc,c=__nook.cam; const sx=w.ox+(${f[0]}-${f[1]})*32-c[0], sy=w.oy+(${f[0]}+${f[1]})*16-c[1]; return [sx,sy];})()`);
+      if (v[0] > 40 && v[0] < 760 && v[1] > 70 && v[1] < 440) { [x, y] = await L(v[0], v[1]); await tap(x, y); await settle(); return; }
+      const cx = Math.max(60, Math.min(740, v[0])), cy = Math.max(90, Math.min(420, v[1]));
+      const g = await ev(`(()=>{const w=__nook.wsc,c=__nook.cam; const a=(${cx}+c[0]-w.ox)/32, b=(${cy}+c[1]-w.oy)/16; return [(a+b)/2,(b-a)/2];})()`);
+      const f2 = await freeNear(g[0], g[1]); const v2 = await ev(`(()=>{const w=__nook.wsc,c=__nook.cam; return [w.ox+(${f2[0]}-${f2[1]})*32-c[0], w.oy+(${f2[0]}+${f2[1]})*16-c[1]];})()`);
+      [x, y] = await L(v2[0], v2[1]); await tap(x, y); await settle();
+    }
+  };
+  const goExit = async (i, j) => { await hop(i, j); const v = await ev(`(()=>{const w=__nook.wsc,c=__nook.cam; return [w.ox+(${i}-${j})*32-c[0], w.oy+(${i}+${j})*16-c[1]];})()`); [x, y] = await L(v[0], v[1]); await tap(x, y); await settle(); await settle(); };
   const settle = async () => { await idle(); await sleep(500); };
   await click('#bOut'); await settle();
   check((await ev('__nook.mode')) === 'city' && (await scene()) === 'central', '按「出門」走到門口、來到中央廣場：' + (await scene()));
@@ -204,13 +216,56 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   check((await ev('__nook.st.q.main')) === 5 && (await ev('__nook.st.bag.poster')) >= 1, '買家具 → 主線完成，獲得禮物「星星海報」');
   await ev('__nook.openQuests()'); await sleep(300);
   const qcards = await ev(`document.querySelectorAll('#questList .qcard').length`);
-  check(qcards === 5, '任務面板：3 個每日＋2 個每週：' + qcards);
+  check(qcards === 6, '任務面板：主線＋3 個每日＋2 個每週：' + qcards);
   await shot('q1_panel.png');
   const before2 = await ev('__nook.st.coins');
   await ev(`[...document.querySelectorAll('#questList .qcard button')].filter(b=>!b.disabled).forEach(b=>b.click())`); await sleep(300);
   const claimedAll = await ev(`[...document.querySelectorAll('#questList .qcard button')].filter(b=>!b.disabled).length`);
   check(claimedAll === 0, '可以領的都領了（金幣 +' + ((await ev('__nook.st.coins')) - before2) + '）');
   await click('#mQuest [data-close]');
+  console.log('6c. 公園：Oliver、清理公園、採集、調查、閃光物品、背包');
+  await click('#bOut'); await settle();
+  await goExit(11.5, 17.5);
+  check((await scene()) === 'park', '中央廣場左下出口 → 城市公園：' + (await scene()));
+  if ((await scene()) !== 'park') console.log('   診斷', JSON.stringify(await ev(`({me:[__nook.me.i,__nook.me.j], cam:__nook.cam, toast:document.querySelector('#toast').textContent, ex:__nook.wsc.exits, b1617:[__nook.wsc.blocked[11][16],__nook.wsc.blocked[11][17],__nook.wsc.blocked[12][17]]})`)), x, y);
+  await shot('p1_park.png');
+  const ol = await ev(`(()=>{const n=__nook.wsc.npcs[0]; return [n.i, n.j];})()`);
+  [x, y] = await W2L(ol[0], ol[1], 55); await tap(x, y); await settle();
+  check(await ev(`document.querySelector('#mTalk').classList.contains('show') && document.querySelector('#talkName').textContent==='Oliver'`), '點 Oliver → 對話');
+  const c0p = await ev('__nook.st.coins');
+  await ev(`[...document.querySelectorAll('#talkOpts button')].find(b=>/清理|交給/.test(b.textContent)).click()`); await sleep(400);
+  check(await ev('!!__nook.park && __nook.wsc.pickups.filter(p=>p.kind==="trash").length===8'), '開始清理：地圖上出現 8 個垃圾');
+  await shot('p2_trash.png');
+  for (let k = 0; k < 12; k++) {
+    const left = await ev(`(()=>{const p=__nook.wsc.pickups.filter(p=>p.kind==='trash'); if(!p.length) return 0; const m=__nook.me; p.sort((a,b)=>Math.abs(a.i-m.i)+Math.abs(a.j-m.j)-Math.abs(b.i-m.i)-Math.abs(b.j-m.j)); __nook.tapPickup(p[0]); return p.length;})()`);
+    if (!left) break; await settle();
+  }
+  await sleep(600);
+  check(!(await ev('__nook.park')), '8 個垃圾撿完 → 工作結束');
+  console.log('   診斷', JSON.stringify(await ev(`({park:__nook.park&&{picked:__nook.park.picked,left:__nook.park.left}, left:(__nook.wsc.pickups||[]).filter(p=>p.kind==='trash').map(p=>[p.i,p.j]), me:[__nook.me.i,__nook.me.j], path:__nook.me.path.length, toast:document.querySelector('#toast').textContent, modal:[...document.querySelectorAll('.modal.show')].map(m=>m.id), err:__nook.loopErr})`)));
+  check((await ev(`__nook.jobState('park').paid`)) === 1 && (await ev(`document.querySelector('#talkName').textContent`)) === 'Oliver', 'Oliver 發薪水（今天領薪 1 次）');
+  check((await ev('__nook.st.coins')) > c0p, '金幣增加：+' + ((await ev('__nook.st.coins')) - c0p));
+  check((await ev('__nook.st.q.main')) >= 6, '主線「幫 Oliver 清理公園」完成');
+  await ev(`document.querySelector('#mTalk').classList.remove('show')`);
+  // 採集：最近的花叢
+  const fl = await ev(`(()=>{const m=__nook.me; const o=__nook.wsc.items.filter(o=>o.harvest&&!o.on).sort((a,b)=>Math.abs(a.i-m.i)+Math.abs(a.j-m.j)-Math.abs(b.i-m.i)-Math.abs(b.j-m.j))[0]; return o?[o.i+0.5,o.j+0.5,o.t]:null;})()`);
+  const mats0 = await ev('JSON.stringify(__nook.st.mats||{})');
+  await ev(`__nook.cityInteract(__nook.wsc.items.find(o=>o.harvest&&!o.on&&o.i+0.5===${fl[0]}&&o.j+0.5===${fl[1]}))`); await settle();
+  check((await ev('JSON.stringify(__nook.st.mats||{})')) !== mats0, '採集 ' + fl[2] + ' → 拿到材料：' + (await ev('JSON.stringify(__nook.st.mats)')));
+  // 調查：最近的可調查地點
+  const se = await ev(`(()=>{const m=__nook.me; const o=__nook.wsc.items.filter(o=>o.search).sort((a,b)=>Math.abs(a.i-m.i)+Math.abs(a.j-m.j)-Math.abs(b.i-m.i)-Math.abs(b.j-m.j))[0]; const [w,d]=__nook.M.footprint(__nook.M.ITEMS[o.t],o.r); return [o.i+w/2,o.j+d/2,o.t];})()`);
+  await ev(`(()=>{const m=__nook.me; const o=__nook.wsc.items.filter(o=>o.search).sort((a,b)=>Math.abs(a.i-m.i)+Math.abs(a.j-m.j)-Math.abs(b.i-m.i)-Math.abs(b.j-m.j))[0]; __nook.cityInteract(o);})()`); await settle(); await sleep(1800);
+  check(await ev(`Object.keys(__nook.st.ex.done).some(k=>k.startsWith('se:'))`), '調查 ' + se[2] + '：' + (await ev(`document.querySelector('#toast').textContent`)));
+  // 閃光物品
+  const sp = await ev(`(()=>{const p=(__nook.wsc.pickups||[]).filter(p=>p.kind==='sparkle'); return p.length?[p[0].i+0.5,p[0].j+0.5,p.length]:null;})()`);
+  if (sp) { await ev(`__nook.tapPickup(__nook.wsc.pickups.filter(p=>p.kind==='sparkle')[0])`); await settle();
+    check((await ev(`(__nook.wsc.pickups||[]).filter(p=>p.kind==='sparkle').length`)) === sp[2] - 1, '撿到閃光物品：' + (await ev(`document.querySelector('#toast').textContent`))); }
+  await click('#bBag'); await sleep(300);
+  check((await ev(`document.querySelectorAll('#bagBody .colc').length`)) === 24, '背包：收藏圖鑑 24 格');
+  await shot('p3_bag.png');
+  await click('#mBag [data-close]');
+  await click('#bGoHome'); await settle();
+
   const perf = await ev(`(async()=>{__nook.enterScene('central',[12,12],'SW'); await new Promise(r=>setTimeout(r,300)); const f0=__nook.frames, t0=performance.now(); __nook.cityTap(400,300); await new Promise(r=>setTimeout(r,2000)); return Math.round((__nook.frames-f0)/((performance.now()-t0)/1000));})()`);
   console.log('   城市走路時每秒畫面：', perf);
   await click('#bGoHome'); await settle();
