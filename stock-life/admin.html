@@ -49,7 +49,7 @@ th{color:var(--sub);font-weight:600}
   <div class="cols">
     <div class="card">
       <h2>🕒 市場</h2>
-      <div class="btns"><button class="b" data-mode="test">測試：全天開盤</button><button class="b" data-mode="real">真實時間（週一～五 09:00–13:30）</button></div>
+      <div class="btns"><button class="b" data-mode="test">測試：全天開盤</button><button class="b" data-mode="real">真實時間（平日 17:00／週末 08:00～凌晨 02:00）</button></div>
       <div class="btns"><button class="b" id="pauseBtn">暫停交易</button><button class="b" id="autoBtn">自動新聞</button></div>
       <label>波動倍率 <b id="volV">1.0</b>×（1 = 真實股市）</label>
       <input type="range" id="vol" min="0.2" max="5" step="0.1" value="1">
@@ -219,7 +219,7 @@ var SCEN = [
   { id:'earn', t:'📊 財報優於預期', run: function(){ var c = rndCo(); cmd({type:'earn', sym:c.sym, exp:10, act:30}); return '新聞出現橘色「財報」標籤：「' + c.name + '公布財報…優於預期」，股價在 1 分鐘內上漲約 10～15%。'; } },
   { id:'fake', t:'🃏 假消息（2 分鐘後澄清）', run: function(){ var c = rndCo(); cmd({type:'news', tgt:c.sym, tag:'傳聞', title:'網路盛傳' + c.name + '要被收購（測試）', impact:6, min:1, fake:true, revMin:2}); return '「' + c.name + '」先漲約 6%；2 分鐘後出現灰色「澄清」新聞，股價跌回去（甚至更低）。'; } },
   { id:'bias', t:'🎚️ 主力慢慢拉抬', run: function(){ var c = rndCo(); cmd({type:'bias', sym:c.sym, rate:0.3, min:10}); return '「' + c.name + '」接下來 10 分鐘慢慢往上爬，大約 +5%（玩家看不到任何提示）。'; } },
-  { id:'closed', t:'⏰ 收盤狀態（記得切回）', run: function(){ cmd({type:'mode', mode:'real'}); return '如果現在不是週一～五 09:00–13:30：遊戲右上角顯示「收盤」，股價不動，下市價單會變成「委託中」，開盤才成交。測完請按「市場 → 測試：全天開盤」切回來。'; } },
+  { id:'closed', t:'⏰ 收盤狀態（記得切回）', run: function(){ cmd({type:'mode', mode:'real'}); return '如果現在不在開盤時間（平日 17:00、週末 08:00 開，凌晨 02:00 收）：遊戲右上角顯示「收盤」，股價不動，下市價單會變成「委託中」，開盤才成交。測完請按「市場 → 測試：全天開盤」切回來。'; } },
 ];
 var CHECK = [
   '走路：模擬走路（或真的走）後，「領取」按鈕的金額變多，按下去錢包增加、有金幣動畫',

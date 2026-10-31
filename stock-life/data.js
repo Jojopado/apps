@@ -23,7 +23,7 @@
     RECOVER_MULT: 3, RECOVER_UNTIL: 70000,                  // after bankruptcy: walking pays x3 until net worth is back to 70k
     REF_BONUS: 70000, REF_STEPS: 10000,                     // invite: both get 70k once the new player has walked 10k steps
     GIFT_VALUE: 50000,                                      // hold this much of a company at the close -> its sector's shareholder gift
-    SESSION: { days: [0, 1, 2, 3, 4, 5, 6], open: '17:00', close: '02:00', tzOffsetMin: 480 },   // close earlier than open = the session runs past midnight
+    SESSION: { days: [0, 1, 2, 3, 4, 5, 6], open: '17:00', openByDay: { 0: '08:00', 6: '08:00' }, close: '02:00', tzOffsetMin: 480 },   // close earlier than open = the session runs past midnight; weekends open at 08:00
     INDEX_NAME: 'AVX 綜合指數'
   };
 

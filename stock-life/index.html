@@ -318,7 +318,7 @@ function viewMe(){
   h += '<div class="sm" style="margin:8px 0">已重新開始 ' + (ME.resets || 0) + ' 次・最高資產 ' + money(Math.max(ME.best || 0, nw)) + '</div>';
   h += UI.confirmReset ? '<div class="warn">確定要清空所有持股和現金，從 ' + money(G.START_CASH) + ' 重新開始嗎？</div><div style="display:flex;gap:8px"><button class="btn sell" style="flex:1" id="resetYes">確定重來</button><button class="btn" style="flex:1" id="resetNo">算了</button></div>' : '<button class="btn" id="resetAsk">🔄 重新開始</button>';
   h += '</div>';
-  h += '<div class="card sm">交易成本：手續費 0.1425%（最低 $20），賣出另收 0.3% 交易稅。<br>開盤時間：' + (M && M.mode === 'test' ? '目前是測試期間，全天開放交易' : '週一～週五 ' + G.SESSION.open + '–' + G.SESSION.close) + '。</div>';
+  h += '<div class="card sm">交易成本：手續費 0.1425%（最低 $20），賣出另收 0.3% 交易稅。<br>開盤時間：' + (M && M.mode === 'test' ? '目前是測試期間，全天開放交易' : '平日 ' + G.SESSION.open + '、週末 08:00 開盤，凌晨 ' + G.SESSION.close + ' 收盤') + '。</div>';
   return h;
 }
 function viewRank(){
