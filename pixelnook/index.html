@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="像素小窩">
+<meta name="theme-color" content="#18161f">
+<title>像素小窩 PixelNook</title>
+<style>
+:root{--ink:#22283f;--paper:#fff8ec;--card:#fffdf8;--line:#e3d6bf;--accent:#ff9f5a;--accent2:#5aa9ff;--good:#3bb273;--bad:#e05a5a;
+  --sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);--st:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#18161f;color:var(--ink);overflow:hidden;overscroll-behavior:none;
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
+#cv{position:absolute;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+button{font:inherit;color:var(--ink);cursor:pointer;border:2px solid var(--ink);background:var(--card);border-radius:12px;
+  padding:6px 12px;line-height:1.2;white-space:nowrap;box-shadow:0 3px 0 var(--ink)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+button:disabled{opacity:.45}
+button.pri{background:var(--accent)}
+button.blue{background:var(--accent2);color:#fff}
+.hud{position:fixed;display:flex;gap:8px;align-items:center;z-index:5}
+#hudL{top:calc(8px + var(--st));left:calc(8px + var(--sl));flex-direction:column;align-items:flex-start;gap:6px}
+#hudR{top:calc(8px + var(--st));right:calc(8px + var(--sr))}
+#hudB{bottom:calc(10px + var(--sb));right:calc(10px + var(--sr))}
+.chip{background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font-weight:700;font-size:14px;box-shadow:0 2px 0 var(--ink)}
+.coin{display:inline-block;width:14px;height:14px;border-radius:50%;background:#ffcf4a;border:2px solid #b07a12;box-shadow:inset -2px -2px 0 #e8a92a;vertical-align:-2px}
+.card canvas,.slot canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+.chip small{font-weight:400;color:#6b6450}
+#name{font-size:15px}
+#visitBar{position:fixed;top:calc(8px + var(--st));left:50%;transform:translateX(-50%);z-index:6;display:none;gap:8px;align-items:center}
+#edit{position:fixed;left:0;right:0;bottom:0;z-index:6;display:none;background:rgba(255,248,236,.97);border-top:3px solid var(--ink);
+  padding:6px calc(8px + var(--sr)) calc(6px + var(--sb)) calc(8px + var(--sl))}
+#edit .tabs{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+#edit .tabs button{padding:3px 10px;font-size:13px;box-shadow:0 2px 0 var(--ink)}
+#edit .tabs button.on{background:var(--accent)}
+#edit .tabs .sp{flex:1}
+#bag{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;touch-action:pan-x;min-height:88px}
+.slot{flex:0 0 auto;width:86px;height:84px;border:2px solid var(--ink);border-radius:10px;background:#fff;position:relative;display:flex;
+  flex-direction:column;align-items:center;justify-content:flex-end;padding:2px;cursor:pointer}
+.slot.on{outline:3px solid var(--accent);outline-offset:1px}
+.slot canvas{flex:1;width:80px;min-height:0;object-fit:contain}
+.slot .n{font-size:11px;line-height:1.1;text-align:center;max-width:82px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.slot .c{position:absolute;top:2px;right:4px;font-size:12px;font-weight:700;background:var(--accent);border-radius:8px;padding:0 5px;border:1.5px solid var(--ink)}
+.empty{color:#7a735f;font-size:13px;padding:24px 8px}
+#selBar{position:fixed;z-index:7;display:none;gap:6px}
+#selBar button{padding:5px 10px;font-size:13px}
+.modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(15,14,22,.55);padding:12px}
+.modal.show{display:flex}
+.box{background:var(--paper);border:3px solid var(--ink);border-radius:16px;box-shadow:0 6px 0 var(--ink);width:min(760px,100%);
+  max-height:calc(100% - 8px);display:flex;flex-direction:column;overflow:hidden}
+.box h2{margin:0;font-size:18px;padding:10px 14px;border-bottom:2px solid var(--line);display:flex;align-items:center;gap:10px}
+.box h2 .sp{flex:1}
+.box .body{padding:10px 14px;overflow:auto;touch-action:pan-y}
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.cats button{padding:3px 10px;font-size:13px;box-shadow:0 2px 0 var(--ink)}
+.cats button.on{background:var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;position:relative}
+.card canvas{width:100%;height:90px;object-fit:contain}
+.card .t{font-weight:700;font-size:14px}
+.card .m{font-size:12px;color:#6b6450}
+.card .row{display:flex;justify-content:space-between;align-items:center}
+.card .sale{position:absolute;top:6px;left:6px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px}
+.card s{color:#9a927d;font-size:12px}
+.tag{display:inline-block;font-size:11px;border:1.5px solid var(--ink);border-radius:6px;padding:0 5px;margin-right:4px;background:#fff}
+.creator{display:flex;gap:14px;flex-wrap:wrap}
+.creator .pv{flex:0 0 160px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.creator .pv canvas{width:160px;height:200px;image-rendering:pixelated;background:#f3e6cf;border:2px solid var(--ink);border-radius:12px}
+.creator .opts{flex:1;min-width:240px;display:flex;flex-direction:column;gap:8px}
+.opt b{display:block;font-size:13px;margin-bottom:3px}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw button{width:30px;height:30px;padding:0;border-radius:8px;box-shadow:0 2px 0 var(--ink)}
+.sw button.on{outline:3px solid var(--accent);outline-offset:1px}
+.sw button.txt{width:auto;padding:0 10px;font-size:13px}
+input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;padding:6px 10px;width:100%;background:#fff;-webkit-user-select:text;user-select:text}
+.list .r{display:flex;align-items:center;gap:10px;padding:8px;border:2px solid var(--ink);border-radius:12px;background:var(--card);margin-bottom:8px;cursor:pointer}
+.list .r .nm{font-weight:700;flex:1}
+.list .r .st{font-size:13px;color:#6b6450}
+#toast{position:fixed;left:50%;top:calc(56px + var(--st));transform:translateX(-50%);z-index:30;background:var(--ink);color:#fff;
+  padding:8px 16px;border-radius:12px;font-size:14px;display:none;max-width:90%;text-align:center}
+#rot{position:fixed;inset:0;z-index:40;background:#18161f;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+.help{font-size:13px;color:#6b6450;line-height:1.7}
+</style>
+</head>
+<body>
+<canvas id="cv" width="800" height="480"></canvas>
+
+<div class="hud" id="hudL">
+  <div class="chip" id="name">—</div>
+  <div style="display:flex;gap:6px">
+    <div class="chip"><i class="coin"></i> <span id="coins">0</span></div>
+    <div class="chip" title="舒適度：家具越多、同系列湊滿 3 件越高；每天領的金幣跟著變多">❤ <span id="comfort">0</span></div>
+  </div>
+</div>
+<div class="hud" id="hudR">
+  <button id="bVisit">👀 參觀</button>
+  <button id="bLook">🧑 角色</button>
+</div>
+<div class="hud" id="hudB">
+  <button id="bEdit" class="pri">🛠 佈置</button>
+  <button id="bShop" class="blue">🛒 商店</button>
+</div>
+<div id="visitBar" class="hud">
+  <div class="chip" id="vName">—</div>
+  <button id="bLike">👍 按讚</button>
+  <button id="bHome" class="pri">🏠 回家</button>
+</div>
+
+<div id="edit">
+  <div class="tabs">
+    <button data-tab="floor" class="on">家具</button>
+    <button data-tab="wall">牆面</button>
+    <button data-tab="paper">壁紙</button>
+    <button data-tab="ground">地板</button>
+    <span class="sp"></span>
+    <span class="help" id="editHelp">點背包裡的東西 → 點房間放下；點家具可以移動、旋轉、收起</span>
+    <button id="bDone" class="pri">完成</button>
+  </div>
+  <div id="bag"></div>
+</div>
+<div id="selBar" class="hud">
+  <button id="bRot">↻ 旋轉</button>
+  <button id="bStore">📦 收起</button>
+  <button id="bDesel">✕</button>
+</div>
+
+<div class="modal" id="mShop"><div class="box">
+  <h2>🛒 家具店 <span class="sp"></span><span class="chip"><i class="coin"></i> <span id="shopCoins">0</span></span><button data-close>關閉</button></h2>
+  <div class="body"><div class="cats" id="shopCats"></div><div class="grid" id="shopGrid"></div></div>
+</div></div>
+
+<div class="modal" id="mLook"><div class="box">
+  <h2 id="lookTitle">🧑 我的角色 <span class="sp"></span><button data-close id="lookClose">關閉</button></h2>
+  <div class="body">
+    <div class="creator">
+      <div class="pv"><canvas id="pv" width="80" height="100"></canvas>
+        <div style="display:flex;gap:6px"><button id="pvL">◀</button><button id="pvR">▶</button></div></div>
+      <div class="opts" id="lookOpts"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="pri" id="lookOK">好了！</button></div>
+  </div>
+</div></div>
+
+<div class="modal" id="mVisit"><div class="box">
+  <h2>👀 去別人家參觀 <span class="sp"></span><button data-close>關閉</button></h2>
+  <div class="body">
+    <div class="cats" id="visitTabs">
+      <button data-v="recent" class="on">最新</button><button data-v="pop">本週人氣</button><button data-v="rand">隨機</button>
+    </div>
+    <div class="list" id="visitList"></div>
+  </div>
+</div></div>
+
+<div id="toast"></div>
+<div id="rot"><div style="font-size:48px">📱↻</div><div>把手機轉成橫的比較好玩！</div><button id="rotOK">直的也沒關係</button></div>
+
+<script src="js/raster.js"></script>
+<script src="js/models.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
