@@ -184,7 +184,7 @@ input[type=text],input[type=password]{font:inherit;border:2px solid var(--ink);b
 <div class="hud" id="hudB">
   <button id="bOut">🚪 出門</button>
   <button id="bEdit" class="pri">🛠 佈置</button>
-  <button id="bShop" class="blue">🛒 商店</button>
+  <button id="bShop" class="blue">🛋 家具店</button>
 </div>
 <div class="hud" id="hudCity" style="display:none;bottom:calc(10px + var(--sb));right:calc(10px + var(--sr))"><button id="bGoHome" class="pri">🏠 回家</button></div>
 <div id="visitBar" class="hud">
@@ -213,10 +213,18 @@ input[type=text],input[type=password]{font:inherit;border:2px solid var(--ink);b
 </div>
 
 <div class="modal" id="mShop"><div class="box">
-  <h2>🛒 家具店 <span class="sp"></span><span class="chip"><i class="coin"></i> <span id="shopCoins">0</span></span><button data-close>關閉</button></h2>
+  <h2>📖 家具型錄 <span class="sp"></span><span class="chip"><i class="coin"></i> <span id="shopCoins">0</span></span><button data-close>關閉</button></h2>
   <div class="body"><div class="cats" id="shopCats"></div><div class="grid" id="shopGrid"></div></div>
 </div></div>
 
+<div class="modal" id="mBuy"><div class="box" style="max-width:420px">
+  <h2><span id="buyName">—</span> <span class="sp"></span><button data-close>關閉</button></h2>
+  <div class="body"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div id="buyPic" style="flex:0 0 140px;height:120px;display:grid;place-items:center;background:#fffaf0;border:2px solid var(--line);border-radius:12px"></div>
+    <div style="flex:1 1 160px;display:flex;flex-direction:column;gap:6px"><div id="buyMeta" class="help"></div><div id="buyPrice" style="font-size:20px;font-weight:800"></div><div id="buyOwn" class="help"></div></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button id="buySit">🪑 坐坐看</button><button id="buyCat">📖 看型錄</button><button class="pri" id="buyBtn">買下來</button></div>
+  </div>
+</div></div>
 <div class="modal" id="mLook"><div class="box">
   <h2 id="lookTitle">🧑 我的角色 <span class="sp"></span><button data-close id="lookClose">關閉</button></h2>
   <div class="body">

@@ -16,6 +16,7 @@
   bld('cafe_building', '咖啡廳', 5, 4, 140, [236, 214, 180], [150, 90, 70]);
   bld('bakery_building', '麵包店', 4, 4, 130, [250, 226, 170], [200, 120, 80]);
   bld('market_building', '超市', 6, 4, 130, [220, 236, 246], [90, 150, 210]);
+  bld('furniture_building', '家具店', 4, 4, 130, [196, 214, 186], [92, 118, 104]);
   bld('apartment_building', '公寓', 5, 4, 180, [214, 200, 230], [120, 100, 150]);
   bld('house_player', '我的家', 3, 3, 110, [250, 240, 220], [200, 96, 80]);
   const small = (id, name, W, D, parts) => { PH[id] = { id, name, W, D, kind: 'floor', hidden: true, model: () => parts }; };
@@ -33,6 +34,7 @@
   small('fence_j', '施工圍欄', 1, 1, [p(0, 0, 0.12, 1, 30, 0, [250, 180, 60], [[10, 18, [60, 60, 70]]])]);
   small('sign_arrow', '路標', 1, 1, [p(0, 0, 0.08, 0.08, 50, 0, [120, 120, 130], null, false), p(0, 0, 0.1, 0.7, 16, 50, [90, 150, 210])]);
 
+  small('shop_counter', '櫃台', 2, 1, [p(0, 0, 0.7, 1.9, 34, 0, [150, 104, 70], [[0, 4, [110, 76, 52]], [30, 34, [214, 166, 112]]]), p(0.05, -0.45, 0.34, 0.5, 14, 34, [70, 76, 92], [[10, 14, [230, 236, 240]]]), p(0, 0.6, 0.22, 0.22, 10, 34, [196, 120, 80]), p(0, 0.6, 0.2, 0.2, 12, 44, [96, 168, 92])]);
   small('pond_rock', '大石頭', 1, 1, [p(0, 0, 0.6, 0.6, 14, 0, [150, 150, 160])]);
   small('reeds', '蘆葦', 1, 1, [p(0, 0, 0.5, 0.5, 26, 0, [120, 160, 90])]);
   small('lily_pad', '荷葉', 1, 1, [p(0, 0, 0.6, 0.6, 2, 0, [90, 170, 90])]);
@@ -105,15 +107,15 @@
     rect(T, 0, 9, 23, 9, 'road_i_a'); rect(T, 0, 10, 23, 10, 'road_i_b'); rect(T, 0, 7, 23, 8, 'sidewalk'); rect(T, 0, 11, 23, 12, 'sidewalk');
     rect(T, 7, 9, 7, 10, 'crosswalk_i');
     let i = 2;
-    for (const [t, open] of [['cafe_building', 'cafe'], ['bakery_building', 'bakery'], ['market_building', 'market']]) {
+    for (const [t, open] of [['cafe_building', 'cafe'], ['bakery_building', 'bakery'], ['market_building', 'market'], ['furniture_building', 'furniture']]) {
       const [w, d] = fp(t, 0);
       O.push({ t, i, j: 7 - d, r: 0, enter: open, closed: open ? null : I[t].name + '還在準備中，之後開放！' });
       i += w + 1;
     }
-    for (const [x, j] of [[1, 6], [i, 6], [8, 13], [16, 13]]) if (x < NI_) O.push({ t: 'street_lamp', i: x, j, r: 0 });
-    for (const [x, j, t] of [[3, 14, 'tree_round'], [6, 15, 'bench'], [10, 14, 'tree_round'], [12, 15, 'flower_bed'], [14, 14, 'tree_pine'], [18, 14, 'tree_round'], [20, 15, 'bench'], [22, 13, 'bush'], [1, 16, 'bush'], [23, 3, 'tree_round'], [22, 1, 'tree_pine']]) O.push({ t, i: x, j, r: t === 'bench' ? 2 : 0 });
+    for (const [x, j] of [[1, 6], [8, 13], [16, 13]]) if (x < NI_) O.push({ t: 'street_lamp', i: x, j, r: 0 });
+    for (const [x, j, t] of [[3, 14, 'tree_round'], [6, 15, 'bench'], [10, 14, 'tree_round'], [12, 15, 'flower_bed'], [14, 14, 'tree_pine'], [18, 14, 'tree_round'], [20, 15, 'bench'], [22, 13, 'bush'], [1, 16, 'bush'], [22, 1, 'tree_pine']]) O.push({ t, i: x, j, r: t === 'bench' ? 2 : 0 });
     O.push({ t: 'trash_bin', i: 9, j: 13, r: 0 });
-    O.push({ t: 'sign_arrow', i: 1, j: 12, r: 3, talk: '路標：← 中央廣場' });
+    O.push({ t: 'sign_arrow', i: 1, j: 12, r: 3, talk: '路標：← 中央廣場　→ 咖啡廳、麵包店、超市、家具店' });
     return { id: 'commercial', name: '商業街', ni: NI_, nj: NJ_, tiles: T, objs: O,
       exits: [{ cells: [[0, 9], [0, 10]], to: 'central', spawn: [22, 9], facing: 'NW' }] };
   }
@@ -174,6 +176,74 @@
     npc = { id: kind === 'bakery' ? 'leo' : 'nora', i: mi + 0.5, j: mj + 0.5, facing: 'SW', talkFrom: [[mi, mj + 1], [mi + 1, mj + 1], [mi, mj + 2]] };
     return { id: kind, name: kind === 'bakery' ? '麵包店' : '超市', interior: true, room, npcs: [npc], ni: S.NI, nj: S.NJ, back: { to: 'commercial', obj: kind === 'bakery' ? 'bakery_building' : 'market_building' } };
   }
+  // 家具店室內：櫃台＋店長 Hazel，其他空間每天換一批展示家具（opts.floor / opts.wall 由遊戲決定）
+  function buildFurniture(opts) {
+    opts = opts || {};
+    const room = S.newRoom();
+    room.door = { side: 'R', u: 1, color: [110, 86, 60] };
+    const nw = M.WALLS.findIndex(w => /米|奶油|cream/i.test(w.name || '')), nf = M.FLOORS.findIndex(w => /木/.test(w.name || ''));
+    if (nw >= 0) room.wall = nw; if (nf >= 0) room.floor = nf;
+    const counter = { t: 'shop_counter', i: 2, j: 1, r: 0 };
+    if (S.canPlace(room, counter)) room.items.push(counter);
+    const cw = M.footprint(I[counter.t], 0)[0], mi = counter.i + cw, mj = counter.j - 1;
+    const npc = { id: 'hazel', i: mi + 0.5, j: mj + 0.5, facing: 'SW', talkFrom: [[mi, mj + 1], [mi + 1, mj + 1], [mi, mj + 2]] };
+    let seed = (opts.seed || 1) * 7919 + 13;
+    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const dc = S.doorCell(room.door), keep = new Set([dc + '', [dc[0] - 1, dc[1]] + '', [dc[0], dc[1] + 1] + '', [mi, mj] + ''].concat(npc.talkFrom.map(c => c + '')));
+    // 櫃台區（門口到櫃台前面）保持空著，店長才看得清楚
+    for (let a = 0; a <= 6; a++) for (let b = 0; b <= 2; b++) if (!S.cellsOf(counter).some(q => q[0] === a && q[1] === b)) keep.add(a + ',' + b);
+    // 檢查：留給通道的格子沒被擋、所有空格連在一起、每件家具旁邊都站得到人
+    function ok() {
+      const g = S.blockedGrid(room);
+      for (const k of keep) { const [a, b] = k.split(',').map(Number); if (g[a] && g[a][b] && !S.cellsOf(counter).some(q => q[0] === a && q[1] === b)) return false; }
+      g[mi][mj] = true;
+      const free = []; for (let a = 0; a < S.NI; a++) for (let b = 0; b < S.NJ; b++) if (!g[a][b]) free.push([a, b]);
+      const seen = new Set([dc + '']), q = [dc];
+      for (let h = 0; h < q.length; h++) for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = q[h][0] + x, b = q[h][1] + y; if (a < 0 || b < 0 || a >= S.NI || b >= S.NJ || g[a][b] || seen.has(a + ',' + b)) continue; seen.add(a + ',' + b); q.push([a, b]); }
+      if (seen.size !== free.length) return false;
+      for (const it of room.items) { if (I[it.t].kind !== 'floor') continue; if (!S.cellsOf(it).some(([a, b]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([x, y]) => seen.has((a + x) + ',' + (b + y))))) return false; }
+      return true;
+    }
+    // 擺法像展示間：高的（床、櫃子、電器、立燈）背靠牆面向店裡；矮的（沙發、桌椅、盆栽）可以放中間
+    const height = id => Math.max(...M.itemParts({ t: id, i: 0, j: 0, r: 0 }).map(q => q.z1));
+    const tryPut = id => {
+      const d = I[id]; if (!d) return false;
+      const tall = d.kind === 'floor' && (height(id) > 50 || d.cat === 'bed' || d.cat === 'storage' || d.cat === 'tech');
+      const cand = [];
+      for (let a = 0; a < S.NI; a++) for (let b = 0; b < S.NJ; b++) for (let r = 0; r < 4; r++) {
+        const [w, dd] = M.footprint(d, r), [fi, fj] = M.ROT[r];
+        if (a + w > S.NI || b + dd > S.NJ) continue;
+        const backI = a === 0 && fi === 1, backJ = b === 0 && fj === 1, front = a + w === S.NI || b + dd === S.NJ;
+        let sc = rnd() * 4;
+        if (d.kind === 'rug') sc += (a > 0 && b > 0 && !front) ? 6 : 0;
+        else if (tall) sc += (backI || backJ ? 12 : -6) + (front ? -10 : 0);
+        else sc += (front ? -3 : 0) + ((a === 0 && fi !== 1) || (b === 0 && fj !== 1) ? -8 : 0) + (backI || backJ ? 2 : 0);
+        if (tall && !(backI || backJ)) continue;   // 高的只靠牆擺，找不到位置今天就不擺
+        cand.push([sc, a, b, r]);
+      }
+      cand.sort((x, y) => y[0] - x[0]);
+      for (const [, a, b, r] of cand) {
+        const it = { t: id, i: a, j: b, r, shop: true };
+        if (!S.canPlace(room, it)) continue;
+        room.items.push(it);
+        if (d.kind === 'rug' || ok()) return true;
+        room.items.pop();
+      }
+      return false;
+    };
+    // 地毯先放（不擋路），再放高的、再放矮的；地上最多 9 件，留走道
+    const list = opts.floor || [], rugs = list.filter(id => I[id] && I[id].kind === 'rug').slice(0, 2);
+    const flo = list.filter(id => I[id] && I[id].kind === 'floor').slice(0, 9);
+    flo.sort((x, y) => height(y) - height(x));
+    const shown = [];
+    for (const id of rugs.concat(flo)) if (tryPut(id)) shown.push(id);
+    for (const id of opts.wall || []) {
+      const d = I[id]; if (!d) continue;
+      let placed = false;
+      for (const side of ['L', 'R']) { for (let u = 0; u <= 9 && !placed; u++) { const w = { t: id, side, u, shop: true }; if (S.canPlace(room, w)) { room.walls.push(w); placed = true; shown.push(id); } } if (placed) break; }
+    }
+    return { id: 'furniture', name: '家具店', interior: true, room, npcs: [npc], ni: S.NI, nj: S.NJ, shown, back: { to: 'commercial', obj: 'furniture_building' } };
+  }
   // 咖啡廳室內（房間系統畫，門在右牆）
   function buildCafe() {
     const c = cafeArt(), has = id => hasObj(id) && !PH[id];
@@ -209,18 +279,20 @@
     ethan: { id: 'ethan', name: 'Ethan', role: '城市居民', job: null, look: { skin: 1, hair: 'spiky', hairC: 6, shirt: 2, pants: 1, shoes: 3 } },
     oliver: { id: 'oliver', name: 'Oliver', role: '公園管理員', job: 'park',
       look: { skin: 2, hair: 'short', hairC: 1, shirt: 3, pants: 2, shoes: 4, hat: [96, 140, 84] } },
+    hazel: { id: 'hazel', name: 'Hazel', role: '家具店老闆', job: null,
+      look: { skin: 1, hair: 'long', hairC: 1, shirt: 5, pants: 1, shoes: 2, apron: [118, 150, 96] } },
     mia: { id: 'mia', name: 'Mia', role: '咖啡廳老闆', job: 'cafe',
       look: { skin: 0, hair: 'bun', hairC: 4, shirt: 4, pants: 1, shoes: 4, apron: [126, 86, 60] } },
   };
   // ---------------- 場景物件 ----------------
-  const BUILDERS = { central: buildCentral, commercial: buildCommercial, park: buildPark, cafe: buildCafe, bakery: () => buildShop('bakery'), market: () => buildShop('market') };
+  const BUILDERS = { central: buildCentral, commercial: buildCommercial, park: buildPark, cafe: buildCafe, bakery: () => buildShop('bakery'), market: () => buildShop('market'), furniture: buildFurniture };
   // 外送地點（場景、格子、名稱）
   const DELIVERY = [{ scene: 'central', cell: [5, 11], name: '中央廣場的信箱旁' }, { scene: 'central', cell: [15, 5], name: '中央廣場的長椅旁' }, { scene: 'park', cell: [16, 14], name: '公園涼亭前' }, { scene: 'park', cell: [6, 8], name: '公園池塘邊' }, { scene: 'commercial', cell: [12, 13], name: '商業街對面的花圃' }];
   // NPC 作息：Ethan 傍晚到晚上在中央廣場，白天在公園
   function ethanSpot(hour) { return (hour >= 17 || hour < 6) ? { scene: 'central', i: 15.5, j: 8.5, facing: 'SW', talkFrom: [[15, 9], [14, 8], [16, 8]] } : { scene: 'park', i: 6.5, j: 6.5, facing: 'SE', talkFrom: [[7, 6], [6, 7], [5, 6]] }; }
-  function makeScene(id) {
+  function makeScene(id, opts) {
     registerArt();
-    const a = BUILDERS[id]();
+    const a = BUILDERS[id](opts);
     if (a.interior) {
       Object.assign(a, { ox: S.OX, oy: S.OY, ww: VW, wh: VH, fixed: true });
       a.blocked = S.blockedGrid(a.room);

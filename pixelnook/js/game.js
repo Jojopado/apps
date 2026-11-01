@@ -279,8 +279,10 @@
   // ---------------- 城市（分區地圖、室內、攝影機、出入口） ----------------
   const W_ = () => window.WORLD;
   function getScene(id) {
+    if (id === 'furniture' && scenes[id] && scenes[id].day !== dayNum()) delete scenes[id];
     if (!scenes[id]) {
-      const sc = W_().makeScene(id);
+      const sc = W_().makeScene(id, id === 'furniture' ? showroomPick() : undefined);
+      if (id === 'furniture') sc.day = dayNum();
       sc.bgC = toCanvas(W_().drawSceneBG(sc));
       sc.parts = [];
       for (const it of sc.items) if (I[it.t] && I[it.t].kind === 'floor') for (const pp of M.itemParts(it)) sc.parts.push(Object.assign(pp, { spr: spriteOf(pp, 4, sc.ox, sc.oy), item: it }));
@@ -394,6 +396,7 @@
       ctx.drawImage(s.c, x, y);
     }
     xray(order, meD, cam[0], cam[1]);
+    if (wsc.id === 'furniture') drawTags(wsc);
     drawBubbles(wsc);
     // 浮動文字（撿到東西）
     const now = performance.now();
@@ -703,6 +706,15 @@
     if (wsc.interior) {
       const w = toWallAt(wx, wy, wsc.ox, wsc.oy), dr = wsc.room.door;
       if (w && w.side === dr.side && w.u >= dr.u && w.u <= dr.u + S.DOOR_W && w.z <= S.DOOR_H + 6) { walkNear([S.doorCell(dr)], leaveInterior); return; }
+      if (w && wsc.id === 'furniture') {
+        const wi = wsc.room.walls.find(x => x.shop && x.side === w.side && w.u >= x.u && w.u <= x.u + I[x.t].W && w.z >= I[x.t].z0 - 6 && w.z <= I[x.t].z1 + 6);
+        if (wi) { const c = w.side === 'R' ? [Math.min(S.NI - 1, Math.floor(wi.u + I[wi.t].W / 2)), 0] : [0, Math.min(S.NJ - 1, Math.floor(wi.u + I[wi.t].W / 2))]; walkNear([c], () => { me.facing = w.side === 'R' ? 'NE' : 'NW'; dirty = true; openProduct(wi); }); return; }
+      }
+      if (wsc.id === 'furniture') {
+        const a0 = (wx - wsc.ox) / (TW / 2), b0 = (wy - wsc.oy) / (TH / 2), gc = [Math.floor((a0 + b0) / 2), Math.floor((b0 - a0) / 2)];
+        const rug = wsc.room.items.find(x => x.shop && I[x.t].kind === 'rug' && S.cellsOf(x).some(q => q[0] === gc[0] && q[1] === gc[1]));
+        if (rug && !wsc.blocked[gc[0]][gc[1]]) { cityWalk(gc, () => openProduct(rug)); return; }
+      }
     }
     const a = (wx - wsc.ox) / (TW / 2), b = (wy - wsc.oy) / (TH / 2), c = [Math.floor((a + b) / 2), Math.floor((b - a) / 2)];
     if (c[0] < 0 || c[1] < 0 || c[0] >= wsc.ni || c[1] >= wsc.nj) return;
@@ -715,6 +727,7 @@
   }
   function cityInteract(o) {
     const d = I[o.t];
+    if (o.shop) return walkNear(S.cellsOf(o), () => { faceTo(me, o.i + 0.5, o.j + 0.5); dirty = true; openProduct(o); });
     // 點櫃台這類家具時，如果緊鄰著 NPC，就去跟 NPC 說話（NPC 常被櫃台擋住下半身）
     for (const n of wsc.npcs || []) {
       const ni = Math.floor(n.i), nj = Math.floor(n.j);
@@ -724,7 +737,15 @@
     if (o.home) return walkNear([door], goHome);
     if (o.enter) return walkNear([door], () => fadeTo(() => enterScene(o.enter, [1, 0], 'SW')));
     if (o.closed) return walkNear(door ? [door] : S.cellsOf(o), () => toast(o.closed));
-    if (d.seat && !o.home && !o.enter) {
+    if (d.seat && !o.home && !o.enter) return sitOn(o);
+    if (o.harvest) return tapHarvest(o);
+    if (o.search) return tapSearch(o);
+    if (o.deco) return;
+    walkNear(S.cellsOf(o), () => toast(o.talk || d.name));
+  }
+  function sitOn(o) {
+    const d = I[o.t];
+    {
       const taken = (wsc.life && wsc.life.seatsTaken) || {};
       const ks = d.seat.spots.map((_, k) => k).filter(k => !taken[o.i + ',' + o.j + ':' + k])
         .sort((a, b) => { const p = M.seatSpot(o, a), q = M.seatSpot(o, b); return Math.hypot(p.i - me.i, p.j - me.j) - Math.hypot(q.i - me.i, q.j - me.j); });
@@ -739,13 +760,15 @@
       }
       toast('走不過去'); return;
     }
-    if (o.harvest) return tapHarvest(o);
-    if (o.search) return tapSearch(o);
-    if (o.deco) return;
-    walkNear(S.cellsOf(o), () => toast(o.talk || d.name));
   }
   // ---------------- NPC 對話 ----------------
   const NPC_TALK = {
+    hazel: {
+      first: '歡迎光臨！我是 Hazel，這間家具店是我開的。店裡擺的家具都可以摸、可以坐，點一下就看得到價錢。店裡沒擺出來的，翻我的型錄也買得到喔！',
+      greet: ['今天的展示換過了，逛逛看吧！', '歡迎光臨～找什麼樣的家具呢？', '紅色價格牌的是今天的特價品喔。'],
+      tired: '', chat: ['每天我都會換一個系列擺出來，今天是哪一系列呢？', '沙發一定要坐坐看才知道舒不舒服。', '同一系列的家具擺在一起，房間會特別有感覺。', '地毯不擋路，可以放在桌子下面。', '聽說公園的倒木可以做成家具……我還在研究。'],
+      jobLabel: '', firstJob: '', extra: [['📖 看型錄（全部家具）', 'catalog']],
+    },
     leo: {
       first: '歡迎光臨！我是 Leo，這間麵包店的師傅。每天早上要烤好幾百個麵包，分類包裝常常忙不過來……可以來幫忙嗎？偶爾也要外送喔。',
       greet: ['剛出爐的可頌，香吧？', '今天也來幫忙分類嗎？', '外送單又來了，有空的話幫我跑一趟！'],
@@ -796,7 +819,7 @@
     const n = W_().NPCS[id], T = NPC_TALK[id]; st.met = st.met || {};
     const first = !st.met[id], j = jobState(n.job);
     let text, opts;
-    if (first) { text = T.first; opts = n.job ? [[T.firstJob, 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']] : [['聊聊天', 'chat'], ['你好！', 'bye']]; st.met[id] = 1; save(false); }
+    if (first) { text = T.first; opts = n.job ? [[T.firstJob, 'job'], ['先聊聊天', 'chat'], ['下次再說', 'bye']] : (T.extra || []).concat([['聊聊天', 'chat'], ['你好！', 'bye']]); st.met[id] = 1; save(false); }
     else { text = n.job && j.paid >= CafeJob.DAILY_PAID ? T.tired : T.greet[Math.floor(Math.random() * T.greet.length)]; opts = (n.job ? [[T.jobLabel, 'job']] : []).concat(T.extra || [], [['聊聊天', 'chat']]); }
     st.req = st.req || {}; if (!first && REQS[id] && st.req[id] !== 'done') opts.push([st.req[id] === 'active' ? '委託：' + REQS[id].title : '有什麼需要幫忙的嗎？', 'req']);
     if (!first) opts.push(['再見', 'bye']);
@@ -814,6 +837,7 @@
         if (act === 'bye') { box.classList.remove('show'); return; }
         if (act === 'chat') { showTalk(n, T.chat[Math.floor(Math.random() * T.chat.length)], (n.job ? [[T.jobLabel, 'job']] : []).concat([['再見', 'bye']])); return; }
         if (act === 'req') { talkReq(n); return; }
+        if (act === 'catalog') { box.classList.remove('show'); shopCat = 'all'; openShop(); return; }
         if (act === 'reqdone') { finishReq(n); return; }
         if (act === 'deliver') { if (deliver) { showTalk(n, '你手上已經有一個包裹在送了喔！送到「' + deliver.sp.name + '」。', [['好', 'bye']]); return; } startDelivery(n); return; }
         if (act === 'job') { box.classList.remove('show'); startJob(n); }
@@ -1188,7 +1212,7 @@
     }
     $('#editHelp').textContent = editTab === 'wall' ? '點牆面裝飾 → 點牆壁掛上去' : '點背包裡的家具 → 點房間放下；點家具可以拖曳、旋轉、收起';
     const ids = Object.keys(st.bag).filter(id => I[id] && st.bag[id] > 0 && ((editTab === 'wall') === (I[id].kind === 'wall')));
-    if (!ids.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '背包是空的，去 🛒 商店買家具吧！（或點房間裡的家具收起來）'; bag.appendChild(e); return; }
+    if (!ids.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = '背包是空的，去商業街的 🛋 家具店買家具吧！（或點房間裡的家具收起來）'; bag.appendChild(e); return; }
     for (const id of ids) bag.appendChild(slot(thumb(id), I[id].name, st.bag[id], hold && hold.t === id, () => {
       if (hold && hold.t === id) hold = null; else { hold = { t: id, r: 0 }; sel = null; hideSelBar(); }
       renderBag(); dirty = true;
@@ -1230,6 +1254,66 @@
     return out;
   }
   const priceOf = id => saleIds().includes(id) ? Math.round(I[id].price * 0.7) : I[id].price;
+  // ---------------- 家具店：每天的展示品、價格牌、商品卡 ----------------
+  function showroomPick() {
+    const day = dayNum(), sets = Object.keys(M.SETS), feat = sets[day % sets.length], sale = saleIds();
+    const vis = Object.keys(I).filter(id => !I[id].hidden && I[id].set);
+    const floor = vis.filter(id => I[id].kind !== 'wall' && (I[id].set === feat || sale.includes(id)));
+    const wall = vis.filter(id => I[id].kind === 'wall' && (I[id].set === feat || sale.includes(id)));
+    // 再隨機加兩件別的系列，讓店裡不會全是同一色
+    let sd = day * 31 + 7; const others = vis.filter(id => I[id].kind === 'floor' && I[id].set !== feat && !floor.includes(id)).sort();
+    for (let k = 0; k < 2 && others.length; k++) { sd = (sd * 9301 + 49297) % 233280; floor.push(others.splice(Math.floor(sd / 233280 * others.length), 1)[0]); }
+    // 特價品優先擺，再來主打系列
+    floor.sort((a, b) => (sale.includes(b) - sale.includes(a)) || ((I[b].set === feat) - (I[a].set === feat)));
+    return { seed: day, featured: feat, floor, wall };
+  }
+  function drawTags(sc) {
+    if (!sc.tags) {
+      sc.tags = [];
+      for (const it of sc.room.items) {
+        if (!it.shop) continue;
+        const ps = sc.parts.filter(p => p.item === it);
+        let x, y;
+        if (ps.length) { const x0 = Math.min(...ps.map(p => p.spr.x)), x1 = Math.max(...ps.map(p => p.spr.x + p.spr.pix.w)); y = Math.min(...ps.map(p => p.spr.y)) + 6; x = (x0 + x1) / 2; }
+        else { const [w, d] = M.footprint(I[it.t], it.r); x = sc.ox + (it.i + w / 2 - it.j - d / 2) * TW / 2; y = sc.oy + (it.i + w / 2 + it.j + d / 2) * TH / 2 - 4; }
+        sc.tags.push({ it, x, y });
+      }
+    }
+    const sale = saleIds();
+    ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const g of sc.tags) {
+      const on = sale.includes(g.it.t), txt = (on ? '🔥' : '') + priceOf(g.it.t), w = ctx.measureText(txt).width + 12, x = Math.round(g.x - cam[0]), y = Math.round(g.y - cam[1]);
+      ctx.fillStyle = on ? '#e2574c' : '#fffdf6'; ctx.strokeStyle = '#2b2a33'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, y - 9, w, 18, 6) : ctx.rect(x - w / 2, y - 9, w, 18); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = on ? '#fff' : '#2b2a33'; ctx.fillText(txt, x, y + 1);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+  let buyItem = null;
+  function openProduct(it) {
+    const id = it.t, d = I[id]; buyItem = it;
+    const pr = priceOf(id), own = (st.bag[id] || 0) + st.room.items.concat(st.room.walls).filter(x => x.t === id).length;
+    $('#buyName').textContent = d.name;
+    const pic = $('#buyPic'); pic.innerHTML = ''; const t = thumb(id), c = document.createElement('canvas'); c.width = t.width; c.height = t.height; c.getContext('2d').drawImage(t, 0, 0);
+    c.style.cssText = 'max-width:130px;max-height:110px;image-rendering:pixelated'; pic.appendChild(c);
+    $('#buyMeta').innerHTML = `<span class="tag">${M.SETS[d.set] || ''}</span> ❤ 舒適度 ${d.comfort}${d.seat ? '・可以坐' : ''}${d.toggle ? '・可開關' : ''}${d.kind === 'wall' ? '・掛牆上' : d.kind === 'rug' ? '・地毯' : ''}`;
+    $('#buyPrice').innerHTML = `<i class="coin"></i> ${pr}` + (pr !== d.price ? ` <s style="font-size:14px">${d.price}</s> <span style="color:var(--bad);font-size:14px">今日 7 折</span>` : '');
+    $('#buyOwn').textContent = (own ? `你已經有 ${own} 件。` : '') + `身上有 ${st.coins} 金幣。`;
+    $('#buyBtn').disabled = st.coins < pr; $('#buyBtn').textContent = st.coins < pr ? '金幣不夠' : '買下來';
+    $('#buySit').style.display = d.seat && d.kind === 'floor' && mode === 'city' ? '' : 'none';
+    $('#mBuy').classList.add('show'); sfx('open');
+  }
+  function buy(id) {
+    const d = I[id], pr = priceOf(id);
+    if (st.coins < pr) return false;
+    st.coins -= pr; st.bag[id] = (st.bag[id] || 0) + 1; save(false); refreshHud();
+    sfx('coin'); emit('BUY', { item: id });
+    return true;
+  }
+  $('#buyBtn').onclick = () => { if (!buyItem) return; const d = I[buyItem.t]; if (buy(buyItem.t)) { toast(`買了 ${d.name}！已經送到你的背包，回家用 🛠 佈置 擺進房間`); openProduct(buyItem); } };
+  $('#buySit').onclick = () => { const o = buyItem; $('#mBuy').classList.remove('show'); if (o) sitOn(o); };
+  $('#buyCat').onclick = () => { $('#mBuy').classList.remove('show'); if (buyItem) shopCat = I[buyItem.t].cat || 'all'; openShop(); };
+  function goFurnitureStore() { $('#mShop').classList.remove('show'); fadeTo(() => enterScene('furniture', [1, 0], 'SW')); }
   function openShop() {
     const cats = $('#shopCats'); cats.innerHTML = '';
     [['all', '全部'], ['sale', '🔥 今日特價']].concat(Object.entries(M.CATS)).forEach(([k, n]) => {
@@ -1252,15 +1336,14 @@
       const b = document.createElement('button'); b.className = 'pri'; b.textContent = '買'; b.disabled = st.coins < pr;
       b.onclick = () => {
         if (st.coins < pr) return;
-        st.coins -= pr; st.bag[id] = (st.bag[id] || 0) + 1; save(false); refreshHud();
-        sfx('coin'); emit('BUY', { item: id });
+        if (!buy(id)) return;
         toast(`買了 ${d.name}！到 🛠 佈置 裡放進房間`); openShop();
       };
       row.appendChild(b); card.appendChild(row); grid.appendChild(card);
     }
     $('#mShop').classList.add('show');
   }
-  $('#bShop').onclick = openShop;
+  $('#bShop').onclick = goFurnitureStore;
 
   // ---------------- 角色 ----------------
   let draft = null, pvFacing = 0, creating = false;
@@ -1711,5 +1794,5 @@
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // 測試用
-  window.__nook = { get renderMs() { return renderMs; }, updateLife, openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { openShop, openProduct, showroomPick, goFurnitureStore, buy, get renderMs() { return renderMs; }, updateLife, openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();

@@ -80,13 +80,34 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   [x, y] = await G(0.5, 7.5, 60); await tap(x, y); await idle();
   check((await ev(`__nook.st.room.items.find(x=>x.t==='lamp_wood').on`)) === !lampOn, '點立燈會開關');
 
-  console.log('4. 商店買東西');
-  await click('#bShop'); await sleep(300);
+  console.log('4. 家具店買東西');
+  await click('#bShop'); await sleep(900);
+  check((await ev('__nook.mode')) === 'city' && (await ev('__nook.wsc.id')) === 'furniture', '按「🛋 家具店」→ 走進家具店');
+  const disp = await ev(`__nook.wsc.room.items.filter(x=>x.shop).length`);
+  check(disp >= 6, '店裡有展示家具：' + disp + ' 件');
+  await sleep(400); await shot('e3_store.png');
+  // 點一件展示品 → 走過去 → 商品卡 → 買
+  const dispT = await ev(`(()=>{const it=__nook.wsc.room.items.find(x=>x.shop&&x.t!=='plant_s'&&x.t!=='bed_wood'&&__nook.M.ITEMS[x.t].kind==='floor'&&__nook.M.ITEMS[x.t].price<=__nook.st.coins); window.__dispIt=it; __nook.cityInteract(it); return it&&it.t;})()`);
+  for (let k = 0; k < 40; k++) { await sleep(200); if (await ev(`document.querySelector('#mBuy').classList.contains('show')`)) break; }
+  check(await ev(`document.querySelector('#mBuy').classList.contains('show')`), '點展示品 → 走過去、跳出商品卡：' + dispT);
+  check(/\d/.test(await ev(`document.querySelector('#buyPrice').textContent`)), '商品卡有價錢：' + (await ev(`document.querySelector('#buyPrice').textContent`)).trim());
+  const sc0 = await ev('__nook.st.coins'), b0 = await ev(`__nook.st.bag['${dispT}']||0`);
+  await click('#buyBtn'); await sleep(200);
+  check((await ev('__nook.st.coins')) < sc0 && (await ev(`__nook.st.bag['${dispT}']`)) === b0 + 1, '商品卡買下來：扣錢、進背包');
+  await click('#mBuy [data-close]'); await sleep(200);
+  // 跟店長說話 → 型錄 → 買小盆栽
+  await ev(`__nook.talkTo('hazel')`); await sleep(300);
+  check(await ev(`[...document.querySelectorAll('#talkOpts button')].some(b=>b.textContent.includes('型錄'))`), '店長 Hazel 有「看型錄」選項');
+  await ev(`[...document.querySelectorAll('#talkOpts button')].find(b=>b.textContent.includes('型錄')).click()`); await sleep(300);
   const before = await ev('__nook.st.coins');
   await ev(`(()=>{const c=[...document.querySelectorAll('#shopGrid .card')].find(c=>c.querySelector('.t').textContent==='小盆栽'); c.querySelector('button').click();})()`);
-  check((await ev('__nook.st.coins')) < before && (await ev('__nook.st.bag.plant_s')) === 1, '買小盆栽：扣錢、進背包');
+  check((await ev('__nook.st.coins')) < before && (await ev('__nook.st.bag.plant_s')) === 1, '型錄買小盆栽：扣錢、進背包');
   await shot('e3_shop.png');
   await click('#mShop [data-close]');
+  await ev(`__nook.goHome()`); await sleep(900);
+  check((await ev('__nook.mode')) === 'home', '從家具店回家');
+  // 剛剛買的展示品先賣回去不影響後面的測試：直接從背包移除並退錢
+  await ev(`(()=>{const t='${dispT}'; if(t!=='plant_s'){ __nook.st.bag[t]--; if(!__nook.st.bag[t]) delete __nook.st.bag[t]; }})()`);
 
   console.log('5. 佈置：放下、拖曳、旋轉、收起');
   await click('#bEdit'); await sleep(300);
@@ -210,9 +231,11 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   const qm = await ev('__nook.st.q.main');
   check(qm === 4, '新手主線自動前進到第 5 步（買家具）：目前第 ' + (qm + 1) + ' 步');
   check((await ev(`document.querySelector('#qText').textContent`)).includes('買一件家具'), '左上目標顯示「買一件家具」');
-  await click('#bShop'); await sleep(300);
+  await click('#bShop'); await sleep(900);
+  await ev('__nook.openShop()'); await sleep(300);
   await ev(`(()=>{const c=[...document.querySelectorAll('#shopGrid .card')].find(c=>c.querySelector('.t').textContent==='小盆栽'); c.querySelector('button').click();})()`);
-  await click('#mShop [data-close]'); await sleep(600);
+  await click('#mShop [data-close]'); await sleep(300);
+  await ev(`__nook.goHome()`); await sleep(900);
   check((await ev('__nook.st.q.main')) === 5 && (await ev('__nook.st.bag.poster')) >= 1, '買家具 → 主線完成，獲得禮物「星星海報」');
   await ev('__nook.openQuests()'); await sleep(300);
   const qcards = await ev(`document.querySelectorAll('#questList .qcard').length`);

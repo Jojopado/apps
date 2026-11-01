@@ -8,7 +8,7 @@
     { id: 'm2', title: '認識新朋友', desc: '到商業街的咖啡廳，跟 Mia 說說話', ev: 'TALK', match: d => d.npc === 'mia', need: 1, coins: 30 },
     { id: 'm3', title: '第一份工作', desc: '在咖啡廳完成一次打工', ev: 'JOB', match: d => d.served > 0 && (d.job || 'cafe') === 'cafe', need: 1, coins: 80 },
     { id: 'm4', title: '回家看看', desc: '回到自己的房間', ev: 'HOME', need: 1, coins: 30 },
-    { id: 'm5', title: '打造新生活', desc: '用賺來的錢在商店買一件家具', ev: 'BUY', need: 1, coins: 0, item: 'poster' },
+    { id: 'm5', title: '打造新生活', desc: '去商業街的家具店，用賺來的錢買一件家具', ev: 'BUY', need: 1, coins: 0, item: 'poster' },
     { id: 'm6', title: '城市小幫手', desc: '到城市公園（中央廣場左下），幫 Oliver 清理公園', ev: 'JOB', match: d => d.job === 'park' && d.served > 0, need: 1, coins: 50 },
     { id: 'm7', title: '小小收藏家', desc: '在城市裡收集 3 種收藏品（閃光物品、採集、調查）', ev: 'COLLECT', count: d => d.n || 0, need: 3, coins: 80 },
     { id: 'm8', title: '麵包的香味', desc: '到商業街的麵包店，認識麵包師傅 Leo', ev: 'TALK', match: d => d.npc === 'leo', need: 1, coins: 30 },
@@ -31,7 +31,7 @@
     { id: 'd_visit', title: '串門子', desc: '參觀 2 位玩家的房間', ev: 'VISIT', need: 2, coins: 40 },
     { id: 'd_like', title: '給個讚', desc: '幫別人的房間按讚', ev: 'LIKE', need: 1, coins: 30 },
     { id: 'd_place', title: '換個擺設', desc: '在房間擺放 2 件家具', ev: 'PLACE', need: 2, coins: 30 },
-    { id: 'd_buy', title: '小小購物', desc: '在商店買 1 件家具', ev: 'BUY', need: 1, coins: 30 },
+    { id: 'd_buy', title: '小小購物', desc: '在家具店買 1 件家具', ev: 'BUY', need: 1, coins: 30 },
     { id: 'd_walk', title: '逛街去', desc: '走到商業街', ev: 'ENTER', match: d => d.scene === 'commercial', need: 1, coins: 30 },
   ];
   const WEEKLY = [

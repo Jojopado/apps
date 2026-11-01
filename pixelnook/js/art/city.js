@@ -30,6 +30,9 @@
     // 街道
     iron: [70, 84, 104], lampOn: [255, 236, 150], lampOff: [226, 222, 196], bench: [214, 150, 92], cork: [196, 146, 98],
     mailbox: [92, 140, 206], bin: [110, 170, 130], barrier: [250, 150, 60], sign: [80, 150, 210],
+    // 家具店
+    furWall: [196, 214, 186], furLow: [150, 112, 80], furTrim: [86, 70, 58], furRoof: [92, 118, 104], furRoofL: [112, 140, 122],
+    awnOlive: [118, 150, 96], sofaC: [232, 150, 96], sofaD: [196, 116, 72], lampY: [255, 226, 140],
   };
 
   // ---------------- 建築共用：牆面、窗、門 ----------------
@@ -433,6 +436,49 @@
     return a;
   }
 
+  // 家具店：灰綠牆＋木頭腰牆、兩扇大展示窗（裡面看得到沙發和立燈）、二樓椅子招牌
+  function furnitureBuilding() {
+    const bd = { fF: 1.3, fB: -1.9, sL: -1.85, sR: 1.85 }, fb = faceFn(bd), H = 150, a = [];
+    a.push(B(bd.fB, bd.fF, bd.sL, bd.sR, 0, H, K.furWall, [[0, 30, K.furLow], [0, 6, K.furTrim], [30, 33, K.furTrim], [100, 104, K.furTrim], [146, 150, K.furTrim]]));
+    const wo = { frame: K.furTrim, sillC: K.furTrim };
+    // 一樓：左邊大展示窗，右邊門
+    windowOn(a, fb, 'F', -1.74, -0.06, 36, 94, Object.assign({ cross: false }, wo));
+    // 展示窗裡的沙發＋立燈（貼在玻璃上的薄片，照順序疊在前面）
+    a.push(fb('F', -1.5, -0.5, 42, 52, 0, 0.03, K.sofaC, [[42, 44, K.sofaD]]));
+    a.push(fb('F', -1.5, -1.36, 52, 62, 0, 0.03, K.sofaD));
+    a.push(fb('F', -0.64, -0.5, 52, 62, 0, 0.03, K.sofaD));
+    a.push(fb('F', -1.36, -0.64, 52, 60, 0, 0.03, K.sofaC));
+    a.push(fb('F', -0.32, -0.26, 40, 74, 0, 0.03, K.dark));
+    a.push(fb('F', -0.42, -0.16, 74, 84, 0, 0.03, K.lampY, [[74, 76, K.gold]]));
+    doorOn(a, fb, 'F', 0.18, 0.82, 86, { frame: K.furTrim, col: K.woodL });
+    a.push(fb('F', 1.08, 1.7, 40, 76, 0, 0.03, K.furTrim));                       // 門旁的價目板
+    a.push(fb('F', 1.14, 1.64, 44, 72, 0.03, 0.04, K.cream, [[64, 66, K.woodD], [56, 58, K.woodD], [48, 50, K.red]]));
+    awning(a, bd.fF, -1.8, 1.8, 104, 0.5, K.awnOlive, K.cream);
+    // 二樓：兩扇窗＋中間的椅子招牌
+    windowOn(a, fb, 'F', -1.6, -0.75, 116, 142, wo);
+    windowOn(a, fb, 'F', 0.75, 1.6, 116, 142, wo);
+    a.push(fb('F', -0.6, 0.6, 112, 146, 0, 0.02, K.cream, [[112, 114, K.furTrim], [144, 146, K.furTrim]]));
+    a.push(fb('F', -0.3, 0.2, 124, 128, 0, 0, K.wood));                       // 椅面
+    a.push(fb('F', 0.12, 0.2, 128, 141, 0, 0, K.woodD));                       // 椅背
+    a.push(fb('F', -0.3, -0.24, 117, 124, 0, 0, K.woodD));                     // 前腳
+    a.push(fb('F', 0.14, 0.2, 117, 124, 0, 0, K.woodD));                       // 後腳
+    // 門口：一張展示用的小凳子和盆栽
+    a.push(B(1.42, 1.74, -1.7, -1.3, 0, 12, K.woodL, [[0, 2, K.woodD]]));
+    a.push(B(1.46, 1.7, -1.06, -0.82, 0, 10, K.furLow));
+    a.push(B(1.48, 1.68, -1.04, -0.84, 10, 26, K.leaf, [[20, 22, K.leafD]], false));
+    a.push(B(1.37, 1.6, 0.12, 0.88, 0, 3, K.stone));
+    // 側面、背面
+    for (const f of ['R', 'L']) {
+      windowOn(a, fb, f, -1.2, -0.2, 40, 88, wo);
+      windowOn(a, fb, f, -1.3, -0.5, 116, 140, wo);
+      windowOn(a, fb, f, 0.2, 1.0, 116, 140, Object.assign({ flowers: [K.white, K.yellow, K.leafL] }, wo));
+    }
+    windowOn(a, fb, 'K', -1.4, -0.5, 116, 140, wo); windowOn(a, fb, 'K', 0.5, 1.4, 116, 140, wo);
+    doorOn(a, fb, 'K', -0.4, 0.3, 84, { frame: K.furTrim, col: K.woodD, glass: false, panel: true });
+    steppedRoof(a, bd.fB, bd.fF, bd.sL, bd.sR, H, 7, 0.22, 6, K.furRoof, K.furRoofL);
+    return a;
+  }
+
   // ---------------- 註冊 ----------------
   const OBJS = {};
   function obj(id, name, W, D, model, extra) { OBJS[id] = Object.assign({ id, name, W, D, kind: 'floor', model }, extra || {}); }
@@ -440,6 +486,7 @@
   obj('cafe_building', '咖啡廳', 5, 4, () => cafeBuilding(), { door: { f: 2.5, s: 0 } });
   obj('bakery_building', '麵包店', 4, 4, () => bakeryBuilding(), { door: { f: 2.5, s: 0.5 } });
   obj('market_building', '超市', 6, 5, () => marketBuilding(), { door: { f: 3.0, s: 0.5 } });
+  obj('furniture_building', '家具店', 4, 4, () => furnitureBuilding(), { door: { f: 2.5, s: 0.5 } });
   obj('apartment_building', '公寓', 5, 4, () => apartmentBuilding(), { door: { f: 2.5, s: 0 } });
   obj('house_player', '我的家', 3, 3, () => housePlayer(), { door: { f: 2.0, s: 0 } });
   obj('street_lamp', '路燈', 1, 1, on => streetLamp(on), { toggle: true });
