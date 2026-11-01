@@ -41,7 +41,38 @@
       const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pixelnook:' + code.toUpperCase().replace(/[^A-Z0-9]/g, '')));
       return Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join('');
     },
-    async backup(code, state) { const h = await this.hashCode(code); await req('/xfer/' + h + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ s: JSON.stringify(state), t: Date.now() }) }); },
+    async backup(code, state) { const h = await this.hashCode(code), t = Date.now(); await req('/xfer/' + h + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ s: JSON.stringify(state), t }) }); return t; },
+    async backupTime(code) { const h = await this.hashCode(code); const t = await req('/xfer/' + h + '/t.json'); return typeof t === 'number' ? t : 0; },
+    // ---- 帳號密碼：帳號名稱登記在 users/<帳號>（只能註冊一次）；
+    // 存檔碼放在 acct/<PBKDF2(帳號+密碼)>，不知道密碼就算不出位置，也就拿不到存檔碼 ----
+    normUser(u) { u = String(u || '').trim().toLowerCase(); return /^[a-z0-9_]{3,16}$/.test(u) ? u : null; },
+    async acctKey(u, pw) {
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pw)), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode('pixelnook-acct:' + u), iterations: 120000 }, base, 256);
+      return Array.from(new Uint8Array(bits), x => x.toString(16).padStart(2, '0')).join('');
+    },
+    async userExists(u) { return (await req('/users/' + u + '.json')) !== null; },
+    async register(u, pw, code) {
+      if (await this.userExists(u)) { const e = new Error('taken'); e.code = 'taken'; throw e; }
+      const k = await this.acctKey(u, pw), t = Date.now(), body = {};
+      body['users/' + u] = { t }; body['acct/' + k] = { c: code, t };
+      try { await req('.json?print=silent', { method: 'PATCH', body: JSON.stringify(body) }); }
+      catch (e) { if (/HTTP 40[13]/.test(e.message)) { const e2 = new Error('taken'); e2.code = 'taken'; throw e2; } throw e; }
+    },
+    // 回傳存檔碼；帳號不存在回 'nouser'、密碼錯回 'badpw'
+    async login(u, pw) {
+      const o = await req('/acct/' + (await this.acctKey(u, pw)) + '.json');
+      if (o && typeof o.c === 'string') return o.c;
+      return (await this.userExists(u)) ? 'badpw' : 'nouser';
+    },
+    async changePw(u, oldPw, newPw) {
+      const k0 = await this.acctKey(u, oldPw), o = await req('/acct/' + k0 + '.json');
+      if (!o || typeof o.c !== 'string') return false;
+      const k1 = await this.acctKey(u, newPw);
+      await req('/acct/' + k1 + '.json?print=silent', { method: 'PUT', body: JSON.stringify({ c: o.c, t: Date.now() }) });
+      if (k1 !== k0) await req('/acct/' + k0 + '.json?print=silent', { method: 'DELETE' });
+      return true;
+    },
     async restore(code) { const h = await this.hashCode(code); const o = await req('/xfer/' + h + '.json'); if (!o || typeof o.s !== 'string') return null; try { return { state: JSON.parse(o.s), t: o.t }; } catch (e) { return null; } },
     async recent(n) {
       const o = await req('/idx.json?orderBy=%22t%22&limitToLast=' + (n || 40));

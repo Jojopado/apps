@@ -78,7 +78,7 @@ button.blue{background:var(--accent2);color:#fff}
 .sw button{width:30px;height:30px;padding:0;border-radius:8px;box-shadow:0 2px 0 var(--ink)}
 .sw button.on{outline:3px solid var(--accent);outline-offset:1px}
 .sw button.txt{width:auto;padding:0 10px;font-size:13px}
-input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;padding:6px 10px;width:100%;background:#fff;-webkit-user-select:text;user-select:text}
+input[type=text],input[type=password]{font:inherit;border:2px solid var(--ink);border-radius:10px;padding:6px 10px;width:100%;background:#fff;-webkit-user-select:text;user-select:text}
 .list .r{display:flex;align-items:center;gap:10px;padding:8px;border:2px solid var(--ink);border-radius:12px;background:var(--card);margin-bottom:8px;cursor:pointer}
 .list .r .nm{font-weight:700;flex:1}
 .list .r .st{font-size:13px;color:#6b6450}
@@ -225,7 +225,7 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
         <div style="display:flex;gap:6px"><button id="pvL">◀</button><button id="pvR">▶</button></div></div>
       <div class="opts" id="lookOpts"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:10px"><button id="lookRestore">我有存檔碼</button><button class="pri" id="lookOK">好了！</button></div>
+    <div style="display:flex;justify-content:space-between;margin-top:10px"><button id="lookRestore">我有帳號／存檔碼</button><button class="pri" id="lookOK">好了！</button></div>
   </div>
 </div></div>
 
@@ -248,6 +248,18 @@ input[type=text]{font:inherit;border:2px solid var(--ink);border-radius:10px;pad
 <div class="modal" id="mSet"><div class="box">
   <h2>⚙ 設定 <span class="sp"></span><button data-close>關閉</button></h2>
   <div class="body">
+    <div class="setRow" id="acctRow"><b>👤 帳號</b>
+      <div id="acctOut">
+        <div class="help">註冊帳號後，在任何手機、平板、電腦輸入帳號密碼，都能接著玩同一份進度（會自動同步）。</div>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="text" id="acctUser" placeholder="帳號（英文小寫、數字、_，3～16 字）" maxlength="16" autocomplete="username" autocapitalize="off" style="flex:1 1 180px"><input type="password" id="acctPw" placeholder="密碼（至少 6 個字）" maxlength="64" autocomplete="current-password" style="flex:1 1 140px"></div>
+        <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end"><button id="acctReg">註冊新帳號</button><button class="pri" id="acctLogin">登入</button></div>
+      </div>
+      <div id="acctIn" style="display:none">
+        <div>已登入：<b id="acctName"></b>　<span class="help" id="acctSync"></span></div>
+        <div style="display:flex;gap:8px;margin-top:6px"><button id="acctPwBtn">🔑 改密碼</button><button id="acctOutBtn">登出</button></div>
+        <div id="acctPwBox" style="display:none;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="acctOld" placeholder="舊密碼" maxlength="64" style="flex:1 1 120px"><input type="password" id="acctNew" placeholder="新密碼（至少 6 個字）" maxlength="64" autocomplete="new-password" style="flex:1 1 120px"><button class="pri" id="acctPwOK">確定</button></div>
+      </div>
+    </div>
     <div class="setRow"><b>我的存檔碼</b><div class="code" id="setCode">—</div>
       <div class="help">換手機或清除瀏覽器資料時，用這組碼就能找回你的房間和所有進度。<b>請抄下來或截圖保存，不要給別人。</b></div>
       <div class="help" id="setBackup"></div>

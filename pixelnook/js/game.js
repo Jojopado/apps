@@ -44,7 +44,30 @@
   let cloudT = 0, cloudBusy = false, cloudPending = false;
   function scheduleCloud() { clearTimeout(cloudT); cloudT = setTimeout(pushCloud, 1800); scheduleBackup(); }
   let backupT = 0;
-  function scheduleBackup() { clearTimeout(backupT); backupT = setTimeout(async () => { if (!st.name) return; try { await Cloud.backup(st.code, st); st.backupT = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} } catch (e) { setTimeout(scheduleBackup, 30000); } }, 10000); }
+  function scheduleBackup() { clearTimeout(backupT); backupT = setTimeout(doBackup, 10000); }
+  async function doBackup() {
+    if (!st.name) return;
+    try {
+      if (st.acct && await pullIfNewer()) return;   // 別的裝置有更新的進度：先載入，不要蓋掉
+      const t = await Cloud.backup(st.code, st); st.backupT = t; st.syncT = t;
+      try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+    } catch (e) { setTimeout(scheduleBackup, 30000); }
+  }
+  // 已登入：雲端備份比這台上次同步的還新 → 自動載入（換裝置接著玩）
+  let pulling = false;
+  async function pullIfNewer() {
+    if (!st.acct || pulling) return false;
+    pulling = true;
+    try {
+      const t = await Cloud.backupTime(st.code);
+      if (!t || t <= (st.syncT || 0) + 500) return false;
+      const r = await Cloud.restore(st.code);
+      if (!r || !r.state || !r.state.id || !r.state.room) return false;
+      applyState(r.state, { acct: st.acct, code: st.code, t: r.t });
+      toast('已載入你在其他裝置的最新進度');
+      return true;
+    } catch (e) { return false; } finally { pulling = false; }
+  }
   async function pushCloud() {
     if (!st.name) return;
     if (cloudBusy) { cloudPending = true; return; }
@@ -473,7 +496,7 @@
     if (!free.length) return;
     const nW = sc.interior ? (sc.id === 'cafe' ? 2 : 1) : ({ central: 5, commercial: 6, park: 4 }[sc.id] || 3);
     for (let k = 0; k < nW; k++) {
-      const c = pick(free), w = { i: c[0] + 0.5, j: c[1] + 0.5, facing: pick(['SW', 'SE', 'NE', 'NW']), step: 0, walkT: 0, path: [], pose: 'stand', look: randLook(), st: 'idle', t: rnd(0.5, 4), line: pick(FOLK_LINES) };
+      const c = pick(free), w = { i: c[0] + 0.5, j: c[1] + 0.5, facing: pick(['SW', 'SE', 'NE', 'NW']), step: 0, walkT: 0, path: [], pose: 'stand', look: randLook(), st: 'idle', t: rnd(1, 8), line: pick(FOLK_LINES), spd: rnd(1.0, 1.3) };
       L.walkers.push(w);
       if (sc.interior) folkSit(sc, w, true);
     }
@@ -489,7 +512,7 @@
     if (!seats.length) return false;
     const s = pick(seats), ap = seatApproach(sc, s.it, s.k); if (!ap) return false;
     L.seatsTaken[s.key] = w; w.seat = s;
-    const sit = () => { w.pose = 'sit'; w.i = ap.sp.i; w.j = ap.sp.j; w.facing = ap.sp.facing; w.seatZ = ap.sp.z; w.stand = ap.cell; w.st = 'sit'; w.t = rnd(8, 20); };
+    const sit = () => { w.pose = 'sit'; w.i = ap.sp.i; w.j = ap.sp.j; w.facing = ap.sp.facing; w.seatZ = ap.sp.z; w.stand = ap.cell; w.st = 'sit'; w.t = rnd(12, 30); };
     if (instant) { sit(); return true; }
     const p = W_().bfs(sc.blocked, sc.ni, sc.nj, cellOf(w), ap.cell);
     if (!p) { delete L.seatsTaken[s.key]; w.seat = null; return false; }
@@ -506,30 +529,82 @@
     if (Math.abs(di) > Math.abs(dj)) e.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) e.facing = dj > 0 ? 'SW' : 'NE';
     if (dist <= sp) { e.i = ti; e.j = tj; e.path.shift(); if (!e.path.length) { e.step = 0; const f = e.onArrive; e.onArrive = null; if (f) f(); return; } }
     else { e.i += di / dist * sp; e.j += dj / dist * sp; }
-    e.walkT += dt; e.step = Math.floor(e.walkT / 0.16) % 2 ? 1 : -1;
+    e.walkT += dt; e.step = Math.floor(e.walkT * speed / 0.26) % 2 ? 1 : -1;
   }
   function faceTo(e, i, j) { const di = i - e.i, dj = j - e.j; e.facing = Math.abs(di) > Math.abs(dj) ? (di > 0 ? 'SE' : 'NW') : (dj > 0 ? 'SW' : 'NE'); }
   function say(e, text, sec) { e.bub = { text, until: performance.now() + (sec || 2.2) * 1000 }; }
+  // ---- 路人：每個人都有「要去哪、去做什麼」，到了會停下來做事，不會一直亂走 ----
+  function folkGoals(sc) {
+    if (sc.folkGoals) return sc.folkGoals;
+    const ok = c => c[0] >= 0 && c[1] >= 0 && c[0] < sc.ni && c[1] < sc.nj && !sc.blocked[c[0]][c[1]];
+    const doors = [], exits = [];
+    for (const it of sc.items) {
+      const dc = W_().doorCellOf(it); if (!dc) continue;
+      const cand = [dc, [dc[0] + 1, dc[1]], [dc[0] - 1, dc[1]], [dc[0], dc[1] + 1], [dc[0], dc[1] - 1]].filter(ok);
+      if (cand.length) doors.push({ cell: cand[0], look: dc, canEnter: !!it.enter });
+    }
+    for (const ex of sc.exits || []) for (const c of ex.cells) if (ok(c)) exits.push(c);
+    if (!sc.interior && !exits.length) {   // 沒有出口的場景：用地圖邊緣當「走出畫面」的地方
+      for (let i = 0; i < sc.ni; i++) for (const j of [0, sc.nj - 1]) if (ok([i, j])) exits.push([i, j]);
+    }
+    return (sc.folkGoals = { doors, exits });
+  }
+  function folkGo(sc, w, tgt, after) {
+    const p = W_().bfs(sc.blocked, sc.ni, sc.nj, cellOf(w), tgt);
+    if (!p) return false;
+    if (p.length < 2) { after(); return true; }
+    w.path = p.slice(1); w.st = 'walk'; w.onArrive = after; return true;
+  }
+  function folkLinger(w, sec, lookCell) { w.st = 'idle'; w.t = sec; w.lookHome = null; if (lookCell) { faceTo(w, lookCell[0] + 0.5, lookCell[1] + 0.5); w.lookHome = w.facing; } }
+  function folkHide(w, sec) { w.hidden = true; w.st = 'away'; w.t = sec; w.path = []; w.bub = null; }
+  function folkThink(sc, w, dt, free) {
+    if (w.st === 'walk') { stepEnt(w, dt, w.spd || 1.15); if (!w.path.length && w.st === 'walk') folkLinger(w, rnd(4, 8)); return; }
+    if (w.st === 'chat') { w.t -= dt; if (w.t <= 0) w.st = w.pose === 'sit' ? 'sit' : 'idle'; return; }
+    w.t -= dt;
+    if (w.st === 'away') {   // 在店裡／離開了：時間到從門口或出口重新出現
+      if (w.t > 0) return;
+      const G = folkGoals(sc);
+      let c = w.back;
+      if (!c) { c = G.exits.length ? pick(G.exits) : pick(free); w.look = randLook(); w.line = pick(FOLK_LINES); w.spd = rnd(1.0, 1.3); }
+      w.i = c[0] + 0.5; w.j = c[1] + 0.5; w.hidden = false; w.back = null; w.st = 'idle'; w.t = 0; return;
+    }
+    // 站著時偶爾看看四周，看完會轉回原本在看的方向
+    if (w.st === 'idle') {
+      if (w.glance > 0) { w.glance -= dt; if (w.glance <= 0 && w.lookHome) w.facing = w.lookHome; }
+      else if (Math.random() < dt * 0.08) { w.lookHome = w.lookHome || w.facing; w.facing = pick(['SW', 'SE', 'NE', 'NW']); w.glance = rnd(1, 2.5); }
+    }
+    if (Math.random() < dt * 0.03) say(w, pick(BUB));
+    if (w.t > 0) return;
+    if (w.next) { const f = w.next; w.next = null; f(); return; }
+    if (w.st === 'sit') { folkStand(sc, w); folkLinger(w, rnd(1, 2.5)); return; }
+    const G = folkGoals(sc), r = Math.random();
+    if (sc.interior) {
+      if (r < 0.75 && folkSit(sc, w)) return;
+      if (r < 0.8 && G.exits.length && folkGo(sc, w, pick(G.exits), () => { folkHide(w, rnd(10, 25)); })) return;
+    } else {
+      // 去店門口看看，有一半機率走進去逛一下
+      if (r < 0.35 && G.doors.length) {
+        const d = pick(G.doors);
+        if (folkGo(sc, w, d.cell, () => {
+          folkLinger(w, rnd(5, 10), d.look);
+          if (d.canEnter && Math.random() < 0.5) { w.t = rnd(1.5, 3); w.next = () => { w.back = d.cell; folkHide(w, rnd(10, 25)); }; }
+          else if (Math.random() < 0.3) say(w, pick(['♪', '!', '…']));
+        })) return;
+      }
+      if (r < 0.55 && folkSit(sc, w)) return;
+      // 走出畫面（之後會有新的路人從出口進來）
+      if (r < 0.75 && G.exits.length && folkGo(sc, w, pick(G.exits), () => folkHide(w, rnd(6, 16)))) return;
+    }
+    // 散步到稍遠的地方，停下來休息一下
+    const here = cellOf(w), near = free.filter(c => { const d = Math.abs(c[0] - here[0]) + Math.abs(c[1] - here[1]); return d >= (sc.interior ? 2 : 4) && d <= (sc.interior ? 5 : 11); });
+    if (!folkGo(sc, w, near.length ? pick(near) : pick(free), () => folkLinger(w, rnd(6, 14)))) w.t = rnd(2, 4);
+  }
   let idleT = 0, lookT = 0;
   function updateLife(dt) {
     if (!wsc) return;
     if (!wsc.life) initLife(wsc);
     const L = wsc.life, sc = wsc, free = freeCellsOf(sc);
-    for (const w of L.walkers) {
-      if (w.st === 'walk') { stepEnt(w, dt, 1.5); if (!w.path.length && w.st === 'walk') { w.st = 'idle'; w.t = rnd(1.5, 5); } continue; }
-      if (w.st === 'chat') { w.t -= dt; if (w.t <= 0) w.st = w.pose === 'sit' ? 'sit' : 'idle'; continue; }
-      w.t -= dt;
-      if (w.st === 'idle' && Math.random() < dt * 0.25) w.facing = pick(['SW', 'SE', 'NE', 'NW']);
-      if (Math.random() < dt * 0.04) say(w, pick(BUB));
-      if (w.t > 0) continue;
-      if (w.st === 'sit') { folkStand(sc, w); w.st = 'idle'; w.t = rnd(0.5, 2); continue; }
-      const r = Math.random();
-      if (r < (sc.interior ? 0.7 : 0.3) && folkSit(sc, w)) continue;
-      // 走到附近的隨機空格
-      const here = cellOf(w), near = free.filter(c => { const d = Math.abs(c[0] - here[0]) + Math.abs(c[1] - here[1]); return d >= 3 && d <= (sc.interior ? 6 : 12); });
-      const tgt = near.length ? pick(near) : pick(free), p = W_().bfs(sc.blocked, sc.ni, sc.nj, here, tgt);
-      if (p && p.length > 1) { w.path = p.slice(1); w.st = 'walk'; } else w.t = rnd(1, 3);
-    }
+    for (const w of L.walkers) folkThink(sc, w, dt, free);
     for (const a of L.animals) {
       const dme = Math.hypot(a.i - me.i, a.j - me.j);
       if (a.kind === 'pigeon') {
@@ -569,7 +644,7 @@
   function lifeDrawables(sc) {
     const out = [];
     if (!sc.life) return out;
-    for (const w of sc.life.walkers) { const d = npcDrawable(w, w.look, sc.ox, sc.oy); d.walker = w; out.push(d); }
+    for (const w of sc.life.walkers) { if (w.hidden) continue; const d = npcDrawable(w, w.look, sc.ox, sc.oy); d.walker = w; out.push(d); }
     for (const a of sc.life.animals) if (!(a.kind === 'pigeon' && a.gone > 0)) out.push(animalDrawable(a, sc.ox, sc.oy));
     return out;
   }
@@ -577,7 +652,7 @@
     const now = performance.now(), ents = (sc.life ? sc.life.walkers.concat(sc.life.animals) : []).concat(sc.npcs || []);
     ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const e of ents) {
-      if (!e.bub || e.bub.until < now) continue;
+      if (!e.bub || e.bub.until < now || e.hidden) continue;
       const h = e.kind ? 30 : (e.pose === 'sit' ? 92 : 100);
       const x = Math.round(sc.ox + (e.i - e.j) * TW / 2 - cam[0]), y = Math.round(sc.oy + (e.i + e.j) * TH / 2 - h - cam[1]);
       const w = Math.max(20, ctx.measureText(e.bub.text).width + 12);
@@ -1334,6 +1409,7 @@
   }
   // 每個人對同一間房間只能讚一次（雲端規則），以雲端紀錄為準
   function likedToday(id) { return !!(visit && visit.id === id && visit.liked) || st.likeLog.ids.includes(id); }
+  const curVisit = () => visit;
   function updateVisitBar() {
     if (!visit) return;
     $('#vName').textContent = `🏠 ${visit.name} 的小窩　❤ ${S.comfortOf(visit.room).total}　👍 ${visit.likes}`;
@@ -1341,7 +1417,7 @@
     $('#bFav').textContent = isFav(visit.id) ? '⭐ 已收藏' : '☆ 收藏';
   }
   $('#bLike').onclick = async () => {
-    if (!visit || likedToday(visit.id)) return;
+    const visit = curVisit(); if (!visit || likedToday(visit.id)) return;   // 先抓住：等雲端時玩家可能已經離開
     if (!st.published) { await pushCloud(); if (!st.published) { toast('先連上雲端才能按讚'); return; } }
     try {
       await Cloud.like(visit.id, st.id, dayNum());
@@ -1435,13 +1511,13 @@
     $('#setCode').textContent = st.code;
     $('#setBackup').textContent = st.backupT ? '最近備份：' + new Date(st.backupT).toLocaleString() : '還沒備份（改動後 10 秒內會自動備份）';
     $('#setSfx').checked = SFX.on; $('#setMusic').checked = SFX.musicOn;
-    $('#restoreIn').value = ''; $('#mSet').classList.add('show');
+    $('#restoreIn').value = ''; refreshAcct(); $('#mSet').classList.add('show');
   }
   $('#bSet').onclick = openSettings;
   $('#setSfx').onchange = e => SFX.setOn(e.target.checked);
   $('#setMusic').onchange = e => SFX.setMusic(e.target.checked);
   $('#copyCode').onclick = async () => { try { await navigator.clipboard.writeText(st.code); toast('已複製存檔碼，請存在安全的地方'); } catch (e) { toast('請手動抄下存檔碼：' + st.code); } };
-  $('#backupNow').onclick = async () => { try { await Cloud.backup(st.code, st); st.backupT = Date.now(); save(false); toast('已備份到雲端！'); openSettings(); } catch (e) { toast('連不上雲端，等一下再試試看'); } };
+  $('#backupNow').onclick = async () => { try { const t = await Cloud.backup(st.code, st); st.backupT = t; st.syncT = t; save(false); toast('已備份到雲端！'); openSettings(); } catch (e) { toast('連不上雲端，等一下再試試看'); } };
   $('#restoreBtn').onclick = async () => {
     const code = $('#restoreIn').value.trim().toUpperCase();
     if (code.replace(/[^A-Z0-9]/g, '').length !== 16) { toast('存檔碼是 16 個英文或數字（可以有 - ）'); return; }
@@ -1449,27 +1525,96 @@
       const r = await Cloud.restore(code);
       if (!r || !r.state || !r.state.id || !r.state.room) { toast('找不到這組存檔碼的備份'); return; }
       const s2 = r.state;
-      if (!confirmRestore(s2, r.t)) return;
+      if (!confirmRestore(s2, r.t, { t: r.t, code })) return;
     } catch (e) { toast('連不上雲端，等一下再試試看'); }
   };
-  let pendingRestore = null;
-  function confirmRestore(s2, t) {
-    pendingRestore = s2;
+  let pendingRestore = null, pendingExtra = null;
+  function confirmRestore(s2, t, extra) {
+    pendingRestore = s2; pendingExtra = extra || { t };
     $('#restoreInfo').textContent = `找到存檔：「${String(s2.name || '').slice(0, 12)}」，金幣 ${s2.coins | 0}，備份時間 ${new Date(t).toLocaleString()}。還原後，這支手機目前的進度會被取代。`;
     $('#restoreConfirm').style.display = 'flex';
     return false;
   }
   $('#restoreYes').onclick = () => {
     if (!pendingRestore) return;
-    const s2 = pendingRestore; pendingRestore = null;
-    st = Object.assign(newState(), s2); st.room.door = Object.assign({}, HOME_DOOR); if (!st.code) st.code = mkCode();
-    try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+    const s2 = pendingRestore, ex = pendingExtra; pendingRestore = null;
+    applyState(s2, ex);
     $('#restoreConfirm').style.display = 'none'; $('#mSet').classList.remove('show');
+    toast((ex && ex.acct ? '登入成功！' : '還原成功！') + '歡迎回來，' + st.name);
+  };
+  function applyState(s2, extra) {
+    extra = extra || {};
+    st = Object.assign(newState(), s2); st.room.door = Object.assign({}, HOME_DOOR);
+    if (extra.code) st.code = extra.code;
+    if (!st.code) st.code = mkCode();
+    if (extra.acct) st.acct = extra.acct;
+    if (extra.t) { st.syncT = extra.t; st.backupT = extra.t; }
+    try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+    if (creating) { creating = false; $('#mLook').classList.remove('show'); }
+    daily();
     partCache.clear(); bgCache.key = ''; for (const k in scenes) delete scenes[k];
     if (mode !== 'home') { wsc = null; setMode('home'); }
     me.path = []; ensureFree(me, st.room); refreshHud(); refreshQuest(); dirty = true;
-    toast('還原成功！歡迎回來，' + st.name);
+  }
+  // ---------------- 帳號 ----------------
+  function refreshAcct() {
+    $('#acctOut').style.display = st.acct ? 'none' : ''; $('#acctIn').style.display = st.acct ? '' : 'none';
+    $('#acctPwBox').style.display = 'none'; $('#acctOutBtn').textContent = '登出'; $('#acctPw').value = '';
+    if (st.acct) { $('#acctName').textContent = st.acct; $('#acctSync').textContent = st.syncT ? '上次同步 ' + new Date(st.syncT).toLocaleTimeString() : ''; }
+  }
+  const acctInput = () => {
+    const u = Cloud.normUser($('#acctUser').value), pw = $('#acctPw').value;
+    if (!u) { toast('帳號要 3～16 個英文小寫、數字或底線 _'); return null; }
+    if (pw.length < 6) { toast('密碼至少 6 個字'); return null; }
+    return { u, pw };
   };
+  let acctBusy = false;
+  const busy = async (btn, fn) => { if (acctBusy) return; acctBusy = true; const t0 = btn.textContent; btn.textContent = '處理中…'; btn.disabled = true; let keep = false; try { keep = await fn(); } finally { acctBusy = false; btn.disabled = false; if (!keep) btn.textContent = t0; } };
+  $('#acctReg').onclick = () => busy($('#acctReg'), async () => {
+    const a = acctInput(); if (!a) return;
+    if (!st.name) { toast('先把角色做好（取名字），再註冊帳號'); return; }
+    try {
+      const t = await Cloud.backup(st.code, st); st.backupT = t; st.syncT = t;
+      await Cloud.register(a.u, a.pw, st.code);
+      st.acct = a.u; save(false); refreshAcct(); sfx('coin'); toast('註冊成功！之後在別的裝置用「' + a.u + '」登入就能接著玩');
+    } catch (e) { toast(e.code === 'taken' ? '這個帳號已經有人用了，換一個吧' : '連不上雲端，等一下再試試看'); }
+  });
+  $('#acctLogin').onclick = () => busy($('#acctLogin'), async () => {
+    const a = acctInput(); if (!a) return;
+    try {
+      const c = await Cloud.login(a.u, a.pw);
+      if (c === 'nouser') { toast('沒有這個帳號，要不要按「註冊新帳號」？'); return; }
+      if (c === 'badpw') { toast('密碼不對喔'); return; }
+      const r = await Cloud.restore(c);
+      if (!r || !r.state || !r.state.id || !r.state.room) { toast('這個帳號還沒有雲端存檔'); return; }
+      const extra = { acct: a.u, code: c, t: r.t };
+      if (st.name && st.code !== c) {
+        confirmRestore(r.state, r.t, extra);
+        $('#restoreInfo').textContent = `帳號「${a.u}」的存檔：「${String(r.state.name || '').slice(0, 12)}」，金幣 ${r.state.coins | 0}。登入後，這台裝置目前的進度會被帳號的進度取代。`;
+        return;
+      }
+      applyState(r.state, extra); $('#mSet').classList.remove('show'); sfx('coin'); toast('登入成功！歡迎回來，' + st.name);
+    } catch (e) { toast('連不上雲端，等一下再試試看'); }
+  });
+  $('#acctPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('#acctLogin').click(); });
+  $('#acctPwBtn').onclick = () => { const b = $('#acctPwBox'); b.style.display = b.style.display === 'none' ? 'flex' : 'none'; };
+  $('#acctPwOK').onclick = () => busy($('#acctPwOK'), async () => {
+    const o = $('#acctOld').value, n = $('#acctNew').value;
+    if (n.length < 6) { toast('新密碼至少 6 個字'); return; }
+    try {
+      if (await Cloud.changePw(st.acct, o, n)) { $('#acctOld').value = ''; $('#acctNew').value = ''; refreshAcct(); toast('密碼改好了！'); }
+      else toast('舊密碼不對喔');
+    } catch (e) { toast('連不上雲端，等一下再試試看'); }
+  });
+  let outArm = 0;
+  $('#acctOutBtn').onclick = () => busy($('#acctOutBtn'), async () => {
+    if (Date.now() - outArm > 4000) { outArm = Date.now(); $('#acctOutBtn').textContent = '再按一次確定登出'; return true; }
+    try { await Cloud.backup(st.code, st); } catch (e) { toast('連不上雲端，先不要登出，進度還沒存上去'); return; }
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    location.reload();
+    return true;
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pullIfNewer(); });
   $('#restoreNo').onclick = () => { pendingRestore = null; $('#restoreConfirm').style.display = 'none'; };
   // ---------------- HUD、雜項 ----------------
   const sfx = n => { try { window.SFX && SFX.play(n); } catch (e) {} };
@@ -1556,7 +1701,7 @@
   fit(); refreshHud(); refreshQuest(); requestAnimationFrame(loop);
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) sfx('tap'); }, true);
 
-  if (!st.name) openLook(true); else { daily(); checkLikes(); scheduleCloud(); }
+  if (!st.name) openLook(true); else { daily(); checkLikes(); scheduleCloud(); pullIfNewer(); }
   setInterval(() => { if (mode === 'home') checkLikes(); }, 120000);
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
