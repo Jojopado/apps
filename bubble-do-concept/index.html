@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>泡泡待辦 概念圖</title>
+<style>
+:root{--bg:#0f1220;--card:#181c2e;--ink:#eef1ff;--mute:#9aa3c7;--line:#2a3050}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding:24px 16px 60px}
+h1{font-size:26px;text-align:center}
+.sub{color:var(--mute);text-align:center;margin:6px 0 26px;font-size:14px}
+.grid{display:flex;flex-wrap:wrap;gap:28px;justify-content:center}
+.item{width:280px;max-width:100%}
+.cap{margin-top:12px}
+.cap b{display:block;font-size:16px;margin-bottom:4px}
+.cap span{color:var(--mute);font-size:13px;line-height:1.55}
+.phone{position:relative;width:280px;height:580px;border-radius:44px;border:10px solid #05060c;overflow:hidden;box-shadow:0 18px 50px #0008, inset 0 0 0 1px #333;margin:0 auto}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#05060c;border-radius:0 0 16px 16px;z-index:9}
+.status{position:absolute;top:6px;left:22px;right:22px;display:flex;justify-content:space-between;font-size:12px;font-weight:600;z-index:8}
+
+/* bubble */
+.b{position:absolute;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;font-weight:700;line-height:1.2;padding:8px;
+ background:radial-gradient(circle at 32% 28%,#fff9 0 8%,transparent 9%),radial-gradient(circle at 50% 50%,var(--c1),var(--c2));
+ box-shadow:inset -6px -8px 16px #0003, inset 4px 6px 12px #fff3, 0 6px 16px #0004;
+ animation:float 6s ease-in-out infinite;text-shadow:0 1px 2px #0005}
+.b small{display:block;font-weight:500;font-size:.72em;opacity:.9;margin-top:2px}
+.red{--c1:#ff8a8a;--c2:#e2475e}
+.ora{--c1:#ffc37a;--c2:#f08a2c}
+.blu{--c1:#8fc8ff;--c2:#3f7fe0}
+.grn{--c1:#9ff0c2;--c2:#2fb57a}
+.pur{--c1:#cfa8ff;--c2:#8253e0}
+.pnk{--c1:#ffb3df;--c2:#e2569f}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* 1 lock */
+.lock{background:linear-gradient(170deg,#2b3270 0%,#523a8c 45%,#c06c9a 100%)}
+.lock .date{position:absolute;top:44px;width:100%;text-align:center;font-size:14px;font-weight:600;opacity:.9}
+.lock .clock{position:absolute;top:58px;width:100%;text-align:center;font-size:76px;font-weight:700;letter-spacing:-2px}
+.widgets{position:absolute;top:156px;width:100%;display:flex;justify-content:center;gap:10px}
+.wg{width:54px;height:54px;border-radius:50%;background:#ffffff26;backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px}
+.wg b{font-size:18px}
+.wg.rect{width:120px;border-radius:16px;align-items:flex-start;padding:0 10px;font-size:10px}
+.wg.rect b{font-size:12px}
+.lockzone{position:absolute;top:226px;bottom:96px;left:0;right:0}
+.lockbtm{position:absolute;bottom:28px;left:26px;right:26px;display:flex;justify-content:space-between;align-items:center}
+.cir{width:42px;height:42px;border-radius:50%;background:#ffffff2e;display:flex;align-items:center;justify-content:center;font-size:18px}
+.swipe{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:110px;height:4px;border-radius:2px;background:#fff}
+.hint{position:absolute;bottom:80px;width:100%;text-align:center;font-size:11px;opacity:.75}
+
+/* 2 app */
+.app{background:radial-gradient(ellipse at 50% 0%,#20325f,#0d1430 70%)}
+.app h2{position:absolute;top:40px;left:20px;font-size:24px}
+.app .meta{position:absolute;top:72px;left:20px;font-size:12px;color:#b8c2ee}
+.tabs{position:absolute;top:96px;left:20px;display:flex;gap:6px}
+.tabs i{font-style:normal;font-size:11px;padding:4px 10px;border-radius:12px;background:#ffffff1a}
+.tabs i.on{background:#fff;color:#0d1430;font-weight:700}
+.fab{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:linear-gradient(#7fd3ff,#4b7dff);font-size:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px #4b7dff88}
+.pop{position:absolute;left:182px;top:420px;width:70px;height:70px}
+.pop .b{position:absolute;inset:0;animation:popb 2.6s infinite}
+.spark{position:absolute;left:31px;top:31px;width:8px;height:8px;border-radius:50%;background:#ffd36b;opacity:0;animation:spark 2.6s infinite}
+@keyframes popb{0%,55%{transform:scale(1);opacity:1}62%{transform:scale(1.25);opacity:1}66%{transform:scale(1.4);opacity:0}100%{opacity:0;transform:scale(1)}}
+@keyframes spark{0%,62%{opacity:0;transform:translate(0,0)}66%{opacity:1}90%{opacity:0;transform:translate(var(--x),var(--y))}100%{opacity:0}}
+.popword{position:absolute;left:176px;top:396px;font-weight:800;color:#ffd36b;font-size:16px;opacity:0;animation:word 2.6s infinite}
+@keyframes word{0%,62%{opacity:0;transform:translateY(0)}70%{opacity:1}95%{opacity:0;transform:translateY(-20px)}100%{opacity:0}}
+.finger{position:absolute;left:214px;top:452px;font-size:28px;animation:tap 2.6s infinite}
+@keyframes tap{0%,40%{transform:translate(20px,30px);opacity:0}50%{opacity:1;transform:translate(0,0)}60%{transform:scale(.9)}75%,100%{opacity:0}}
+
+/* 3 sheet */
+.sheetbg{background:#0d1430}
+.dim{position:absolute;inset:0;background:#0007}
+.sheet{position:absolute;bottom:0;left:0;right:0;height:470px;background:#1b2140;border-radius:24px 24px 0 0;padding:18px}
+.grab{width:40px;height:4px;border-radius:2px;background:#ffffff40;margin:0 auto 14px}
+.sheet h3{font-size:17px;margin-bottom:12px}
+.input{background:#0f1430;border:1px solid #33407a;border-radius:12px;padding:12px;font-size:14px}
+.input .cur{display:inline-block;width:2px;height:15px;background:#7fd3ff;vertical-align:middle;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+.lab{font-size:12px;color:var(--mute);margin:10px 0 5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips i{font-style:normal;font-size:11px;padding:5px 8px;border-radius:14px;background:#ffffff14}
+.chips i.on{background:#4b7dff;font-weight:700}
+.urg{display:flex;gap:8px}
+.urg i{flex:1;font-style:normal;text-align:center;font-size:12px;padding:7px 0;border-radius:12px;background:#ffffff14}
+.urg i.on{background:#e2475e;font-weight:700}
+.prev{position:relative;height:86px;margin-top:6px}
+.prev .b{left:50%;margin-left:-40px;top:2px;width:80px;height:80px;font-size:12px}
+.prev .note{position:absolute;right:0;top:34px;font-size:10px;color:var(--mute);width:70px}
+.add{margin-top:8px;background:linear-gradient(90deg,#7fd3ff,#4b7dff);border-radius:14px;text-align:center;padding:12px;font-weight:700}
+
+/* 4 home */
+.home{background:linear-gradient(160deg,#a2d5f2,#f6c6ea)}
+.hw{position:absolute;top:44px;left:16px;right:16px;height:150px;border-radius:22px;background:#ffffffcc;backdrop-filter:blur(10px);color:#22305a;overflow:hidden}
+.hw .t{position:absolute;top:10px;left:14px;font-size:12px;font-weight:700}
+.hw .n{position:absolute;top:10px;right:14px;font-size:11px;color:#5a6aa0}
+.apps{position:absolute;top:212px;left:22px;right:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px 0;justify-items:center}
+.ic{width:46px;height:46px;border-radius:12px;background:#ffffff8c}
+.ic.me{background:radial-gradient(circle at 35% 30%,#fff 0 10%,transparent 11%),radial-gradient(circle,#8fc8ff,#3f7fe0)}
+.icl{font-size:9px;color:#22305a;text-align:center;margin-top:3px}
+.hs{position:absolute;bottom:18px;left:16px;right:16px;height:70px;border-radius:24px;background:#ffffff66;display:flex;justify-content:space-around;align-items:center}
+.small{position:absolute;top:356px;left:16px;width:118px;height:118px;border-radius:22px;background:#1b2140;color:#fff;overflow:hidden}
+.small .t{position:absolute;top:8px;left:10px;font-size:10px;font-weight:700}
+.small .big{position:absolute;bottom:6px;left:10px;font-size:9px;color:#b8c2ee}
+
+.notes{max-width:900px;margin:40px auto 0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.notes h3{font-size:16px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{border-top:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+th{color:var(--mute);font-weight:600}
+</style>
+</head>
+<body>
+<h1>🫧 泡泡待辦 Bubble Do</h1>
+<p class="sub">概念圖 v0.1　·　四個畫面　·　泡泡越大＝越花時間，紅色＝很急</p>
+
+<div class="grid">
+
+ <!-- 1 lock screen -->
+ <div class="item">
+  <div class="phone lock">
+   <div class="notch"></div>
+   <div class="status"><span></span><span>▮▮▮</span></div>
+   <div class="date">11月1日 星期日</div>
+   <div class="clock">9:41</div>
+   <div class="widgets">
+    <div class="wg"><b>5</b>顆</div>
+    <div class="wg rect"><b>🔴 ML 作業</b>今晚 23:59 截止</div>
+   </div>
+   <div class="lockzone">
+    <div class="b red" style="left:22px;top:20px;width:112px;height:112px;font-size:14px">ML 作業<small>2 小時</small></div>
+    <div class="b blu" style="left:150px;top:6px;width:86px;height:86px;font-size:12px;animation-delay:-2s">DSP 簡報<small>1 小時</small></div>
+    <div class="b grn" style="left:160px;top:110px;width:64px;height:64px;font-size:11px;animation-delay:-4s">倒垃圾<small>5 分</small></div>
+    <div class="b ora" style="left:40px;top:150px;width:76px;height:76px;font-size:12px;animation-delay:-1s">回信<small>15 分</small></div>
+    <div class="b pur" style="left:132px;top:186px;width:56px;height:56px;font-size:10px;animation-delay:-3s">買牛奶</div>
+   </div>
+   <div class="hint">泡泡只在中間這塊，不會擋到時鐘和解鎖</div>
+   <div class="lockbtm"><div class="cir">🔦</div><div class="cir">📷</div></div>
+   <div class="swipe"></div>
+  </div>
+  <div class="cap"><b>① 鎖定畫面（泡泡桌布）</b><span>App 把待辦畫成桌布，「捷徑」自動更新。時鐘下方的小工具顯示剩幾顆、最急的是哪件。往上滑一樣是輸入密碼。</span></div>
+ </div>
+
+ <!-- 2 app main -->
+ <div class="item">
+  <div class="phone app">
+   <div class="notch"></div>
+   <div class="status"><span>9:41</span><span>▮▮▮</span></div>
+   <h2>今天</h2>
+   <div class="meta">5 顆泡泡 · 預估 3 小時 20 分</div>
+   <div class="tabs"><i class="on">今天</i><i>明天</i><i>之後</i><i>已戳破 12</i></div>
+   <div class="b red" style="left:24px;top:140px;width:132px;height:132px;font-size:16px">ML 作業<small>2 小時 · 今晚</small></div>
+   <div class="b blu" style="left:150px;top:200px;width:100px;height:100px;font-size:14px;animation-delay:-2s">DSP 簡報<small>1 小時</small></div>
+   <div class="b ora" style="left:40px;top:300px;width:84px;height:84px;font-size:13px;animation-delay:-1s">回信<small>15 分</small></div>
+   <div class="b pnk" style="left:132px;top:320px;width:62px;height:62px;font-size:11px;animation-delay:-3.5s">運動<small>30 分</small></div>
+   <div class="pop">
+    <div class="b grn" style="font-size:11px">倒垃圾</div>
+    <div class="spark" style="--x:-34px;--y:-30px"></div><div class="spark" style="--x:36px;--y:-26px"></div>
+    <div class="spark" style="--x:-30px;--y:32px"></div><div class="spark" style="--x:34px;--y:30px"></div>
+    <div class="spark" style="--x:0;--y:-42px"></div><div class="spark" style="--x:0;--y:42px"></div>
+   </div>
+   <div class="popword">啵！</div>
+   <div class="finger">👆</div>
+   <div class="fab">＋</div>
+  </div>
+  <div class="cap"><b>② App 主畫面</b><span>泡泡會飄、可以拖動、互相輕輕碰撞。點一下就戳破＝完成，有爆開的粒子、「啵」一聲和震動。長按可以編輯。</span></div>
+ </div>
+
+ <!-- 3 add sheet -->
+ <div class="item">
+  <div class="phone sheetbg">
+   <div class="notch"></div>
+   <div class="b blu" style="left:30px;top:70px;width:90px;height:90px;opacity:.5"></div>
+   <div class="b red" style="left:150px;top:100px;width:70px;height:70px;opacity:.5"></div>
+   <div class="dim"></div>
+   <div class="sheet">
+    <div class="grab"></div>
+    <h3>吹一顆新泡泡</h3>
+    <div class="input">準備期中報告<span class="cur"></span></div>
+    <div class="lab">要花多久？（決定大小）</div>
+    <div class="chips"><i>5 分</i><i>15 分</i><i>30 分</i><i class="on">1 小時</i><i>2 小時+</i></div>
+    <div class="lab">多急？（決定顏色）</div>
+    <div class="urg"><i>不急</i><i>普通</i><i class="on">很急</i></div>
+    <div class="prev"><div class="b red">期中報告</div><div class="note">← 預覽，會越吹越大</div></div>
+    <div class="add">吹出去 🫧</div>
+   </div>
+  </div>
+  <div class="cap"><b>③ 新增泡泡</b><span>只問三件事：做什麼、多久、多急。下方即時預覽泡泡的大小和顏色。也可以在小工具或 Siri 直接說「新增泡泡」。</span></div>
+ </div>
+
+ <!-- 4 home widgets -->
+ <div class="item">
+  <div class="phone home">
+   <div class="notch"></div>
+   <div class="status" style="color:#22305a"><span>9:41</span><span>▮▮▮</span></div>
+   <div class="hw">
+    <div class="t">🫧 泡泡待辦</div><div class="n">5 顆 · 點一下就戳破</div>
+    <div class="b red" style="left:12px;top:34px;width:92px;height:92px;font-size:13px">ML 作業</div>
+    <div class="b blu" style="left:106px;top:50px;width:70px;height:70px;font-size:11px;animation-delay:-2s">DSP 簡報</div>
+    <div class="b ora" style="left:178px;top:36px;width:50px;height:50px;font-size:10px;animation-delay:-1s">回信</div>
+    <div class="b grn" style="left:184px;top:92px;width:42px;height:42px;font-size:9px;animation-delay:-3s">垃圾</div>
+   </div>
+   <div class="apps">
+    <div><div class="ic me"></div><div class="icl">泡泡待辦</div></div>
+    <div><div class="ic"></div><div class="icl">相機</div></div>
+    <div><div class="ic"></div><div class="icl">照片</div></div>
+    <div><div class="ic"></div><div class="icl">地圖</div></div>
+    <div><div class="ic"></div><div class="icl">天氣</div></div>
+    <div><div class="ic"></div><div class="icl">備忘錄</div></div>
+    <div><div class="ic"></div><div class="icl">設定</div></div>
+    <div><div class="ic"></div><div class="icl">音樂</div></div>
+   </div>
+   <div class="small">
+    <div class="t">現在做這顆</div>
+    <div class="b red" style="left:26px;top:24px;width:66px;height:66px;font-size:11px">ML 作業</div>
+    <div class="big">還有 4 顆在排隊</div>
+   </div>
+   <div class="hs"><div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div></div>
+  </div>
+  <div class="cap"><b>④ 主畫面小工具</b><span>大尺寸的小工具直接顯示泡泡，點泡泡就能戳破（iOS 17 起支援）。小尺寸的只顯示「現在做這顆」。</span></div>
+ </div>
+
+</div>
+
+<div class="notes">
+ <h3>這版想讓你確認的</h3>
+ <table>
+  <tr><th>項目</th><th>這版的做法</th><th>可以換成</th></tr>
+  <tr><td>泡泡風格</td><td>亮面糖果泡泡（有反光點）</td><td>半透明肥皂泡／扁平純色／霓虹</td></tr>
+  <tr><td>大小代表</td><td>要花多少時間</td><td>重要程度</td></tr>
+  <tr><td>顏色代表</td><td>多急（紅＝很急）</td><td>分類（課業／生活／工作）</td></tr>
+  <tr><td>鎖定畫面</td><td>桌布＋小工具</td><td>只用小工具（不用設定捷徑，但空間小）</td></tr>
+  <tr><td>App 底色</td><td>深藍夜空</td><td>淺色／跟著系統</td></tr>
+ </table>
+</div>
+</body>
+</html>
