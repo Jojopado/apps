@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RWST 期中有聲書</title>
+<style>
+:root{--bg:#F4F6F8;--surface:#fff;--fg:#18202C;--muted:#5B6676;--line:#DCE1E8;--accent:#2450C4;--soft:#E6ECFA}
+@media (prefers-color-scheme:dark){:root{--bg:#12161D;--surface:#1A2029;--fg:#E6EAF0;--muted:#97A2B2;--line:#2C3542;--accent:#86A6FF;--soft:#1F2B47;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,"Noto Sans TC",sans-serif;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 16px 140px}
+h1{font-size:1.35rem;margin:0 0 4px}.sub{color:var(--muted);font-size:.9rem;margin:0 0 16px}
+.ch{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;min-height:56px}
+.ch .n{font-family:ui-monospace,Consolas,monospace;color:var(--muted);width:2em;flex:none}
+.ch .t{flex:1;font-weight:500}.ch .d{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.ch.on{border-color:var(--accent);background:var(--soft)}
+.player{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.player .now{font-size:.9rem;font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row{display:flex;gap:8px;align-items:center}
+.row button{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 12px;cursor:pointer}
+.row button.main{background:var(--accent);color:var(--surface);border-color:var(--accent);min-width:64px}
+audio{width:100%;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>科技論文寫作 期中有聲書</h1>
+<p class="sub">精簡必背 PDF 的語音版，全長約 23 分鐘。中文講解，英文定義和例句用英文語音念，聽到英文可以跟著念。會自動接著播下一章；第 8 章的自我測驗每題會停 4 秒讓你先想答案。</p>
+<div id="list"></div>
+</div>
+<div class="player">
+<div class="now" id="now">點一章開始播放</div>
+<div class="row"><button id="prev">⏮</button><button id="back">↺15</button><button class="main" id="play">▶</button><button id="fwd">15↻</button><button id="next">⏭</button><button id="rate">1.0×</button></div>
+<audio id="au" preload="metadata" controls></audio>
+</div>
+<script>
+const CH=[["開場：怎麼聽","0:57"],["期刊指標","3:00"],["3C 原則與贅字","2:01"],["Abstract 五元素與時態","3:13"],["四個一定要會的順序","2:11"],["複選清單","1:57"],["名詞解釋 10 個","2:23"],["是非題陷阱","2:22"],["20 題自我測驗","5:25"]];
+const au=document.getElementById("au"),list=document.getElementById("list"),now=document.getElementById("now"),play=document.getElementById("play");
+const RATES=[1,1.25,1.5,0.85];let cur=-1,ri=0;
+const get=k=>{try{return localStorage.getItem("rwstAudio_"+k)}catch(e){return null}},set=(k,v)=>{try{localStorage.setItem("rwstAudio_"+k,v)}catch(e){}};
+CH.forEach(([t,d],i)=>{const b=document.createElement("button");b.className="ch";b.innerHTML=`<span class="n">${String(i).padStart(2,"0")}</span><span class="t">${t}</span><span class="d">${d}</span>`;b.onclick=()=>load(i,true);list.appendChild(b)});
+function load(i,autoplay,t){
+  if(i<0||i>=CH.length)return;cur=i;au.src=`ch${String(i).padStart(2,"0")}.mp3`;au.playbackRate=RATES[ri];
+  if(t)au.addEventListener("loadedmetadata",()=>{au.currentTime=t},{once:true});
+  now.textContent=`${String(i).padStart(2,"0")}　${CH[i][0]}`;
+  list.querySelectorAll(".ch").forEach((b,j)=>b.classList.toggle("on",j===i));
+  if("mediaSession" in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:CH[i][0],album:"科技論文寫作 期中有聲書"});
+    navigator.mediaSession.setActionHandler("nexttrack",()=>load(cur+1,true));navigator.mediaSession.setActionHandler("previoustrack",()=>load(cur-1,true))}
+  set("ch",i);if(autoplay)au.play().catch(()=>{});
+}
+au.onended=()=>{set("t",0);if(cur<CH.length-1)load(cur+1,true)};
+au.onplay=()=>play.textContent="⏸";au.onpause=()=>play.textContent="▶";
+au.ontimeupdate=()=>{if(cur>=0&&Math.floor(au.currentTime)%5===0)set("t",au.currentTime)};
+play.onclick=()=>{if(cur<0)return load(0,true);au.paused?au.play():au.pause()};
+document.getElementById("prev").onclick=()=>load(Math.max(0,cur-1),true);
+document.getElementById("next").onclick=()=>load(cur+1,true);
+document.getElementById("back").onclick=()=>{au.currentTime=Math.max(0,au.currentTime-15)};
+document.getElementById("fwd").onclick=()=>{au.currentTime+=15};
+document.getElementById("rate").onclick=e=>{ri=(ri+1)%RATES.length;au.playbackRate=RATES[ri];e.target.textContent=RATES[ri].toFixed(RATES[ri]%1?2:1).replace(/0$/,"")+"×"};
+const sc=get("ch");if(sc!==null){load(+sc,false,+(get("t")||0));now.textContent+="（上次聽到這裡）"}
+</script>
+</body>
+</html>
