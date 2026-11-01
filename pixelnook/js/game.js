@@ -148,7 +148,7 @@
     return bgCache.c;
   }
   function charDrawable(ch, look, ox, oy) {
-    const cp = M.charParts(ch.i, ch.j, ch.facing, ch.step, look, ch.pose, ch.seatZ);
+    const cp = M.charParts(ch.i, ch.j, ch.facing, ch.step, look, ch.pose, ch.seatZ, ch.head);
     const a = cp.aabb, o = { i0: a.i0, i1: a.i1, j0: a.j0, j1: a.j1, z0: a.z0, z1: a.z1, isChar: true, draw(iso) { for (const p of cp.parts) p.draw(iso); } };
     o.spr = spriteOf(Object.assign({}, o, { z0: ch.pose === 'sit' ? 0 : a.z0 }), 16, ox, oy);
     return o;
@@ -230,7 +230,7 @@
   function stepChar(ch, dt) {
     if (!ch.path.length) { if (ch.step) { ch.step = 0; dirty = true; } return false; }
     const [ci, cj] = ch.path[0], ti = ci + 0.5, tj = cj + 0.5, di = ti - ch.i, dj = tj - ch.j, dist = Math.hypot(di, dj), sp = (mode === 'city' && wsc && !wsc.interior ? 4.6 : 3.8) * dt;
-    if (Math.abs(di) > Math.abs(dj)) ch.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) ch.facing = dj > 0 ? 'SW' : 'NE';
+    ch.head = null; if (Math.abs(di) > Math.abs(dj)) ch.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) ch.facing = dj > 0 ? 'SW' : 'NE';
     if (dist <= sp) { ch.i = ti; ch.j = tj; ch.path.shift(); if (!ch.path.length) { ch.step = 0; const f = ch.onArrive; ch.onArrive = null; if (f) f(); } }
     else { ch.i += di / dist * sp; ch.j += dj / dist * sp; }
     ch.walkT += dt; if (ch.path.length) ch.step = Math.floor(ch.walkT / 0.11) % 2 ? 1 : -1;
@@ -422,8 +422,8 @@
   }
   const lookKey = l => [l.skin, l.hair, l.hairC, l.shirt, l.pants, l.shoes, l.apron, l.hat].join('/');
   function npcDrawable(ch, look, ox, oy) {
-    const k = 'c|' + lookKey(look) + '|' + ch.facing + '|' + (ch.step || 0) + '|' + (ch.pose || 'stand') + '|' + (ch.seatZ || 0);
-    const d = cachedDrawable(k, ch, (i, j) => M.charParts(i, j, ch.facing, ch.step, look, ch.pose, ch.seatZ), ox, oy, 16);
+    const k = 'c|' + lookKey(look) + '|' + ch.facing + '|' + (ch.head || '') + '|' + (ch.step || 0) + '|' + (ch.pose || 'stand') + '|' + (ch.seatZ || 0);
+    const d = cachedDrawable(k, ch, (i, j) => M.charParts(i, j, ch.facing, ch.step, look, ch.pose, ch.seatZ, ch.head), ox, oy, 16);
     d.isChar = true; return d;
   }
   // 小動物：貓、鴿子（方塊拼成，零件互不重疊）
@@ -520,17 +520,22 @@
   }
   function folkStand(sc, w) {
     if (w.pose !== 'sit') return;
-    w.pose = 'stand'; w.seatZ = 0; if (w.seat) delete sc.life.seatsTaken[w.seat.key]; w.seat = null;
+    w.pose = 'stand'; w.seatZ = 0; w.head = null; if (w.seat) delete sc.life.seatsTaken[w.seat.key]; w.seat = null;
     const c = w.stand || cellOf(w); w.i = c[0] + 0.5; w.j = c[1] + 0.5;
   }
   function stepEnt(e, dt, speed) {
     if (!e.path.length) { e.step = 0; return; }
     const [ci, cj] = e.path[0], ti = ci + 0.5, tj = cj + 0.5, di = ti - e.i, dj = tj - e.j, dist = Math.hypot(di, dj), sp = speed * dt;
-    if (Math.abs(di) > Math.abs(dj)) e.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) e.facing = dj > 0 ? 'SW' : 'NE';
+    e.head = null; if (Math.abs(di) > Math.abs(dj)) e.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) e.facing = dj > 0 ? 'SW' : 'NE';
     if (dist <= sp) { e.i = ti; e.j = tj; e.path.shift(); if (!e.path.length) { e.step = 0; const f = e.onArrive; e.onArrive = null; if (f) f(); return; } }
     else { e.i += di / dist * sp; e.j += dj / dist * sp; }
     e.walkT += dt; e.step = Math.floor(e.walkT * speed / 0.26) % 2 ? 1 : -1;
   }
+  const OPP = { SW: 'NE', NE: 'SW', SE: 'NW', NW: 'SE' };
+  const dirTo = (e, i, j) => { const di = i - e.i, dj = j - e.j; return Math.abs(di) > Math.abs(dj) ? (di > 0 ? 'SE' : 'NW') : (dj > 0 ? 'SW' : 'NE'); };
+  function lookAt(e, i, j) { const d = dirTo(e, i, j); if (d === OPP[e.facing]) { e.facing = d; e.head = null; } else e.head = d === e.facing ? null : d; }
+  function lookDir(e, d) { if (d === OPP[e.facing]) return; e.head = d === e.facing ? null : d; }
+  const SIDE = { SW: ['SE', 'NW'], NE: ['SE', 'NW'], SE: ['SW', 'NE'], NW: ['SW', 'NE'] };
   function faceTo(e, i, j) { const di = i - e.i, dj = j - e.j; e.facing = Math.abs(di) > Math.abs(dj) ? (di > 0 ? 'SE' : 'NW') : (dj > 0 ? 'SW' : 'NE'); }
   function say(e, text, sec) { e.bub = { text, until: performance.now() + (sec || 2.2) * 1000 }; }
   // ---- 路人：每個人都有「要去哪、去做什麼」，到了會停下來做事，不會一直亂走 ----
@@ -570,8 +575,8 @@
     }
     // 站著時偶爾看看四周，看完會轉回原本在看的方向
     if (w.st === 'idle') {
-      if (w.glance > 0) { w.glance -= dt; if (w.glance <= 0 && w.lookHome) w.facing = w.lookHome; }
-      else if (Math.random() < dt * 0.08) { w.lookHome = w.lookHome || w.facing; w.facing = pick(['SW', 'SE', 'NE', 'NW']); w.glance = rnd(1, 2.5); }
+      if (w.glance > 0) { w.glance -= dt; if (w.glance <= 0) w.head = null; }
+      else if (Math.random() < dt * 0.08) { lookDir(w, pick(SIDE[w.facing])); w.glance = rnd(1, 2.5); }
     }
     if (Math.random() < dt * 0.03) say(w, pick(BUB));
     if (w.t > 0) return;
@@ -631,14 +636,14 @@
     }
     // 有名字的居民：玩家靠近會轉頭看你，偶爾冒泡泡
     for (const n of sc.npcs || []) {
-      if (Math.hypot(n.i - me.i, n.j - me.j) < 2.6) { if (!n.lookAt) { n.home = n.home || n.facing; n.lookAt = true; } faceTo(n, me.i, me.j); }
-      else if (n.lookAt) { n.lookAt = false; n.facing = n.home || n.facing; }
-      else if (Math.random() < dt * 0.12) { n.home = n.home || n.facing; n.facing = n.facing === n.home ? pick(['SW', 'SE', 'NE', 'NW']) : n.home; }
+      if (Math.hypot(n.i - me.i, n.j - me.j) < 2.6) { n.lookAt = true; const d = dirTo(n, me.i, me.j); n.head = d === n.facing || d === OPP[n.facing] ? null : d; }
+      else if (n.lookAt) { n.lookAt = false; n.head = null; }
+      else if (Math.random() < dt * 0.12) n.head = n.head ? null : pick(SIDE[n.facing]);
       if (Math.random() < dt * 0.05) say(n, pick(NPC_BUB[n.id] || BUB));
     }
     // 玩家站著發呆太久，會自己東張西望
     if (me.path.length || me.pose === 'sit') idleT = 0; else idleT += dt;
-    if (idleT > 7) { lookT -= dt; if (lookT <= 0) { lookT = rnd(3, 6); me.facing = pick(['SW', 'SE', 'NE', 'NW']); } }
+    if (idleT > 7) { lookT -= dt; if (lookT <= 0) { lookT = rnd(3, 6); me.head = me.head ? null : pick(SIDE[me.facing]); } }
     dirty = true;
   }
   function lifeDrawables(sc) {
@@ -690,7 +695,7 @@
       if (pk) return tapPickup(pk); }
     const h = hitAt(wx, wy);
     if (h && h.pickup) return tapPickup(h.pickup);
-    if (h && h.walker) { const w = h.walker; if (w.st !== 'sit') { w.path = []; w.onArrive = null; if (w.seat && w.pose !== 'sit') { delete wsc.life.seatsTaken[w.seat.key]; w.seat = null; } } faceTo(w, me.i, me.j); w.st = 'chat'; w.t = 3; say(w, '嗨！', 1.5); faceTo(me, w.i, w.j); toast('路人：' + w.line); w.line = pick(FOLK_LINES); sfx('tap'); return; }
+    if (h && h.walker) { const w = h.walker; if (w.st !== 'sit') { w.path = []; w.onArrive = null; if (w.seat && w.pose !== 'sit') { delete wsc.life.seatsTaken[w.seat.key]; w.seat = null; } } lookAt(w, me.i, me.j); w.st = 'chat'; w.t = 3; w.glance = 3; say(w, '嗨！', 1.5); lookAt(me, w.i, w.j); toast('路人：' + w.line); w.line = pick(FOLK_LINES); sfx('tap'); return; }
     if (h && h.animal) { const a = h.animal; if (a.kind === 'cat') { say(a, a.pose === 'sleep' ? 'Zzz' : '喵～', 1.6); if (a.pose !== 'sleep') faceTo(a, me.i, me.j); toast(a.pose === 'sleep' ? '貓咪睡得正香……' : '貓咪看著你。喵～'); } else toast('咕咕～'); return; }
     if (h && h.npc) return walkNear(h.npc.talkFrom, () => { const n = h.npc; me.facing = 'NE'; dirty = true; talkTo(n.id); });
     if (h && h.item) return cityInteract(h.item);

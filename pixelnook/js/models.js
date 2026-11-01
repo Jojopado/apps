@@ -16,7 +16,7 @@
   const DEFAULT_LOOK = { skin: 1, hair: 'short', hairC: 0, shirt: 0, pants: 0, shoes: 0 };
 
   // 回傳角色的可排序零件（已排好內部層級）＋整體 AABB。pose: 'stand' | 'sit'（seatZ 為座面高度）
-  function charParts(ci, cj, facing, step, look, pose, seatZ) {
+  function charParts(ci, cj, facing, step, look, pose, seatZ, headFacing) {
     step = step || 0; seatZ = seatZ || 0;
     look = Object.assign({}, DEFAULT_LOOK, look || {});
     const skin = SKINS[look.skin] || SKINS[1];
@@ -32,6 +32,14 @@
     function part(fwd, side, wf, ws, h, col, z, hi, bands) {
       const c2i = ci + fi * fwd + si * side, c2j = cj + fj * fwd + sj * side;
       const wi = alongI ? wf : ws, wj = alongI ? ws : wf;
+      const p = boxPart(c2i - wi / 2, c2j - wj / 2, wi, wj, h, col, z, hi, bands);
+      out.push(p); return p;
+    }
+    // 頭部的零件（頭髮、帽子）用頭的方向擺
+    const hf = DIRS[headFacing] ? headFacing : facing, [hfi, hfj] = DIRS[hf], hAlongI = hfi !== 0, hsi = hAlongI ? 0 : 1, hsj = hAlongI ? 1 : 0;
+    function partH(fwd, side, wf, ws, h, col, z, hi, bands) {
+      const c2i = ci + hfi * fwd + hsi * side, c2j = cj + hfj * fwd + hsj * side;
+      const wi = hAlongI ? wf : ws, wj = hAlongI ? ws : wf;
       const p = boxPart(c2i - wi / 2, c2j - wj / 2, wi, wj, h, col, z, hi, bands);
       out.push(p); return p;
     }
@@ -66,11 +74,11 @@
     }
     // 長髮：後腦垂下來的一片
     const HW = 0.40, HD = 0.40;
-    if (look.hair === 'long' && hair) part(-HD / 2 - 0.035, 0, 0.07, HW + 0.04, HEAD + 12, hair, zh - 12, false);
+    if (look.hair === 'long' && hair) { if (hf === facing) part(-HD / 2 - 0.035, 0, 0.07, HW + 0.04, HEAD + 12, hair, zh - 12, false); else partH(-HD / 2 - 0.035, 0, 0.07, HW + 0.04, HEAD, hair, zh, false); }
     // 頭（俯視正方形）＋臉＋頭髮，當成一個零件（裝飾畫在頭的表面）
     const wi = HD, wj = HW, i0 = ci - wi / 2, j0 = cj - wj / 2, top = zh + HEAD;
-    if (look.hair === 'bun' && hair && !look.hat) part(-0.08, 0, 0.18, 0.18, 8, hair, zh + HEAD + 3, false);
-    if (look.hat) { part(0, 0, 0.36, 0.36, 7, look.hat, zh + HEAD + 3, true); part(0.275, 0, 0.12, 0.4, 2, look.hat, zh + HEAD + 1, false); }
+    if (look.hair === 'bun' && hair && !look.hat) partH(-0.08, 0, 0.18, 0.18, 8, hair, zh + HEAD + 3, false);
+    if (look.hat) { partH(0, 0, 0.36, 0.36, 7, look.hat, zh + HEAD + 3, true); partH(0.275, 0, 0.12, 0.4, 2, look.hat, zh + HEAD + 1, false); }
     const head = {
       i0, i1: i0 + wi, j0, j1: j0 + wj, z0: zh, z1: top + (hair ? 3 : 0),
       draw(iso) {
@@ -100,9 +108,9 @@
           const [x, y] = F(Wd * (lowBack ? 0.6 : 0.4), top - 10);
           pix.path([[x - 1, y - 2], [x + 1, y - 2], [x + 1, y + 2], [x - 1, y + 2]], shade(skin, 0.7), true);
         };
-        if (facing === 'SW') { face(FJ, wi); sideF(FI, wj, true); }
-        else if (facing === 'SE') { face(FI, wj); sideF(FJ, wi, true); }
-        else if (facing === 'NE') { back(FJ, wi); sideF(FI, wj, false); }
+        if (hf === 'SW') { face(FJ, wi); sideF(FI, wj, true); }
+        else if (hf === 'SE') { face(FI, wj); sideF(FJ, wi, true); }
+        else if (hf === 'NE') { back(FJ, wi); sideF(FI, wj, false); }
         else { back(FI, wj); sideF(FJ, wi, false); }
       }
     };

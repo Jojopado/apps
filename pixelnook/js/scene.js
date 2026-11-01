@@ -171,7 +171,7 @@
     const list = [];
     for (const it of room.items) for (const p of M.itemParts(it)) list.push(p);
     for (const ch of chars || []) {
-      const cp = M.charParts(ch.i, ch.j, ch.facing, ch.step || 0, ch.look, ch.pose, ch.seatZ);
+      const cp = M.charParts(ch.i, ch.j, ch.facing, ch.step || 0, ch.look, ch.pose, ch.seatZ, ch.head);
       const a = cp.aabb;
       list.push({ i0: a.i0, i1: a.i1, j0: a.j0, j1: a.j1, z0: a.z0, z1: a.z1, ch, cp, draw(iso) { for (const p of cp.parts) p.draw(iso); } });
     }

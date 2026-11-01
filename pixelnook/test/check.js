@@ -24,6 +24,11 @@ for (const f of ['SW', 'SE', 'NE', 'NW']) for (const st of [-1, 0, 1]) for (cons
   checkParts('charApron ' + f + st + hair, M.charParts(0, 0, f, st, { hair, shirt: 1, pants: 1, apron: [120, 80, 60] }, 'stand').parts);
   checkParts('charHat ' + f + st + hair, M.charParts(0, 0, f, st, { hair, hat: [90, 140, 80], apron: [120, 80, 60] }, 'stand').parts);
   checkParts('charApronSit ' + f + hair, M.charParts(0, 0, f, 0, { hair, apron: [120, 80, 60] }, 'sit', 19).parts);
+  // 只轉頭（看向左右兩邊）
+  for (const h of { SW: ['SE', 'NW'], NE: ['SE', 'NW'], SE: ['SW', 'NE'], NW: ['SW', 'NE'] }[f]) {
+    checkParts('charHead ' + f + h + st + hair, M.charParts(0, 0, f, st, { hair, hat: hair === 'short' ? [90, 140, 80] : 0 }, 'stand', 0, h).parts);
+    checkParts('charHeadSit ' + f + h + hair, M.charParts(0, 0, f, 0, { hair, shirt: 1, pants: 1 }, 'sit', 19, h).parts);
+  }
 }
 console.log(bad ? `重疊 ${bad} 處` : '零件重疊檢查：全部通過');
 
