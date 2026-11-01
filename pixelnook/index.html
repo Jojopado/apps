@@ -265,6 +265,9 @@ input[type=text],input[type=password]{font:inherit;border:2px solid var(--ink);b
       <div id="acctIn" style="display:none">
         <div>已登入：<b id="acctName"></b>　<span class="help" id="acctSync"></span></div>
         <div style="display:flex;gap:8px;margin-top:6px"><button id="acctPwBtn">🔑 改密碼</button><button id="acctOutBtn">登出</button></div>
+        <div id="acctOutBox" style="display:none;flex-direction:column;gap:6px;margin-top:8px;border:2px solid var(--bad);border-radius:10px;padding:8px;background:#fff1ef">
+          <div id="acctOutMsg">確定要登出嗎？進度會先存到雲端，之後用帳號密碼登入就能接著玩。登出後這台裝置會回到新玩家畫面。</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end"><button id="acctOutNo">取消</button><button class="pri" id="acctOutYes">確定登出</button></div></div>
         <div id="acctPwBox" style="display:none;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="acctOld" placeholder="舊密碼" maxlength="64" style="flex:1 1 120px"><input type="password" id="acctNew" placeholder="新密碼（至少 6 個字）" maxlength="64" autocomplete="new-password" style="flex:1 1 120px"><button class="pri" id="acctPwOK">確定</button></div>
       </div>
     </div>

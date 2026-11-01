@@ -1647,7 +1647,7 @@
   // ---------------- 帳號 ----------------
   function refreshAcct() {
     $('#acctOut').style.display = st.acct ? 'none' : ''; $('#acctIn').style.display = st.acct ? '' : 'none';
-    $('#acctPwBox').style.display = 'none'; $('#acctOutBtn').textContent = '登出'; $('#acctPw').value = '';
+    $('#acctPwBox').style.display = 'none'; $('#acctOutBox').style.display = 'none'; outForce = false; $('#acctPw').value = '';
     if (st.acct) { $('#acctName').textContent = st.acct; $('#acctSync').textContent = st.syncT ? '上次同步 ' + new Date(st.syncT).toLocaleTimeString() : ''; }
   }
   const acctInput = () => {
@@ -1694,10 +1694,19 @@
       else toast('舊密碼不對喔');
     } catch (e) { toast('連不上雲端，等一下再試試看'); }
   });
-  let outArm = 0;
-  $('#acctOutBtn').onclick = () => busy($('#acctOutBtn'), async () => {
-    if (Date.now() - outArm > 4000) { outArm = Date.now(); $('#acctOutBtn').textContent = '再按一次確定登出'; return true; }
-    try { await Cloud.backup(st.code, st); } catch (e) { toast('連不上雲端，先不要登出，進度還沒存上去'); return; }
+  // 登出：先跳確認框；確定後把進度存上雲端再清掉這台的資料
+  let outForce = false;
+  const OUT_MSG = '確定要登出嗎？進度會先存到雲端，之後用帳號密碼登入就能接著玩。登出後這台裝置會回到新玩家畫面。';
+  $('#acctOutBtn').onclick = () => { outForce = false; $('#acctOutMsg').textContent = OUT_MSG; $('#acctOutYes').textContent = '確定登出'; $('#acctOutBox').style.display = 'flex'; };
+  $('#acctOutNo').onclick = () => { $('#acctOutBox').style.display = 'none'; outForce = false; };
+  $('#acctOutYes').onclick = () => busy($('#acctOutYes'), async () => {
+    if (!outForce) {
+      try { const t = await Cloud.backup(st.code, st); st.backupT = t; st.syncT = t; }
+      catch (e) {
+        outForce = true; $('#acctOutMsg').textContent = '現在連不上雲端，最近的進度可能還沒存上去。還是要登出嗎？（之前自動備份的進度還在雲端）';
+        $('#acctOutYes').textContent = '還是要登出'; return true;
+      }
+    }
     try { localStorage.removeItem(KEY); } catch (e) {}
     location.reload();
     return true;

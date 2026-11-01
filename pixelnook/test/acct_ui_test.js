@@ -88,8 +88,10 @@ function done(code) { try { br.kill(); srv.kill(); } catch (e) {} setTimeout(() 
   check(/改好了/.test(await lastToast()), '改密碼：' + await lastToast());
   check(await ev(`Cloud.changePw('${U}','ui-pass-456','${PW}')`), '改回原密碼');
   // 登出（按兩次）
-  await click('#acctOutBtn'); await sleep(200); check(await ev(`document.querySelector('#acctOutBtn').textContent`) === '再按一次確定登出', '第一次按：要求再按一次');
-  await click('#acctOutBtn'); await sleep(3500);
+  await click('#acctOutBtn'); await sleep(200); check(await ev(`document.querySelector('#acctOutBox').style.display`) === 'flex', '按登出 → 跳出確認框');
+  await click('#acctOutNo'); await sleep(100); check(await ev(`document.querySelector('#acctOutBox').style.display`) === 'none' && (await ev('__nook.st.acct')) === U, '按取消 → 還是登入中');
+  await click('#acctOutBtn'); await sleep(200); await sleep(6000);   // 停很久再按確定也可以（不再有 4 秒限制）
+  await click('#acctOutYes'); await sleep(3500);
   check(!(await ev('__nook.st.acct')) && await ev(`document.querySelector('#mLook').classList.contains('show')`), '登出 → 回到新玩家畫面');
   // 還原測試身分
   await ev(`localStorage.setItem('pixelnook.v1', JSON.stringify(${JSON.stringify({ id: ident.id, pw: ident.pw, name: '測試帳號' })}))`);
