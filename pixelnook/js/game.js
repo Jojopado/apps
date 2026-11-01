@@ -154,6 +154,7 @@
     if (mode === 'visit' && visit) list.push(charDrawable(guest, visit.look)); else list.push(charDrawable(me, st.look));
     order = depthSort(list);
     for (const d of order) ctx.drawImage(d.spr.c, d.spr.x, d.spr.y);
+    if (mode !== 'edit') { const cd = order.find(d => d.isChar); if (cd) xray(order, cd, 0, 0); }
     // 幽靈（拿著或拖著的家具）畫在最上面
     if (mode === 'edit') {
       const g = drag && drag.moved ? drag.obj : hold;
@@ -205,11 +206,11 @@
   }
   function stepChar(ch, dt) {
     if (!ch.path.length) { if (ch.step) { ch.step = 0; dirty = true; } return false; }
-    const [ci, cj] = ch.path[0], ti = ci + 0.5, tj = cj + 0.5, di = ti - ch.i, dj = tj - ch.j, dist = Math.hypot(di, dj), sp = 2.6 * dt;
+    const [ci, cj] = ch.path[0], ti = ci + 0.5, tj = cj + 0.5, di = ti - ch.i, dj = tj - ch.j, dist = Math.hypot(di, dj), sp = (mode === 'city' && wsc && !wsc.interior ? 4.6 : 3.8) * dt;
     if (Math.abs(di) > Math.abs(dj)) ch.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) ch.facing = dj > 0 ? 'SW' : 'NE';
     if (dist <= sp) { ch.i = ti; ch.j = tj; ch.path.shift(); if (!ch.path.length) { ch.step = 0; const f = ch.onArrive; ch.onArrive = null; if (f) f(); } }
     else { ch.i += di / dist * sp; ch.j += dj / dist * sp; }
-    ch.walkT += dt; if (ch.path.length) ch.step = Math.floor(ch.walkT / 0.14) % 2 ? 1 : -1;
+    ch.walkT += dt; if (ch.path.length) ch.step = Math.floor(ch.walkT / 0.11) % 2 ? 1 : -1;
     dirty = true; return true;
   }
   function approachCells(room, it) {
@@ -360,14 +361,17 @@
     // 不會動的零件只排序一次；會動的（角色、NPC、撿拾物）每幀插到正確位置
     if (!wsc.staticOrder || wsc.staticParts !== wsc.parts) { wsc.staticOrder = depthSort(wsc.parts); wsc.staticParts = wsc.parts; }
     const dyn = pickupDrawables(wsc);
-    dyn.push(charDrawable(me, st.look, wsc.ox, wsc.oy));
-    for (const n of wsc.npcs || []) { const d = charDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; dyn.push(d); }
+    const meD = charDrawable(me, st.look, wsc.ox, wsc.oy); dyn.push(meD);
+    for (const n of wsc.npcs || []) { const d = npcDrawable(n, W_().NPCS[n.id].look, wsc.ox, wsc.oy); d.npc = n; dyn.push(d); }
+    for (const d of lifeDrawables(wsc)) dyn.push(d);
     order = insertDynamic(wsc.staticOrder, depthSort(dyn));
     for (const d of order) {
       const s = d.spr, x = s.x - cam[0], y = s.y - cam[1];
       if (x > SW || y > SH || x + s.pix.w < 0 || y + s.pix.h < 0) continue;
       ctx.drawImage(s.c, x, y);
     }
+    xray(order, meD, cam[0], cam[1]);
+    drawBubbles(wsc);
     // 浮動文字（撿到東西）
     const now = performance.now();
     for (let k = floats.length - 1; k >= 0; k--) {
@@ -378,6 +382,231 @@
     }
     if (floats.length || (wsc.pickups && wsc.pickups.length)) dirty = true;   // 閃爍動畫、浮動文字
   }
+  // ---------------- 城市生活：路人、小動物、居民的小動作、對話泡泡 ----------------
+  const sprCache = new Map();
+  function cachedDrawable(key, ent, partsFn, ox, oy, padTop) {
+    // 同樣外觀／姿勢只畫一次，換位置時平移；排序用的 AABB 仍然用實際位置
+    let base = sprCache.get(key);
+    if (!base) {
+      const r = partsFn(0.5, 0.5), a = r.aabb;
+      base = { a: { i0: a.i0 - 0.5, i1: a.i1 - 0.5, j0: a.j0 - 0.5, j1: a.j1 - 0.5, z0: a.z0, z1: a.z1 } };
+      base.spr = spriteOf({ i0: a.i0, i1: a.i1, j0: a.j0, j1: a.j1, z0: Math.min(0, a.z0), z1: a.z1, draw(iso) { for (const p of r.parts) p.draw(iso); } }, padTop || 16, 0, 0);
+      sprCache.set(key, base); if (sprCache.size > 500) sprCache.delete(sprCache.keys().next().value);
+    }
+    const dx = Math.round(ox + (ent.i - 0.5 - (ent.j - 0.5)) * TW / 2), dy = Math.round(oy + (ent.i + ent.j - 1) * TH / 2);
+    const b = base.a;
+    return { i0: ent.i + b.i0, i1: ent.i + b.i1, j0: ent.j + b.j0, j1: ent.j + b.j1, z0: b.z0, z1: b.z1, spr: { pix: base.spr.pix, c: base.spr.c, x: base.spr.x + dx, y: base.spr.y + dy } };
+  }
+  const lookKey = l => [l.skin, l.hair, l.hairC, l.shirt, l.pants, l.shoes, l.apron, l.hat].join('/');
+  function npcDrawable(ch, look, ox, oy) {
+    const k = 'c|' + lookKey(look) + '|' + ch.facing + '|' + (ch.step || 0) + '|' + (ch.pose || 'stand') + '|' + (ch.seatZ || 0);
+    const d = cachedDrawable(k, ch, (i, j) => M.charParts(i, j, ch.facing, ch.step, look, ch.pose, ch.seatZ), ox, oy, 16);
+    d.isChar = true; return d;
+  }
+  // 小動物：貓、鴿子（方塊拼成，零件互不重疊）
+  function animalParts(kind, i, j, facing, step, pose, fly) {
+    const [fi, fj] = M.DIRS[facing], si = fj, sj = -fi, parts = [];
+    // 用「前後 f、左右 s」描述方塊，再轉成 i/j
+    const B = (f0, f1, s0, s1, z0, z1, col) => {
+      const a = [i + fi * f0 + si * s0, i + fi * f1 + si * s1], b = [j + fj * f0 + sj * s0, j + fj * f1 + sj * s1];
+      const i0 = Math.min(a[0], a[1]), j0 = Math.min(b[0], b[1]);
+      parts.push(PX.boxPart(i0, j0, Math.abs(a[1] - a[0]), Math.abs(b[1] - b[0]), z1 - z0, col, z0));
+    };
+    if (kind === 'cat') {
+      const c = [236, 152, 72], d2 = [206, 120, 52], w = [250, 236, 214];
+      if (pose === 'sleep') {
+        B(-0.16, 0.10, -0.10, 0.10, 0, 7, c); B(0.10, 0.22, -0.08, 0.08, 0, 7, c);
+        B(0.12, 0.16, -0.08, -0.04, 7, 9, d2); B(0.12, 0.16, 0.04, 0.08, 7, 9, d2);
+        B(-0.22, -0.16, -0.10, 0.04, 0, 3, d2);
+      } else {
+        const lift = step ? 1 : 0;
+        B(0.06, 0.12, -0.08, -0.03, 0, 5 + (step > 0 ? lift : 0), d2); B(0.06, 0.12, 0.03, 0.08, 0, 5 + (step < 0 ? lift : 0), d2);
+        B(-0.14, -0.08, -0.08, -0.03, 0, 5, d2); B(-0.14, -0.08, 0.03, 0.08, 0, 5, d2);
+        B(-0.16, 0.14, -0.09, 0.09, 6, 14, c);
+        B(0.14, 0.27, -0.08, 0.08, 9, 19, c); B(0.27, 0.29, -0.04, 0.04, 10, 13, w);
+        B(0.16, 0.21, -0.08, -0.04, 19, 22, d2); B(0.16, 0.21, 0.04, 0.08, 19, 22, d2);
+        B(-0.21, -0.16, -0.02, 0.02, 12, 24, d2);
+      }
+    } else {
+      const g = [154, 158, 176], h = [104, 112, 138], bk = [236, 176, 96], z = fly || 0;
+      B(-0.08, 0.05, -0.05, 0.05, 2 + z, 8 + z, g); B(0.05, 0.11, -0.03, 0.03, 6 + z, 11 + z, h); B(0.11, 0.13, -0.01, 0.01, 8 + z, 9 + z, bk);
+      if (fly) { B(-0.04, 0.03, -0.14, -0.05, 6 + z, 7 + z, g); B(-0.04, 0.03, 0.05, 0.14, 6 + z, 7 + z, g); }
+      else { B(-0.01, 0.01, -0.03, -0.01, 0, 2, bk); B(-0.01, 0.01, 0.01, 0.03, 0, 2, bk); }
+    }
+    let a = null;
+    for (const p of parts) a = a ? { i0: Math.min(a.i0, p.i0), i1: Math.max(a.i1, p.i1), j0: Math.min(a.j0, p.j0), j1: Math.max(a.j1, p.j1), z0: Math.min(a.z0, p.z0), z1: Math.max(a.z1, p.z1) } : Object.assign({}, p);
+    return { parts: depthSort(parts), aabb: a };
+  }
+  function animalDrawable(an, ox, oy) {
+    const fz = Math.round(an.fly || 0);
+    const d = cachedDrawable('a|' + an.kind + '|' + an.facing + '|' + (an.step || 0) + '|' + an.pose + '|' + fz, an, (i, j) => animalParts(an.kind, i, j, an.facing, an.step, an.pose, fz), ox, oy, 6);
+    d.animal = an; return d;
+  }
+  const FOLK_LINES = ['今天天氣真好～', '新開的麵包店好香喔！', '咖啡廳的拿鐵很好喝。', '公園的池塘有時候會閃閃發亮耶。', '你也住在這附近嗎？', '週末要不要一起去公園？', '超市今天好像有特價。', '我剛搬來這個城市！', '噴水池晚上很漂亮喔。', '聽說公園裡藏著四葉草……'];
+  const BUB = ['♪', '…', '♥', '!', '?', '♫'];
+  const NPC_BUB = { mia: ['♪', '…', '♥'], leo: ['♪', '!', '…'], nora: ['…', '♪', '?'], oliver: ['♪', '…', '!'], ethan: ['?', '♪', '…'] };
+  const rnd = (a, b) => a + Math.random() * (b - a), pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  function randLook() {
+    return { skin: Math.floor(Math.random() * M.SKINS.length), hair: pick(['short', 'long', 'bun', 'spiky', 'short', 'long']), hairC: Math.floor(Math.random() * M.HAIRC.length),
+      shirt: Math.floor(Math.random() * M.CLOTH.length), pants: Math.floor(Math.random() * M.PANTS.length), shoes: Math.floor(Math.random() * M.SHOES.length) };
+  }
+  function seatsOf(sc) {
+    const out = [];
+    for (const it of sc.items) { const d = I[it.t]; if (!d || !d.seat || it.home || it.enter) continue; d.seat.spots.forEach((_, k) => out.push({ it, k, key: it.i + ',' + it.j + ':' + k })); }
+    return out;
+  }
+  function freeCellsOf(sc) {
+    if (sc.freeList) return sc.freeList;
+    const out = []; for (let i = 0; i < sc.ni; i++) for (let j = 0; j < sc.nj; j++) if (!sc.blocked[i][j]) out.push([i, j]);
+    return (sc.freeList = out);
+  }
+  function seatApproach(sc, it, k) {
+    const sp = M.seatSpot(it, k), fv = M.DIRS[sp.facing], front = [Math.floor(sp.i + fv[0] * 0.8), Math.floor(sp.j + fv[1] * 0.8)];
+    const ok = c => c[0] >= 0 && c[1] >= 0 && c[0] < sc.ni && c[1] < sc.nj && !sc.blocked[c[0]][c[1]];
+    if (ok(front)) return { sp, cell: front };
+    for (const [a, b] of S.cellsOf(it)) for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c = [a + di, b + dj]; if (ok(c)) return { sp, cell: c }; }
+    return null;
+  }
+  function initLife(sc) {
+    const L = sc.life = { walkers: [], animals: [], seatsTaken: {} };
+    const free = freeCellsOf(sc);
+    if (!free.length) return;
+    const nW = sc.interior ? (sc.id === 'cafe' ? 2 : 1) : ({ central: 5, commercial: 6, park: 4 }[sc.id] || 3);
+    for (let k = 0; k < nW; k++) {
+      const c = pick(free), w = { i: c[0] + 0.5, j: c[1] + 0.5, facing: pick(['SW', 'SE', 'NE', 'NW']), step: 0, walkT: 0, path: [], pose: 'stand', look: randLook(), st: 'idle', t: rnd(0.5, 4), line: pick(FOLK_LINES) };
+      L.walkers.push(w);
+      if (sc.interior) folkSit(sc, w, true);
+    }
+    if (!sc.interior) {
+      if (sc.id !== 'commercial' || Math.random() < 0.5) { const c = pick(free); L.animals.push({ kind: 'cat', i: c[0] + 0.5, j: c[1] + 0.5, facing: 'SW', step: 0, walkT: 0, path: [], pose: Math.random() < 0.5 ? 'sleep' : 'stand', t: rnd(3, 9) }); }
+      const nP = sc.id === 'central' ? 4 : sc.id === 'park' ? 3 : 0;
+      const c0 = pick(free);
+      for (let k = 0; k < nP; k++) L.animals.push({ kind: 'pigeon', i: c0[0] + rnd(0.2, 0.8) + (k % 2), j: c0[1] + rnd(0.2, 0.8) + (k >> 1), facing: pick(['SW', 'SE', 'NE', 'NW']), step: 0, walkT: 0, path: [], pose: 'stand', t: rnd(1, 4), home: c0 });
+    }
+  }
+  function folkSit(sc, w, instant) {
+    const L = sc.life, seats = seatsOf(sc).filter(s => !L.seatsTaken[s.key] && !(me.pose === 'sit' && me.seatKey === s.key));
+    if (!seats.length) return false;
+    const s = pick(seats), ap = seatApproach(sc, s.it, s.k); if (!ap) return false;
+    L.seatsTaken[s.key] = w; w.seat = s;
+    const sit = () => { w.pose = 'sit'; w.i = ap.sp.i; w.j = ap.sp.j; w.facing = ap.sp.facing; w.seatZ = ap.sp.z; w.stand = ap.cell; w.st = 'sit'; w.t = rnd(8, 20); };
+    if (instant) { sit(); return true; }
+    const p = W_().bfs(sc.blocked, sc.ni, sc.nj, cellOf(w), ap.cell);
+    if (!p) { delete L.seatsTaken[s.key]; w.seat = null; return false; }
+    w.path = p.slice(1); w.st = 'walk'; w.onArrive = sit; return true;
+  }
+  function folkStand(sc, w) {
+    if (w.pose !== 'sit') return;
+    w.pose = 'stand'; w.seatZ = 0; if (w.seat) delete sc.life.seatsTaken[w.seat.key]; w.seat = null;
+    const c = w.stand || cellOf(w); w.i = c[0] + 0.5; w.j = c[1] + 0.5;
+  }
+  function stepEnt(e, dt, speed) {
+    if (!e.path.length) { e.step = 0; return; }
+    const [ci, cj] = e.path[0], ti = ci + 0.5, tj = cj + 0.5, di = ti - e.i, dj = tj - e.j, dist = Math.hypot(di, dj), sp = speed * dt;
+    if (Math.abs(di) > Math.abs(dj)) e.facing = di > 0 ? 'SE' : 'NW'; else if (dist > 1e-6) e.facing = dj > 0 ? 'SW' : 'NE';
+    if (dist <= sp) { e.i = ti; e.j = tj; e.path.shift(); if (!e.path.length) { e.step = 0; const f = e.onArrive; e.onArrive = null; if (f) f(); return; } }
+    else { e.i += di / dist * sp; e.j += dj / dist * sp; }
+    e.walkT += dt; e.step = Math.floor(e.walkT / 0.16) % 2 ? 1 : -1;
+  }
+  function faceTo(e, i, j) { const di = i - e.i, dj = j - e.j; e.facing = Math.abs(di) > Math.abs(dj) ? (di > 0 ? 'SE' : 'NW') : (dj > 0 ? 'SW' : 'NE'); }
+  function say(e, text, sec) { e.bub = { text, until: performance.now() + (sec || 2.2) * 1000 }; }
+  let idleT = 0, lookT = 0;
+  function updateLife(dt) {
+    if (!wsc) return;
+    if (!wsc.life) initLife(wsc);
+    const L = wsc.life, sc = wsc, free = freeCellsOf(sc);
+    for (const w of L.walkers) {
+      if (w.st === 'walk') { stepEnt(w, dt, 1.5); if (!w.path.length && w.st === 'walk') { w.st = 'idle'; w.t = rnd(1.5, 5); } continue; }
+      if (w.st === 'chat') { w.t -= dt; if (w.t <= 0) w.st = w.pose === 'sit' ? 'sit' : 'idle'; continue; }
+      w.t -= dt;
+      if (w.st === 'idle' && Math.random() < dt * 0.25) w.facing = pick(['SW', 'SE', 'NE', 'NW']);
+      if (Math.random() < dt * 0.04) say(w, pick(BUB));
+      if (w.t > 0) continue;
+      if (w.st === 'sit') { folkStand(sc, w); w.st = 'idle'; w.t = rnd(0.5, 2); continue; }
+      const r = Math.random();
+      if (r < (sc.interior ? 0.7 : 0.3) && folkSit(sc, w)) continue;
+      // 走到附近的隨機空格
+      const here = cellOf(w), near = free.filter(c => { const d = Math.abs(c[0] - here[0]) + Math.abs(c[1] - here[1]); return d >= 3 && d <= (sc.interior ? 6 : 12); });
+      const tgt = near.length ? pick(near) : pick(free), p = W_().bfs(sc.blocked, sc.ni, sc.nj, here, tgt);
+      if (p && p.length > 1) { w.path = p.slice(1); w.st = 'walk'; } else w.t = rnd(1, 3);
+    }
+    for (const a of L.animals) {
+      const dme = Math.hypot(a.i - me.i, a.j - me.j);
+      if (a.kind === 'pigeon') {
+        if (a.flying) {   // 飛走、過一陣子回來
+          a.fly += dt * 60; a.i += a.vx * dt; a.j += a.vy * dt;
+          if (a.fly > 160) { a.flying = false; a.gone = rnd(6, 14); a.fly = 0; }
+          continue;
+        }
+        if (a.gone > 0) { a.gone -= dt; if (a.gone <= 0) { const c = a.home; a.i = c[0] + rnd(0.1, 1.9); a.j = c[1] + rnd(0.1, 1.9); if (dme < 3) a.gone = 3; } continue; }
+        if (dme < 1.6) { a.flying = true; a.fly = 0; const k = Math.max(0.3, dme); a.vx = (a.i - me.i) / k * 3; a.vy = (a.j - me.j) / k * 3; sfx('tap'); continue; }
+        stepEnt(a, dt, 0.8);
+        a.t -= dt; if (a.t <= 0) { a.t = rnd(0.8, 3); if (Math.random() < 0.5) a.facing = pick(['SW', 'SE', 'NE', 'NW']); else { a.step = a.step ? 0 : 1; } }
+        continue;
+      }
+      // 貓：睡覺、散步、偶爾跟著玩家
+      if (a.path.length) { stepEnt(a, dt, a.chase ? 2.2 : 1.1); continue; }
+      a.t -= dt; if (a.t > 0) continue;
+      if (a.pose === 'sleep') { a.pose = 'stand'; a.t = rnd(1, 3); continue; }
+      const r = Math.random();
+      if (r < 0.25) { a.pose = 'sleep'; a.t = rnd(8, 20); continue; }
+      const here = cellOf(a), tgt = r < 0.4 && dme < 7 ? cellOf(me) : pick(free.filter(c => Math.abs(c[0] - here[0]) + Math.abs(c[1] - here[1]) <= 6) || free);
+      const p = tgt && W_().bfs(sc.blocked, sc.ni, sc.nj, here, tgt);
+      a.chase = r < 0.4; if (p && p.length > 1) a.path = p.slice(1, a.chase ? -1 : undefined); a.t = rnd(2, 6);
+    }
+    // 有名字的居民：玩家靠近會轉頭看你，偶爾冒泡泡
+    for (const n of sc.npcs || []) {
+      if (Math.hypot(n.i - me.i, n.j - me.j) < 2.6) { if (!n.lookAt) { n.home = n.home || n.facing; n.lookAt = true; } faceTo(n, me.i, me.j); }
+      else if (n.lookAt) { n.lookAt = false; n.facing = n.home || n.facing; }
+      else if (Math.random() < dt * 0.12) { n.home = n.home || n.facing; n.facing = n.facing === n.home ? pick(['SW', 'SE', 'NE', 'NW']) : n.home; }
+      if (Math.random() < dt * 0.05) say(n, pick(NPC_BUB[n.id] || BUB));
+    }
+    // 玩家站著發呆太久，會自己東張西望
+    if (me.path.length || me.pose === 'sit') idleT = 0; else idleT += dt;
+    if (idleT > 7) { lookT -= dt; if (lookT <= 0) { lookT = rnd(3, 6); me.facing = pick(['SW', 'SE', 'NE', 'NW']); } }
+    dirty = true;
+  }
+  function lifeDrawables(sc) {
+    const out = [];
+    if (!sc.life) return out;
+    for (const w of sc.life.walkers) { const d = npcDrawable(w, w.look, sc.ox, sc.oy); d.walker = w; out.push(d); }
+    for (const a of sc.life.animals) if (!(a.kind === 'pigeon' && a.gone > 0)) out.push(animalDrawable(a, sc.ox, sc.oy));
+    return out;
+  }
+  function drawBubbles(sc) {
+    const now = performance.now(), ents = (sc.life ? sc.life.walkers.concat(sc.life.animals) : []).concat(sc.npcs || []);
+    ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const e of ents) {
+      if (!e.bub || e.bub.until < now) continue;
+      const h = e.kind ? 30 : (e.pose === 'sit' ? 92 : 100);
+      const x = Math.round(sc.ox + (e.i - e.j) * TW / 2 - cam[0]), y = Math.round(sc.oy + (e.i + e.j) * TH / 2 - h - cam[1]);
+      const w = Math.max(20, ctx.measureText(e.bub.text).width + 12);
+      ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = '#2b2a33'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, y - 10, w, 20, 8) : ctx.rect(x - w / 2, y - 10, w, 20); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 4, y + 9); ctx.lineTo(x, y + 15); ctx.lineTo(x + 4, y + 9); ctx.fill();
+      ctx.fillStyle = '#2b2a33'; ctx.fillText(e.bub.text, x, y + 1);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
+  // 玩家被前面的東西擋住時，把被擋住的部分畫成半透明剪影
+  const xrC = document.createElement('canvas'), xrX = xrC.getContext('2d', { willReadFrequently: true });
+  function xray(ord, meD, cx, cy) {
+    const k = ord.indexOf(meD); if (k < 0) return;
+    const s = meD.spr, occ = [];
+    for (let q = k + 1; q < ord.length; q++) { const o = ord[q]; if (o.isChar || o.pickup || o.animal) continue; if (overlapScr(o, meD)) occ.push(o); }
+    if (!occ.length) return;
+    xrC.width = s.pix.w; xrC.height = s.pix.h;
+    xrX.globalCompositeOperation = 'source-over'; xrX.clearRect(0, 0, s.pix.w, s.pix.h);
+    for (const o of occ) xrX.drawImage(o.spr.c, o.spr.x - s.x, o.spr.y - s.y);
+    xrX.globalCompositeOperation = 'source-in'; xrX.drawImage(s.c, 0, 0);
+    // 被擋住的像素太少（例如只遮到腳尖）就不畫
+    const dd = xrX.getImageData(0, 0, s.pix.w, s.pix.h).data; let n = 0, tot = 0;
+    for (let p = 3; p < dd.length; p += 4) if (dd[p]) n++;
+    for (let p = 0; p < s.pix.d.length; p++) if (s.pix.d[p]) tot++;
+    if (n < Math.max(30, tot * 0.08)) return;
+    xrX.globalCompositeOperation = 'source-atop'; xrX.fillStyle = 'rgba(110,190,255,0.55)'; xrX.fillRect(0, 0, s.pix.w, s.pix.h);
+    ctx.globalAlpha = 0.75; ctx.drawImage(xrC, s.x - cx, s.y - cy); ctx.globalAlpha = 1;
+  }
   function cityTap(x, y) {
     if (fading) return;
     const wx = x + cam[0], wy = y + cam[1];
@@ -386,6 +615,8 @@
       if (pk) return tapPickup(pk); }
     const h = hitAt(wx, wy);
     if (h && h.pickup) return tapPickup(h.pickup);
+    if (h && h.walker) { const w = h.walker; if (w.st !== 'sit') { w.path = []; w.onArrive = null; if (w.seat && w.pose !== 'sit') { delete wsc.life.seatsTaken[w.seat.key]; w.seat = null; } } faceTo(w, me.i, me.j); w.st = 'chat'; w.t = 3; say(w, '嗨！', 1.5); faceTo(me, w.i, w.j); toast('路人：' + w.line); w.line = pick(FOLK_LINES); sfx('tap'); return; }
+    if (h && h.animal) { const a = h.animal; if (a.kind === 'cat') { say(a, a.pose === 'sleep' ? 'Zzz' : '喵～', 1.6); if (a.pose !== 'sleep') faceTo(a, me.i, me.j); toast(a.pose === 'sleep' ? '貓咪睡得正香……' : '貓咪看著你。喵～'); } else toast('咕咕～'); return; }
     if (h && h.npc) return walkNear(h.npc.talkFrom, () => { const n = h.npc; me.facing = 'NE'; dirty = true; talkTo(n.id); });
     if (h && h.item) return cityInteract(h.item);
     if (h && h.isChar) { toast('嗨，' + st.name + '！'); return; }
@@ -413,9 +644,19 @@
     if (o.home) return walkNear([door], goHome);
     if (o.enter) return walkNear([door], () => fadeTo(() => enterScene(o.enter, [1, 0], 'SW')));
     if (o.closed) return walkNear(door ? [door] : S.cellsOf(o), () => toast(o.closed));
-    if (d.seat && wsc.interior) {
-      const sp = M.seatSpot(o, 0), fv = M.DIRS[sp.facing], front = [Math.floor(sp.i + fv[0] * 0.8), Math.floor(sp.j + fv[1] * 0.8)];
-      for (const c of nearCells([front].concat(S.cellsOf(o)))) if (cityWalk(c, () => { me.pose = 'sit'; me.i = sp.i; me.j = sp.j; me.facing = sp.facing; me.seatZ = sp.z; me.stand = c; dirty = true; })) return;
+    if (d.seat && !o.home && !o.enter) {
+      const taken = (wsc.life && wsc.life.seatsTaken) || {};
+      const ks = d.seat.spots.map((_, k) => k).filter(k => !taken[o.i + ',' + o.j + ':' + k])
+        .sort((a, b) => { const p = M.seatSpot(o, a), q = M.seatSpot(o, b); return Math.hypot(p.i - me.i, p.j - me.j) - Math.hypot(q.i - me.i, q.j - me.j); });
+      if (!ks.length) { toast('位子都被坐走了'); return; }
+      for (const k of ks) {
+        const sp = M.seatSpot(o, k), fv = M.DIRS[sp.facing], front = [Math.floor(sp.i + fv[0] * 0.8), Math.floor(sp.j + fv[1] * 0.8)];
+        for (const c of nearCells([front].concat(S.cellsOf(o)))) if (cityWalk(c, () => {
+          if (taken[o.i + ',' + o.j + ':' + k]) { toast('剛好被別人坐走了'); return; }
+          me.pose = 'sit'; me.i = sp.i; me.j = sp.j; me.facing = sp.facing; me.seatZ = sp.z; me.stand = c; me.seatKey = o.i + ',' + o.j + ':' + k; dirty = true;
+          if (o.search) sitSearch(o);
+        })) return;
+      }
       toast('走不過去'); return;
     }
     if (o.harvest) return tapHarvest(o);
@@ -681,6 +922,11 @@
       o.on = true; rebuildParts(wsc); dirty = true;
       gotItem(res, '採集時發現'); emit('HARVEST', {});
     });
+  }
+  function sitSearch(o) {
+    const key = wsc.id + ':' + o.t + ':' + o.i + ',' + o.j, d = I[o.t], res = Explore.search(st, o.search, key);
+    if (!res || res.again || res.nothing) return;
+    setTimeout(() => { gotItem(res, '坐在' + d.name + '上時發現'); emit('SEARCH', {}); }, 600);
   }
   function tapSearch(o) {
     const key = wsc.id + ':' + o.t + ':' + o.i + ',' + o.j, d = I[o.t];
@@ -1297,14 +1543,14 @@
 
   // ---------------- 主迴圈 ----------------
   let last = performance.now();
-  let frames = 0, loopErr = null;
+  let frames = 0, loopErr = null, renderMs = 0;
   function loop(now) {
     requestAnimationFrame(loop);              // 先排下一幀：就算這一幀出錯，迴圈也不會停
     frames++;
     const dt = Math.min(0.2, Math.max(0, (now - last) / 1000)); last = now;
-    try { if (mode === 'visit') { wanderGuest(now); stepChar(guest, dt); } else stepChar(me, dt); }
+    try { if (mode === 'visit') { wanderGuest(now); stepChar(guest, dt); } else stepChar(me, dt); if (mode === 'city') updateLife(dt); }
     catch (e) { loopErr = String(e && e.stack || e); console.error('step', e); }
-    if (dirty) { dirty = false; try { render(); } catch (e) { loopErr = String(e && e.stack || e); console.error('render', e); } }
+    if (dirty) { dirty = false; const r0 = performance.now(); try { render(); renderMs = renderMs * 0.95 + (performance.now() - r0) * 0.05; } catch (e) { loopErr = String(e && e.stack || e); console.error('render', e); } }
   }
   ensureFree(me, st.room);
   fit(); refreshHud(); refreshQuest(); requestAnimationFrame(loop);
@@ -1315,5 +1561,5 @@
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
   // 測試用
-  window.__nook = { openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
+  window.__nook = { get renderMs() { return renderMs; }, updateLife, openSettings, get code() { return st.code; }, THEMES, weekId, themeNow, loadVisitList, get deliver() { return deliver; }, endDelivery, REQS, finishReq, talkReq, tapPickup, cityInteract, get park() { return park; }, endParkJob, Explore, emit, openQuests, Quests, talkTo, startJob, jobState, get wsc() { return wsc; }, get cam() { return cam; }, enterScene, goOut, goHome, cityTap, get frames() { return frames; }, get loopErr() { return loopErr; }, get st() { return st; }, get mode() { return mode; }, me, guest, setMode, interact, walkTo, render: () => { dirty = true; }, S, M, cleanRoom, cleanLook, get order() { return order; }, toast };
 })();
