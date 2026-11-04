@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>一張假鈔 One Bad Bill</title>
+<style>
+:root{--ink:#2a2118;--paper:#f3e8d2;--paper2:#e6d6b6;--red:#b5352a;--brass:#c79a3e;--night:#17130f;--green:#3f6b4c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--night);overflow:hidden;overscroll-behavior:none}
+body{font-family:"Noto Serif TC","Songti TC","PMingLiU",Georgia,serif;color:var(--ink);user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;overflow:hidden;touch-action:none}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;display:none;z-index:30;color:var(--paper);pointer-events:none}
+#top .r1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#timer{font:700 30px/1 Georgia,serif;font-variant-numeric:tabular-nums;color:#ffe9b8}
+#timer.low{color:#ff6a55;animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.1)}}
+.mini{font-size:14px;opacity:.9}
+#clue{pointer-events:auto;margin-top:7px;width:100%;text-align:left;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:5px 9px 6px 8px;padding:6px 9px;font:inherit;font-size:14px;line-height:1.35;box-shadow:2px 3px 0 #0007;transform:rotate(-.4deg)}
+#clue b{color:var(--red)}
+#bot{position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(env(safe-area-inset-bottom) + 10px);display:none;gap:8px;z-index:15;align-items:stretch}
+.tool{flex:1;min-height:58px;min-width:0;background:var(--paper2);border:2px solid var(--ink);border-radius:8px 5px 9px 6px;font:inherit;font-size:14px;line-height:1.2;color:var(--ink);box-shadow:2px 3px 0 #0008;padding:4px 3px;position:relative}
+.tool.on{background:#ffd978;transform:translateY(1px)}
+.tool[disabled]{opacity:.45}
+.tool small{display:block;font-size:12px;opacity:.75;margin-top:2px;font-variant-numeric:tabular-nums}
+#toast{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-1deg);background:var(--paper);border:2px solid var(--ink);padding:8px 14px;border-radius:7px;font-size:17px;box-shadow:3px 4px 0 #0009;opacity:0;transition:opacity .2s;pointer-events:none;z-index:70;max-width:86%;text-align:center}
+#toast.show{opacity:1}
+#hint{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 84px);text-align:center;color:#ffe9b8;font-size:15px;z-index:15;pointer-events:none;text-shadow:0 2px 3px #000,0 0 6px #000}
+#insp{position:absolute;inset:0;display:none;z-index:20;background:#120e0bdd;touch-action:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:120px 12px 20px}
+#insp.show{display:flex}
+#nw{position:relative;animation:lift .16s ease-out}
+@keyframes lift{from{transform:scale(.45) rotate(-7deg);opacity:.2}}
+#note{display:block;border-radius:3px;box-shadow:0 8px 22px #000b}
+#lens{position:absolute;left:0;top:0;z-index:22;pointer-events:none;width:160px;height:160px}
+#lens canvas{width:150px;height:150px;border-radius:50%;border:6px solid #8a6a2c;outline:2px solid #2a2118;box-shadow:0 6px 16px #000c,inset 0 0 12px #0006;display:block;background:#000}
+#lens i{position:absolute;left:112px;top:112px;width:64px;height:15px;background:#5a3a1e;border:2px solid #2a2118;border-radius:6px;transform:rotate(45deg);transform-origin:0 50%}
+#inspInfo{color:var(--paper);font-size:14px;text-align:center;min-height:20px}
+#inspBtns{display:flex;gap:10px;width:min(100%,520px)}
+.btn{flex:1;min-height:52px;font:inherit;font-size:17px;font-weight:700;border:2px solid var(--ink);border-radius:8px 6px 9px 5px;background:var(--paper);color:var(--ink);box-shadow:2px 3px 0 #0009;padding:8px 10px}
+.btn:active{transform:translateY(2px);box-shadow:1px 1px 0 #0009}
+.btn.red{background:var(--red);color:#fff4df}
+.btn.ok{background:#cfe0bd}
+.btn.uv{flex:.7;background:#51408c;color:#efe7ff}
+.btn.uv.on{background:#8a6cff}
+.btn[disabled]{opacity:.45}
+.sheet{position:absolute;inset:0;display:none;z-index:60;background:#120e0bee;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 14px) 14px 14px;overflow:auto;touch-action:pan-y}
+.sheet.show{display:flex}
+.card{width:min(100%,460px);margin:auto;background:var(--paper);border:3px solid var(--ink);border-radius:9px 6px 11px 7px;padding:18px 16px;box-shadow:5px 6px 0 #0009;transform:rotate(-.3deg)}
+.card h1{font-size:30px;margin:0 0 2px;letter-spacing:1px}
+.card h2{font-size:23px;margin:0 0 8px}
+.card p{font-size:16px;line-height:1.55;margin:8px 0}
+.card .sub{font-size:14px;opacity:.75}
+.boss{display:flex;gap:10px;align-items:flex-start}
+.boss svg{flex:none;width:64px;height:64px}
+.boss p{margin:0;background:#fff8e8;border:2px solid var(--ink);border-radius:9px;padding:8px 10px;font-size:15px;line-height:1.5}
+.row{display:flex;gap:8px;margin-top:12px}
+.cmp{display:flex;gap:8px;margin-top:8px}
+.cmp div{flex:1;min-width:0;text-align:center;font-size:13px;font-weight:700}
+.cmp canvas{width:100%;display:block;border:2px solid var(--ink);border-radius:4px;margin-top:3px;background:#fff}
+.facts{margin:9px 0;padding:0;list-style:none;font-size:15px;line-height:1.6}
+.facts b{color:var(--red)}
+.shop{border:2px solid var(--ink);border-radius:7px;padding:9px 10px;margin-top:9px;background:#fff8e8}
+.shop b{font-size:16px}.shop p{font-size:14px;margin:3px 0 7px;line-height:1.45}
+#stamp{position:absolute;left:50%;top:40%;z-index:75;font-size:44px;font-weight:900;color:var(--red);border:6px solid var(--red);padding:4px 18px;border-radius:7px;transform:translate(-50%,-50%) rotate(-9deg) scale(1);display:none;background:#f3e8d2d9}
+#stamp.go{display:block;animation:st .28s cubic-bezier(.2,1.4,.5,1)}
+@keyframes st{from{transform:translate(-50%,-50%) rotate(-3deg) scale(3);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="top">
+    <div class="r1"><span class="mini" id="dayL">第 1 天</span><span id="timer">0:00</span><span class="mini" id="moneyL">$0</span></div>
+    <button id="clue"></button>
+  </div>
+  <div id="hint"></div>
+  <div id="bot">
+    <button class="tool on" id="tHand">手<small>撥開／拿起</small></button>
+    <button class="tool" id="tMach">點鈔機<small id="machL">點鈔票堆</small></button>
+    <button class="tool" id="tTray">退鈔匣<small id="trayL">0 張</small></button>
+    <button class="tool" id="tUV">紫外燈<small id="uvL">12 秒</small></button>
+  </div>
+  <div id="insp">
+    <div id="nw"><canvas id="note"></canvas></div>
+    <div id="inspInfo"></div>
+    <div id="inspBtns">
+      <button class="btn ok" id="bPass">放行</button>
+      <button class="btn uv" id="bUV">紫外燈</button>
+      <button class="btn red" id="bFake">是假鈔！</button>
+    </div>
+    <div id="lens"><canvas id="lensC" width="300" height="300"></canvas><i></i></div>
+  </div>
+  <div id="toast"></div>
+  <div id="stamp">抓到了</div>
+  <div class="sheet show" id="sheet"><div class="card" id="card"></div></div>
+</div>
+
+<script id="logic">
+/* 純邏輯：沒有 DOM，node 可測 */
+const G=(()=>{
+const DENOMS=[
+ {v:10, word:'TEN',    color:'棕色',ink:'#6e4526',paper:'#efe0c6',tint:'#c99a6b',scene:'lighthouse'},
+ {v:20, word:'TWENTY', color:'綠色',ink:'#2d5c43',paper:'#dfead3',tint:'#86b08f',scene:'ship'},
+ {v:50, word:'FIFTY',  color:'紫色',ink:'#5f3570',paper:'#eadfed',tint:'#b394c2',scene:'mountain'},
+ {v:100,word:'ONE HUNDRED',color:'藍色',ink:'#1e4c78',paper:'#d9e6f0',tint:'#86aed0',scene:'owl'},
+ {v:500,word:'FIVE HUNDRED',color:'紅色',ink:'#872c2c',paper:'#f2dcd3',tint:'#d89a8c',scene:'crown'}];
+const FLAWS={
+ micro:{name:'微縮字',short:'標題下的微縮字糊成一條線',text:'真鈔標題下方有一行極小的字。假鈔印不出來，放大後是一條糊線。'},
+ thread:{name:'安全線',short:'安全線裡沒有數字',text:'真鈔的直條安全線裡有細小的面額數字。假鈔只是一條灰線。'},
+ serial:{name:'序號',short:'左上與右下序號不一致',text:'真鈔左上、右下的序號完全相同。假鈔有一位數字對不上。'},
+ dots:{name:'印刷網點',short:'放大全是小圓點',text:'真鈔是凹版線條。假鈔是噴墨印的，放大後全是小圓點。'},
+ typo:{name:'拼錯字',short:'微縮字 AURELIA 拼成 AURELLA',text:'這張是高手做的，騙得過點鈔機。微縮字看起來正常，但 AURELIA 被拼成 AURELLA。'}};
+const DAYS=[
+ {n:80,  t:150,flaw:'micro', prefix:false,pay:250,detect:1,  depth:[.2,.9], say:'小子，今天第一天上工。有人塞了一張假鈔進我的錢堆。線報說是 {D} 元。老子中午到，到之前把它找出來。'},
+ {n:180, t:160,flaw:'thread',prefix:true, pay:350,detect:1,  depth:[.1,.7], say:'又來了。這次假鈔是 {D} 元，序號 {P} 開頭，錢也多了一倍。別把真鈔亂指，我聽了會生氣。'},
+ {n:420, t:175,flaw:'serial',prefix:true, pay:450,detect:1,  depth:[.05,.6],say:'賭場那批現金今天進來。{D} 元、序號 {P} 開頭。這麼多錢，用手翻你翻到過年。'},
+ {n:720, t:185,flaw:'dots',  prefix:true, pay:550,detect:.7, depth:[.03,.5],say:'碼頭送來的。{D} 元、序號 {P} 開頭。這張印得好，點鈔機不一定抓得到。自己把眼睛睜大。'},
+ {n:1200,t:245,flaw:'typo',  prefix:true, pay:800,detect:0,  depth:[.02,.45],say:'今晚全部的錢都在這。假鈔是 {D} 元、序號 {P} 開頭，連點鈔機都騙得過。找不到，明天換你在洗衣機裡。'}];
+const PEN=20, SCOOP=30, MACH_T=4.5, UV_T=12;
+function rng(s){s=s>>>0;return()=>{s=s+0x6D2B79F5>>>0;let t=s;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const LET='ABCDEFGHJKLMNPRSTUVWXYZ';
+function serialOf(r,pre){let s=pre||LET[Math.floor(r()*LET.length)];for(let i=0;i<7;i++)s+=Math.floor(r()*10);return s}
+function place(r){const g=()=>(r()+r()+r())/3;return{x:Math.min(.95,Math.max(.05,g())),y:Math.min(.95,Math.max(.05,g())),r:(r()-.5)*Math.PI*.9+(r()<.5?0:Math.PI)}}
+function newDay(day,seed,bonus){
+ const D=DAYS[day],r=rng(seed);
+ const clueD=[1,2,3,4,3][day], letters='KMRTXZ';
+ const prefix=D.prefix?letters[Math.floor(r()*letters.length)]:'';
+ const notes=[];
+ for(let i=0;i<D.n;i++){
+  const d=r()<.25?clueD:Math.floor(r()*DENOMS.length),p=place(r);
+  const n={id:i,d,...p,serial:serialOf(r,d===clueD&&prefix&&r()<.22?prefix:''),wear:r()*r(),scrib:r()<.1,seed:Math.floor(r()*1e9),fake:false,flaw:null};
+  notes.push(n);
+ }
+ const idx=Math.floor((D.depth[0]+r()*(D.depth[1]-D.depth[0]))*(D.n-1));
+ const f=notes[idx];f.fake=true;f.flaw=D.flaw;f.d=clueD;f.serial=serialOf(r,prefix);f.wear=.1;f.scrib=false;
+ f.serial2=mutate(f.serial,r);
+ return{day,D,seed,r,notes,tray:[],clueD,prefix,left:D.t+(bonus||0),status:'play',mistakes:0,checked:0,uv:UV_T,total:D.n,fake:f};
+}
+function mutate(s,r){const i=2+Math.floor(r()*6),c=s[i];let n=c;while(n===c)n=String(Math.floor(r()*10));return s.slice(0,i)+n+s.slice(i+1)}
+function take(S,n){let i=S.notes.indexOf(n);if(i>=0){S.notes.splice(i,1);return}i=S.tray.indexOf(n);if(i>=0)S.tray.splice(i,1)}
+function bury(S,n){const p=place(S.r);Object.assign(n,p);const at=Math.floor(S.r()*(S.notes.length+1)*.6);S.notes.splice(at,0,n)}
+/* 放行：真鈔從堆裡消失；假鈔被放過時悄悄回到堆裡（玩家不知道） */
+function pass(S,n){take(S,n);if(n.fake){bury(S,n);return'missed'}S.checked++;return'ok'}
+function accuse(S,n){if(n.fake){take(S,n);S.status='win';return'win'}take(S,n);S.checked++;S.mistakes++;S.left=Math.max(0,S.left-PEN);if(S.left<=0)S.status='lose';return'wrong'}
+function scoop(S,list){list.forEach(n=>take(S,n));return list}
+function machineDone(S,list){
+ const rej=[];let cleared=0;
+ for(const n of list){
+  if(n.fake){if(S.r()<S.D.detect)rej.push(n);else bury(S,n)}
+  else if(n.wear>.55&&S.r()<.45)rej.push(n);
+  else{S.checked++;cleared++}
+ }
+ S.tray.push(...rej);
+ return{cleared,rej:rej.length};
+}
+function tick(S,dt){if(S.status!=='play')return;S.left-=dt;if(S.left<=0){S.left=0;S.status='lose'}}
+function payout(S){return S.D.pay+Math.max(0,Math.floor(S.left)*5-S.mistakes*30)}
+return{DENOMS,FLAWS,DAYS,PEN,SCOOP,MACH_T,UV_T,rng,newDay,pass,accuse,scoop,machineDone,tick,payout,take};
+})();
+</script>
+
+<script>
+/* ====== 鈔票美術 ====== */
+const NW=1320,NH=600;
+const $=id=>document.getElementById(id);
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function hatch(x,path,box,gap,ang,col,lw){x.save();path(x);x.clip();x.strokeStyle=col;x.lineWidth=lw;x.beginPath();
+ const[cx,cy,R]=box,co=Math.cos(ang),si=Math.sin(ang);
+ for(let t=-R;t<R;t+=gap){x.moveTo(cx+co*-R-si*t,cy+si*-R+co*t);x.lineTo(cx+co*R-si*t,cy+si*R+co*t)}x.stroke();x.restore()}
+function rosette(x,cx,cy,R,r,d,col,lw,steps=900){x.strokeStyle=col;x.lineWidth=lw;x.beginPath();for(let i=0;i<=steps;i++){const t=i/steps*Math.PI*2*Math.abs(r);const px=(R-r)*Math.cos(t)+d*Math.cos((R-r)/r*t),py=(R-r)*Math.sin(t)-d*Math.sin((R-r)/r*t);i?x.lineTo(cx+px,cy+py):x.moveTo(cx+px,cy+py)}x.stroke()}
+const SCENES={
+ lighthouse(x){x.beginPath();x.moveTo(275,450);x.lineTo(290,230);x.lineTo(330,230);x.lineTo(345,450);x.closePath();x.rect(280,200,60,30);x.moveTo(275,200);x.lineTo(310,160);x.lineTo(345,200);x.closePath();x.moveTo(150,490);x.quadraticCurveTo(310,410,470,490);x.closePath()},
+ ship(x){x.beginPath();x.moveTo(190,395);x.lineTo(430,395);x.lineTo(395,450);x.lineTo(225,450);x.closePath();x.moveTo(305,380);x.lineTo(305,170);x.lineTo(405,370);x.closePath();x.moveTo(295,380);x.lineTo(295,205);x.lineTo(205,370);x.closePath()},
+ mountain(x){x.beginPath();x.moveTo(135,450);x.lineTo(265,210);x.lineTo(335,325);x.lineTo(385,250);x.lineTo(485,450);x.closePath()},
+ owl(x){x.beginPath();x.ellipse(310,330,92,128,0,0,7);x.moveTo(232,235);x.lineTo(250,185);x.lineTo(285,215);x.lineTo(335,215);x.lineTo(370,185);x.lineTo(388,235);x.closePath()},
+ crown(x){x.beginPath();x.moveTo(190,420);x.lineTo(165,230);x.lineTo(245,320);x.lineTo(310,190);x.lineTo(375,320);x.lineTo(455,230);x.lineTo(430,420);x.closePath();x.rect(190,430,240,28)}};
+const MICRO=w=>(`RESERVE BANK OF ${w} · `).repeat(5);
+function drawBase(D){
+ const c=mk(NW,NH),x=c.getContext('2d');
+ x.fillStyle=D.paper;x.fillRect(0,0,NW,NH);
+ x.strokeStyle=D.tint;x.lineWidth=.9;x.globalAlpha=.75;
+ for(let i=0;i<46;i++){x.beginPath();for(let px=20;px<=NW-20;px+=10){const py=20+i*12.6+Math.sin(px/70+i*.33)*11+Math.sin(px/190)*7;px===20?x.moveTo(px,py):x.lineTo(px,py)}x.stroke()}
+ x.globalAlpha=1;
+ rosette(x,690,335,176,47,118,D.tint,1.1);rosette(x,690,335,120,31,86,D.ink+'99',.8);
+ x.strokeStyle=D.ink;x.lineWidth=7;x.strokeRect(22,22,NW-44,NH-44);x.lineWidth=1.6;x.strokeRect(36,36,NW-72,NH-72);
+ x.lineWidth=1;for(let i=0;i<300;i++){const t=i/300,a=t*Math.PI*2*60;const X=t*(NW-72)+36;x.beginPath();x.arc(X,29,4+Math.sin(a)*2,0,7);x.stroke();x.beginPath();x.arc(X,NH-29,4+Math.cos(a)*2,0,7);x.stroke()}
+ for(const[a,b]of[[92,92],[NW-92,92],[92,NH-92],[NW-92,NH-92]]){x.fillStyle=D.paper;x.beginPath();x.arc(a,b,54,0,7);x.fill();rosette(x,a,b,50,13,32,D.ink,1,500);}
+ x.fillStyle=D.ink;x.textAlign='center';x.textBaseline='middle';
+ x.font='700 34px Georgia,serif';for(const[a,b]of[[92,92],[NW-92,92],[92,NH-92]]){x.fillStyle=D.paper;x.fillRect(a-40,b-20,80,40);x.fillStyle=D.ink;x.fillText(D.v,a,b)}
+ /* 版畫圓框 */
+ const oval=q=>{q.beginPath();q.ellipse(310,315,178,205,0,0,7)};
+ x.fillStyle=D.paper;oval(x);x.fill();
+ hatch(x,oval,[310,315,300],6,0,D.ink+'88',1.4);
+ const sc=SCENES[D.scene];hatch(x,q=>{oval(q);q.clip();sc(q)},[310,315,300],3.4,.7,D.ink,1.9);
+ x.save();oval(x);x.clip();x.strokeStyle=D.ink;x.lineWidth=2.4;sc(x);x.stroke();x.restore();
+ x.strokeStyle=D.ink;x.lineWidth=5;oval(x);x.stroke();x.lineWidth=1.4;x.beginPath();x.ellipse(310,315,188,215,0,0,7);x.stroke();
+ /* 標題＋文字 */
+ x.fillStyle=D.ink;x.font='700 50px Georgia,serif';x.fillText('RESERVE BANK OF AURELIA',790,92);
+ x.font='700 46px Georgia,serif';x.fillText(D.word+' AUREI',690,370);
+ x.font='italic 25px Georgia,serif';x.fillText('Payable to the bearer on demand',690,428);
+ x.lineWidth=2;x.beginPath();x.moveTo(530,505);x.quadraticCurveTo(570,462,610,500);x.quadraticCurveTo(640,520,680,488);x.moveTo(740,505);x.quadraticCurveTo(780,470,812,500);x.quadraticCurveTo(840,515,880,486);x.stroke();
+ x.font='18px Georgia,serif';x.fillText('Governor',600,530);x.fillText('Treasurer',810,530);
+ /* 印章 */
+ x.strokeStyle='#a4382e';x.fillStyle='#a4382e';x.lineWidth=2;x.beginPath();for(let i=0;i<48;i++){const a=i/48*6.283,r=i%2?58:68,px=1130+Math.cos(a)*r,py=235+Math.sin(a)*r;i?x.lineTo(px,py):x.moveTo(px,py)}x.closePath();x.stroke();
+ x.beginPath();x.arc(1130,235,48,0,7);x.stroke();x.font='700 19px Georgia,serif';x.fillText('TREASURY',1130,226);x.fillText('SEAL',1130,250);
+ x.fillStyle=D.ink;x.font='700 120px Georgia,serif';x.fillText(D.v,1130,430);
+ drawMicro(x,D,'AURELIA');
+ drawThread(x,D);
+ return c;
+}
+function drawMicro(x,D,w){x.save();x.fillStyle=D.paper;x.fillRect(506,122,568,24);x.fillStyle=D.ink;x.font='700 15px Georgia,serif';x.textAlign='left';x.textBaseline='middle';x.beginPath();x.rect(506,122,568,24);x.clip();x.fillText(MICRO(w),506,134);x.restore()}
+function threadX(){return 985}
+function drawThread(x,D){const X=threadX();x.save();x.fillStyle='#8f949c';for(let y=50;y<NH-50;y+=70){x.fillRect(X-13,y,26,48);x.fillStyle='#e8ebef';x.font='700 13px Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.translate(X,y+24);x.rotate(-Math.PI/2);x.fillText(String(D.v).padStart(3,'0')+' '+D.v,0,0);x.rotate(Math.PI/2);x.translate(-X,-(y+24));x.fillStyle='#8f949c'}x.restore()}
+const BASE=G.DENOMS.map(drawBase);
+const noteCv=mk(NW,NH),uvCv=mk(NW,NH);
+function composeInto(c,n){
+ const x=c.getContext('2d'),D=G.DENOMS[n.d],r=G.rng(n.seed);
+ x.globalCompositeOperation='source-over';x.globalAlpha=1;x.clearRect(0,0,NW,NH);
+ x.drawImage(BASE[n.d],0,0);
+ const fl=n.fake?n.flaw:null;
+ if(fl==='micro'){x.save();x.fillStyle=D.paper;x.fillRect(506,122,568,24);x.strokeStyle=D.ink;x.globalAlpha=.65;x.lineWidth=6;x.filter='blur(1.5px)';x.beginPath();x.moveTo(506,134);for(let a=506;a<1074;a+=9)x.lineTo(a,134+Math.sin(a*.7)*2);x.stroke();x.restore()}
+ if(fl==='typo')drawMicro(x,D,'AURELLA');
+ if(fl==='thread'){x.fillStyle=D.paper;x.fillRect(threadX()-15,44,30,NH-88);x.fillStyle='#8f949c';x.fillRect(threadX()-8,44,16,NH-88)}
+ x.fillStyle='#a4282a';x.font='700 38px "Courier New",monospace';x.textAlign='left';x.textBaseline='middle';
+ x.fillText(n.serial,530,205);x.fillText(fl==='serial'?n.serial2:n.serial,1050-260,552);
+ if(fl==='dots'){
+  const s=mk(NW/4,NH/4);s.getContext('2d').drawImage(c,0,0,NW/4,NH/4);
+  x.fillStyle=D.paper;x.fillRect(0,0,NW,NH);
+  x.imageSmoothingEnabled=true;x.drawImage(s,0,0,NW,NH);x.globalCompositeOperation='multiply';x.drawImage(s,0,0,NW,NH);
+  x.globalCompositeOperation='screen';x.fillStyle=(()=>{const p=mk(6,6),q=p.getContext('2d');q.fillStyle='#fff';q.fillRect(0,0,6,6);q.globalCompositeOperation='destination-out';q.beginPath();q.arc(3,3,2.65,0,7);q.fill();return x.createPattern(p,'repeat')})();x.fillRect(0,0,NW,NH);x.globalCompositeOperation='source-over';
+ }
+ /* 真鈔也會破舊：皺摺、污漬、塗鴉 */
+ if(n.wear>.25){x.strokeStyle='#fff8';x.lineWidth=2;const k=1+Math.floor(n.wear*5);for(let i=0;i<k;i++){x.beginPath();const a=r()*NW;x.moveTo(a,0);x.lineTo(a+(r()-.5)*160,NH);x.stroke()}x.fillStyle='#5a3a1e22';for(let i=0;i<k;i++){x.beginPath();x.ellipse(r()*NW,r()*NH,30+r()*90,20+r()*60,r()*3,0,7);x.fill()}}
+ if(n.wear>.55){x.globalCompositeOperation='destination-out';x.beginPath();x.moveTo(NW,NH);x.lineTo(NW-50-r()*60,NH);x.lineTo(NW,NH-40-r()*50);x.closePath();x.fill();x.globalCompositeOperation='source-over'}
+ if(n.scrib){x.strokeStyle='#1b2a55';x.lineWidth=3;x.beginPath();let a=420+r()*500,b=300+r()*200;x.moveTo(a,b);for(let i=0;i<9;i++){a+=(r()-.3)*60;b+=(r()-.5)*40;x.lineTo(a,b)}x.stroke()}
+}
+function composeUV(n){const x=uvCv.getContext('2d');x.globalCompositeOperation='source-over';x.drawImage(noteCv,0,0);x.globalCompositeOperation='multiply';x.fillStyle='#1c1248';x.fillRect(0,0,NW,NH);x.globalCompositeOperation='lighter';
+ if(!n.fake){x.fillStyle='#5cf2ff';x.shadowColor='#5cf2ff';x.shadowBlur=26;x.fillRect(800,44,22,NH-88);x.shadowBlur=0;x.font='700 72px Georgia,serif';x.textAlign='center';x.fillStyle='#39b8d8';x.fillText(G.DENOMS[n.d].v,690,250)}
+ x.globalCompositeOperation='source-over'}
+
+/* ====== 畫面／場景 ====== */
+const cv=$('c'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1,P={x:0,y:0,w:0,h:0},NOTE={w:80,h:36},SPR=[],UVS={real:null,fake:null},bg=null,pileL=null,pileDirty=true;
+function layoutTop(){const t=$('top').offsetHeight||96,b=$('bot').offsetHeight||10;return{t,b}}
+function resize(){
+ W=innerWidth;H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);cv.width=W*DPR;cv.height=H*DPR;
+ const{t,b}=layoutTop();P={x:10,y:t+4,w:W-20,h:Math.max(120,H-t-b-8)};
+ const nw=Math.max(62,Math.min(112,Math.sqrt(P.w*P.h)*.145));NOTE={w:nw,h:nw*NH/NW};
+ const sw=Math.round(nw*DPR*1.25),sh=Math.round(sw*NH/NW),m=Math.round(6*DPR);
+ SPR=BASE.map(b=>[0,1].map(v=>{const c=mk(sw+m*2,sh+m*2),x=c.getContext('2d');x.shadowColor='#0009';x.shadowBlur=3*DPR;x.shadowOffsetY=1.5*DPR;x.fillStyle='#000';x.fillRect(m,m,sw,sh);x.shadowColor='transparent';x.imageSmoothingQuality='high';x.drawImage(b,m,m,sw,sh);if(v){x.fillStyle='#3a250f24';x.fillRect(m,m,sw,sh)}x.strokeStyle='#fff5';x.lineWidth=1;x.strokeRect(m+.5,m+.5,sw-1,sh-1);return c}));
+ SPR.m=m/DPR/1.25;
+ const u=(glow)=>{const c=mk(sw+m*2,sh+m*2),x=c.getContext('2d');x.fillStyle='#17102e';x.fillRect(m,m,sw,sh);x.strokeStyle='#3a2d66';x.strokeRect(m,m,sw,sh);if(glow){x.fillStyle='#5cf2ff';x.shadowColor='#5cf2ff';x.shadowBlur=8*DPR;x.fillRect(m+sw*.6,m+2,sw*.05,sh-4);x.fillStyle='#2fa8c4';x.shadowBlur=0;x.fillRect(m+sw*.4,m+sh*.4,sw*.1,sh*.2)}return c};
+ UVS={real:u(true),fake:u(false)};
+ bg=mk(cv.width,cv.height);drawFloor(bg.getContext('2d'));
+ pileL=mk(cv.width,cv.height);pileDirty=true;
+ if(cur){sizeInspect();const r=noteRect();lens.x=r.left+r.width*.62;lens.y=r.top+r.height*.28;drawLens()}
+}
+function wob(x,a,b,c,d,j=1.6){x.beginPath();x.moveTo(a,b);const n=Math.max(2,Math.hypot(c-a,d-b)/42|0);for(let i=1;i<=n;i++){const t=i/n;x.lineTo(a+(c-a)*t+(Math.random()-.5)*j,b+(d-b)*t+(Math.random()-.5)*j)}x.stroke()}
+function drawFloor(x){
+ x.save();x.scale(DPR,DPR);
+ x.fillStyle='#4a3f35';x.fillRect(0,0,W,H);
+ x.strokeStyle='#2c241d';x.lineWidth=2;
+ const s=78;for(let i=0;i<W/s+1;i++)wob(x,i*s,0,i*s+Math.random()*4,H);for(let i=0;i<H/s+1;i++)wob(x,0,i*s,W,i*s+Math.random()*4);
+ x.fillStyle='#00000018';for(let i=0;i<70;i++){x.beginPath();x.ellipse(Math.random()*W,Math.random()*H,8+Math.random()*50,5+Math.random()*24,Math.random()*3,0,7);x.fill()}
+ x.strokeStyle='#2c241d88';x.lineWidth=1.2;for(let i=0;i<30;i++){const a=Math.random()*W,b=Math.random()*H;wob(x,a,b,a+(Math.random()-.5)*70,b+(Math.random()-.5)*50,3)}
+ /* 燈泡光 */
+ const cx=W/2,cy=P.y+P.h*.46,g=x.createRadialGradient(cx,cy,30,cx,cy,Math.max(W,H)*.68);
+ g.addColorStop(0,'#ffdd9a55');g.addColorStop(.5,'#ffb65a12');g.addColorStop(1,'#0a0604dd');x.fillStyle=g;x.fillRect(0,0,W,H);
+ x.restore();
+}
+function drawPile(){
+ const x=pileL.getContext('2d');x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,pileL.width,pileL.height);
+ const ns=S?S.notes:[],l=ns.length,step=Math.max(40,l/7|0),sp=NOTE.w*DPR/ (SPR[0][0].width-SPR.m*2*DPR*1.25)*1;
+ for(let i=0;i<l;i++){
+  const n=ns[i],px=(P.x+n.x*P.w)*DPR,py=(P.y+n.y*P.h)*DPR,co=Math.cos(n.r)*sp,si=Math.sin(n.r)*sp,img=SPR[n.d][n.id&1];
+  x.setTransform(co,si,-si,co,px,py);x.drawImage(img,-img.width/2,-img.height/2);
+  if(i&&i%step===0&&i<l-step/2){x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-atop';x.fillStyle='#14090422';x.fillRect(0,0,pileL.width,pileL.height);x.globalCompositeOperation='source-over'}
+ }
+ x.setTransform(1,0,0,1,0,0);pileDirty=false;
+}
+function noteAt(a,b){const ns=S.notes;for(let i=ns.length-1;i>=0;i--){const n=ns[i],dx=a-(P.x+n.x*P.w),dy=b-(P.y+n.y*P.h);if(Math.abs(dx)>NOTE.w*.7||Math.abs(dy)>NOTE.w*.7)continue;const c=Math.cos(-n.r),s=Math.sin(-n.r),u=dx*c-dy*s,v=dx*s+dy*c;if(Math.abs(u)<NOTE.w/2+2&&Math.abs(v)<NOTE.h/2+3)return n}return null}
+
+/* ====== 音效 ====== */
+let AC=null,muted=false,noiseB=null,whirr=null;
+function audio(){if(AC)return;try{AC=new(window.AudioContext||window.webkitAudioContext)();const b=AC.createBuffer(1,AC.sampleRate*.5,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseB=b}catch(e){AC=null}}
+function noise(dur,freq,vol,type='bandpass'){if(!AC)return;const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseB;f.type=type;f.frequency.value=freq;g.gain.setValueAtTime(vol,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+dur);s.connect(f);f.connect(g);g.connect(AC.destination);s.start();s.stop(AC.currentTime+dur)}
+function tone(fr,dur,vol=.15,t='square',at=0){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain(),T=AC.currentTime+at;o.type=t;o.frequency.value=fr;g.gain.setValueAtTime(vol,T);g.gain.exponentialRampToValueAtTime(.001,T+dur);o.connect(g);g.connect(AC.destination);o.start(T);o.stop(T+dur)}
+const SFX={flick(){noise(.09,3600,.22)},rustle(){noise(.05,2400,.05)},pass(){noise(.14,1800,.2)},wrong(){tone(150,.3,.2,'sawtooth');tone(110,.4,.2,'sawtooth',.12)},
+ win(){noise(.09,700,.5,'lowpass');[523,659,784,1047].forEach((f,i)=>tone(f,.25,.12,'triangle',.12+i*.09))},tick(){tone(1000,.05,.07)},lose(){[300,240,180].forEach((f,i)=>tone(f,.4,.16,'sawtooth',i*.25))},
+ reject(){tone(880,.09,.1);tone(880,.09,.1,'square',.14)},
+ whirrOn(){if(!AC||whirr)return;const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();s.buffer=noiseB;s.loop=true;f.type='bandpass';f.frequency.value=2600;g.gain.value=.07;l.frequency.value=34;lg.gain.value=.05;l.connect(lg);lg.connect(g.gain);s.connect(f);f.connect(g);g.connect(AC.destination);s.start();l.start();whirr=[s,l]},
+ whirrOff(){if(whirr){whirr.forEach(n=>{try{n.stop()}catch(e){}});whirr=null}}};
+
+/* ====== 遊戲狀態 ====== */
+let S=null,cur=null,mode='hand',mach={busy:false,t:0,list:[],shown:0},fx=[],save={day:0,money:0,machine:false,uv:false,bonus:0,seed:1},uvOn=null,lens={x:0,y:0},inspUV=false,tut=0,lastTick=0,hintT='';
+function load(){try{const v=JSON.parse(localStorage.getItem('onebadbill')||'null');if(v&&typeof v.day==='number')save=Object.assign(save,v)}catch(e){}}
+function store(){try{localStorage.setItem('onebadbill',JSON.stringify(save))}catch(e){}}
+const fmt=t=>{t=Math.ceil(Math.max(0,t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+function clueText(s){const D=G.DENOMS[s.clueD];return`線報：<b>${D.v} 元（${D.color}）</b>${s.prefix?`・序號 <b>${s.prefix}</b> 開頭`:''}・${G.FLAWS[s.D.flaw].short}`}
+function toast(t,ms=1300){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),ms)}
+function hint(t){if(t!==hintT){hintT=t;$('hint').textContent=t}}
+const BOSS=`<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#e6d6b6" stroke="#2a2118" stroke-width="2"/><path d="M12 62c1-16 10-20 20-20s19 4 20 20z" fill="#2a2118"/><path d="M28 43l4 9 4-9z" fill="#b5352a"/><ellipse cx="32" cy="30" rx="13" ry="14" fill="#d9b48c" stroke="#2a2118" stroke-width="2"/><path d="M13 23c6 2 32 2 38 0-3 3-7 4-9 4H22c-2 0-6-1-9-4z" fill="#2a2118"/><path d="M21 22c0-12 4-15 11-15s11 3 11 15z" fill="#2a2118"/><path d="M21 19h22v3H21z" fill="#b5352a"/><path d="M24 31h6M35 31h6" stroke="#2a2118" stroke-width="2.4"/><path d="M26 38c4-2 8-2 12 0" stroke="#2a2118" stroke-width="2.4" fill="none"/></svg>`;
+function sheet(html){$('card').innerHTML=html;$('sheet').classList.add('show');$('sheet').scrollTop=0}
+function hideSheet(){$('sheet').classList.remove('show')}
+function on(id,f){const e=$(id);if(e)e.onclick=()=>{audio();f()}}
+function screenTitle(){
+ const has=save.day>0||save.money>0;
+ sheet(`<h1>一張假鈔</h1><div class="sub">One Bad Bill</div><div class="boss" style="margin-top:12px">${BOSS}<p>這家洗衣店樓下，是老子的錢庫。堆了多少錢我也懶得算。我只知道裡面混了<b>一張假鈔</b>，而你是新來的。</p></div>
+ <div class="row">${has?`<button class="btn" id="sNew">重新開始</button><button class="btn red" id="sGo">繼續第 ${save.day+1} 天</button>`:`<button class="btn red" id="sGo">下樓上工</button>`}</div>`);
+ on('sGo',()=>screenBrief());on('sNew',()=>{save={day:0,money:0,machine:false,uv:false,bonus:0,seed:save.seed+7};store();screenBrief()});
+}
+function flawCrops(flaw,d){
+ const real={d,serial:'K4471902',wear:0,seed:1,fake:false},fake={d,serial:'K4471902',serial2:'K4471602',wear:0,seed:1,fake:true,flaw};
+ const R={micro:[[640,122,260,24]],typo:[[655,124,84,20]],thread:[[945,190,80,36]],dots:[[230,270,160,64]],serial:[[526,184,200,40],[786,532,200,40]]}[flaw];
+ const mkC=n=>{composeInto(noteCv,n);const c=mk(600,240),x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,600,240);const h=240/R.length;R.forEach((r,i)=>{const sc=Math.min(600/r[2],h/r[3]);x.imageSmoothingEnabled=false;x.drawImage(noteCv,r[0],r[1],r[2],r[3],(600-r[2]*sc)/2,i*h+(h-r[3]*sc)/2,r[2]*sc,r[3]*sc)});return c};
+ return[mkC(real),mkC(fake)];
+}
+function screenBrief(reopen){
+ if(!reopen){S=G.newDay(save.day,(save.seed*7919+save.day*31+Date.now())>>>0,save.bonus);save.bonus=0;store();mach={busy:false,t:0,list:[],shown:0};fx=[];mode='hand';tut=save.day===0?1:0;pileDirty=true;hud();}
+ const D=G.DENOMS[S.clueD],F=G.FLAWS[S.D.flaw],say=S.D.say.replace('{D}',D.v).replace('{P}',S.prefix);
+ sheet(`<h2>第 ${S.day+1} 天</h2><div class="boss">${BOSS}<p>${say}</p></div>
+ <ul class="facts"><li>假鈔面額：<b>${D.v} 元（${D.color}）</b></li>${S.prefix?`<li>序號開頭：<b>${S.prefix}</b></li>`:''}<li>破綻：<b>${F.name}</b>　${F.text}</li><li class="sub">錢堆 ${S.total} 張・老大 ${fmt(S.left)} 後到</li></ul>
+ <div class="cmp"><div>真鈔<span id="cA"></span></div><div style="color:#b5352a">假鈔<span id="cB"></span></div></div>
+ <div class="row"><button class="btn red" id="sStart">${reopen?'回去找':'開始找'}</button></div>`);
+ const[a,b]=flawCrops(S.D.flaw,S.clueD);$('cA').appendChild(a);$('cB').appendChild(b);
+ on('sStart',()=>{hideSheet();$('top').style.display='block';resize();hud()});
+}
+function hud(){
+ if(!S)return;$('dayL').textContent=`第 ${S.day+1} 天・剩 ${S.notes.length+S.tray.length} 張`;$('moneyL').textContent='$'+save.money;$('clue').innerHTML=clueText(S);
+ const hasT=save.machine||save.uv,wantB=hasT?'flex':'none';if($('top').style.display==='block'&&$('bot').style.display!==wantB){$('bot').style.display=wantB;resize()}$('tMach').style.display=save.machine?'':'none';$('tUV').style.display=save.uv?'':'none';$('tTray').style.display=save.machine?'':'none';
+ $('tHand').classList.toggle('on',mode==='hand');$('tMach').classList.toggle('on',mode==='mach');$('tUV').classList.toggle('on',mode==='uv');
+ $('trayL').textContent=S.tray.length+' 張';$('tTray').classList.toggle('on',S.tray.length>0);
+ $('uvL').textContent=S.uv.toFixed(0)+' 秒';$('tUV').disabled=S.uv<=0;$('bUV').style.display=save.uv?'':'none';
+ $('machL').textContent=mach.busy?`${mach.shown} / ${mach.list.length}`:'點鈔票堆';
+}
+function setMode(m){mode=m;if(m==='mach'&&mach.busy)mode='hand';hud()}
+/* 檢查一張鈔票 */
+function sizeInspect(){
+ const c=$('note'),w=Math.min(W-24,560),h=w*NH/NW;c.style.width=w+'px';c.style.height=h+'px';c.width=Math.min(NW,w*2);c.height=c.width*NH/NW;drawInspect();
+}
+function drawInspect(){if(!cur)return;const c=$('note');c.getContext('2d').clearRect(0,0,c.width,c.height);c.getContext('2d').drawImage(inspUV?uvCv:noteCv,0,0,c.width,c.height);drawLens()}
+function noteRect(){const w=$('nw'),n=$('note');return{left:w.offsetLeft,top:w.offsetTop,width:n.clientWidth,height:n.clientHeight,right:w.offsetLeft+n.clientWidth,bottom:w.offsetTop+n.clientHeight}}
+function drawLens(){
+ if(!cur)return;const r=noteRect(),sc=NW/(r.width||1);
+ lens.x=Math.max(r.left-40,Math.min(r.right+40,lens.x));lens.y=Math.max(r.top-60,Math.min(r.bottom+60,lens.y));
+ const L=$('lens');L.style.transform=`translate(${lens.x-80}px,${lens.y-80}px)`;
+ const hx=(lens.x-r.left)*sc,hy=(lens.y-r.top)*sc,d=165,x=$('lensC').getContext('2d');
+ x.fillStyle='#17130f';x.fillRect(0,0,300,300);x.imageSmoothingEnabled=true;x.drawImage(inspUV?uvCv:noteCv,hx-d/2,hy-d/2,d,d,0,0,300,300);
+}
+function pick(n,from){
+ if(cur||!S||S.status!=='play')return;
+ cur=n;n._from=from;if(from==='pile')G.take(S,n);else G.take(S,n);pileDirty=true;composeInto(noteCv,n);inspUV=false;$('bUV').classList.remove('on');composeUV(n);
+ $('insp').classList.add('show');$('nw').style.animation='none';void $('nw').offsetWidth;$('nw').style.animation='';sizeInspect();
+ const r=noteRect();lens.x=r.left+r.width*.62;lens.y=r.top+r.height*.28;drawLens();
+ $('inspInfo').textContent=`${G.DENOMS[n.d].v} 元　序號 ${n.serial}`;SFX.flick();
+ if(tut===1||tut===2){tut=2;hint('')}
+ hud();
+}
+function closeInsp(){cur=null;$('insp').classList.remove('show');hud()}
+function flyNote(n,tx,ty){fx.push({n,x:P.x+n.x*P.w,y:P.y+n.y*P.h,tx,ty,t:0,d:.32})}
+function decide(fake){
+ if(!cur)return;const n=cur;n.x=.5;n.y=.5;closeInsp();
+ if(fake){const res=G.accuse(S,n);if(res==='win')return win();SFX.wrong();toast(`那是真鈔！老大少扣你 ${G.PEN} 秒的耐心`);tut=0;pileDirty=true;if(S.status==='lose')lose()}
+ else{G.pass(S,n);SFX.pass();flyNote(n,W+80,P.y+P.h*.5);if(tut===2){hint('沒問題就放行，繼續找下一張');tut=0}}
+ hud();
+}
+function win(){
+ SFX.win();SFX.whirrOff();mach.busy=false;const e=$('stamp');e.classList.remove('go');void e.offsetWidth;e.classList.add('go');
+ const pay=G.payout(S),t=S.total-S.notes.length-S.tray.length;save.money+=pay;save.day=S.day+1;save.seed=(save.seed+1)%99991;store();hud();
+ setTimeout(()=>{e.classList.remove('go');
+  if(save.day>=G.DAYS.length)return screenEnd();
+  sheet(`<h2>抓到了！</h2><div class="boss">${BOSS}<p>${['不錯，眼睛還能用。','算你有點本事。','行，今晚睡得著了。','這張連我都差點認不出來。'][S.day]||'好。'}</p></div>
+  <ul class="facts"><li>查了 ${t} 張，剩 ${fmt(S.left)}</li><li>冤枉真鈔 ${S.mistakes} 次</li><li>今日工錢：<b>$${pay}</b>（手上 $${save.money}）</li></ul><div class="row"><button class="btn red" id="sNext">領錢</button></div>`);
+  on('sNext',screenShop)},fastUI?0:900);
+}
+function lose(){
+ SFX.lose();SFX.whirrOff();mach.busy=false;if(cur)closeInsp();
+ const f=S.fake;f.wear=.1;composeInto(noteCv,f);const c=mk(NW/2,NH/2);c.getContext('2d').drawImage(noteCv,0,0,NW/2,NH/2);
+ const tx=S.notes.includes(f)?`它還壓在錢堆第 ${S.notes.length-S.notes.indexOf(f)} 層。`:'它就在退鈔匣裡。';
+ sheet(`<h2>老大到了</h2><div class="boss">${BOSS}<p>時間到了，小子。錢還在，假鈔也還在。下次別讓我下樓。</p></div><p>假鈔序號 ${f.serial}，${tx}</p><div id="fNote"></div><div class="row"><button class="btn red" id="sRetry">再試一次</button></div>`);
+ c.style.width='100%';c.style.marginTop='6px';$('fNote').appendChild(c);on('sRetry',()=>{save.seed=(save.seed+13)%99991;store();screenBrief()});
+}
+function screenShop(){
+ const item=(id,name,desc,price,own,lock)=>`<div class="shop"><b>${name}　$${price}</b><p>${desc}</p><button class="btn ${own?'':'ok'}" style="width:100%" id="${id}" ${own||lock||save.money<price?'disabled':''}>${own?'已擁有':lock?lock:save.money<price?'錢不夠':'買下'}</button></div>`;
+ const d=save.day;
+ sheet(`<h2>地下室小舖</h2><p class="sub">手上 $${save.money}・明天是第 ${d+1} 天</p>
+ ${item('bM','點鈔機','選一塊錢堆，一次吃 30 張，4.5 秒點完。真鈔直接清掉，可疑的吐到退鈔匣給你看。機器跑的時候，你可以繼續用手查。',400,save.machine,d<2?'第 2 天後開賣':'')}
+ ${item('bU','紫外燈','按住照錢堆 12 秒。真鈔的螢光條會亮，假鈔不會。也能在放大檢查時開燈。',600,save.uv,d<3?'第 3 天後開賣':'')}
+ ${item('bT','買通司機','老大的車晚 30 秒到，只算明天。',150,save.bonus>0,d<3?'第 3 天後開賣':'')}
+ <div class="row"><button class="btn red" id="sNext">下樓上工</button></div>`);
+ const buy=(id,p,f)=>on(id,()=>{if(save.money<p)return;save.money-=p;f();store();SFX.flick();screenShop()});
+ buy('bM',400,()=>save.machine=true);buy('bU',600,()=>save.uv=true);buy('bT',150,()=>save.bonus=30);on('sNext',()=>screenBrief());
+}
+function screenEnd(){
+ $('top').style.display='none';$('bot').style.display='none';
+ sheet(`<h2>五天過去了</h2><div class="boss">${BOSS}<p>小子，五天你全抓到了。從今天起，這間錢庫歸你管。別告訴別人我誇過你。</p></div><p>總工錢 <b>$${save.money}</b></p><div class="row"><button class="btn red" id="sAgain">再玩一次</button></div>`);
+ on('sAgain',()=>{save={day:0,money:0,machine:false,uv:false,bonus:0,seed:save.seed+3};store();screenTitle()});
+}
+/* ====== 輸入 ====== */
+let ptr=null;
+function down(e){
+ audio();if(!S||$('sheet').classList.contains('show'))return;
+ if(mode==='mach'){if(!mach.busy)startScoop(e.clientX,e.clientY);setMode('hand');return}
+ ptr={sx:e.clientX,sy:e.clientY,x:e.clientX,y:e.clientY,moved:false};
+ if(mode==='uv'&&S.uv>0)uvOn={x:e.clientX,y:e.clientY};
+}
+function move(e){
+ if(!ptr||!S)return;const dx=e.clientX-ptr.x,dy=e.clientY-ptr.y;ptr.x=e.clientX;ptr.y=e.clientY;
+ if(uvOn){uvOn.x=e.clientX;uvOn.y=e.clientY;return}
+ if(!ptr.moved&&Math.hypot(e.clientX-ptr.sx,e.clientY-ptr.sy)>9)ptr.moved=true;
+ if(ptr.moved){sweep(e.clientX,e.clientY,dx,dy)}
+}
+function up(e){
+ if(!ptr)return;const p=ptr;ptr=null;
+ if(uvOn){uvOn=null;return}
+ if(!p.moved&&S&&S.status==='play'&&!cur){const n=noteAt(p.x,p.y);if(n)pick(n,'pile')}
+}
+function sweep(a,b,dx,dy){
+ if(!S||S.status!=='play')return;const R=NOTE.w*.62;let c=0;const ns=S.notes;
+ for(let i=ns.length-1;i>=0&&c<16;i--){const n=ns[i],px=P.x+n.x*P.w,py=P.y+n.y*P.h,d=Math.hypot(px-a,py-b);if(d>R)continue;c++;const f=1-d/R*.4;
+  n.x=Math.min(.98,Math.max(.02,n.x+dx*f/P.w*1.25));n.y=Math.min(.98,Math.max(.02,n.y+dy*f/P.h*1.25));n.r+=(dx*(py-b)-dy*(px-a))*.0009+(Math.random()-.5)*.03}
+ if(c){pileDirty=true;if(Math.random()<.25)SFX.rustle()}
+}
+function startScoop(a,b){
+ if(!S||S.status!=='play'||mach.busy)return;
+ const scored=S.notes.map((n,i)=>[Math.hypot(P.x+n.x*P.w-a,P.y+n.y*P.h-b)-i*.012,n]).sort((p,q)=>p[0]-q[0]).slice(0,G.SCOOP).map(p=>p[1]);
+ if(!scored.length){toast('這裡沒有錢');return}
+ G.scoop(S,scored);mach={busy:true,t:0,list:scored,shown:0};pileDirty=true;
+ scored.forEach((n,i)=>{if(i<14)flyNote(n,W*.38,H-40)});SFX.whirrOn();hud();
+}
+function update(dt){
+ if(!S||$('sheet').classList.contains('show')||S.status!=='play')return;
+ G.tick(S,dt);
+ if(mach.busy){mach.t+=dt;const f=Math.min(1,mach.t/G.MACH_T),sh=Math.floor(f*mach.list.length);if(sh!==mach.shown){mach.shown=sh;hud()}
+  if(f>=1){const r=G.machineDone(S,mach.list);mach={busy:false,t:0,list:[],shown:0};SFX.whirrOff();if(r.rej){SFX.reject();toast(`點鈔機退出 ${r.rej} 張可疑鈔票`,1100)}pileDirty=true;hud()}}
+ if(uvOn){S.uv=Math.max(0,S.uv-dt);if(S.uv<=0){uvOn=null;toast('紫外燈沒電了');setMode('hand')}hud()}
+ const t=Math.ceil(S.left),el=$('timer');el.textContent=fmt(S.left);el.classList.toggle('low',S.left<=20);
+ if(S.left<=20&&t!==lastTick){lastTick=t;SFX.tick()}
+ if(S.status==='lose')lose();
+}
+function render(dt){
+ if(!S){ctx.setTransform(1,0,0,1,0,0);if(bg)ctx.drawImage(bg,0,0);return}
+ if(pileDirty)drawPile();
+ ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(bg,0,0);ctx.drawImage(pileL,0,0);
+ ctx.setTransform(DPR,0,0,DPR,0,0);
+ if(uvOn){
+  ctx.fillStyle='#080414e0';ctx.fillRect(0,0,W,H);ctx.save();const R=Math.min(96,W*.25);ctx.beginPath();ctx.arc(uvOn.x,uvOn.y,R,0,7);ctx.clip();ctx.fillStyle='#0b0620';ctx.fillRect(0,0,W,H);
+  const sp=1/(1.25);for(const n of S.notes){const px=P.x+n.x*P.w,py=P.y+n.y*P.h;if(Math.hypot(px-uvOn.x,py-uvOn.y)>R+NOTE.w*.6)continue;const im=n.fake?UVS.fake:UVS.real,sc=NOTE.w/(im.width-SPR.m*2*DPR*1.25);ctx.save();ctx.translate(px,py);ctx.rotate(n.r);ctx.scale(sc,sc);ctx.drawImage(im,-im.width/2,-im.height/2);ctx.restore()}
+  ctx.restore();ctx.strokeStyle='#a68bff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(uvOn.x,uvOn.y,R,0,7);ctx.stroke();
+ }
+ for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt/f.d;if(f.t>=1){fx.splice(i,1);continue}const e=f.t*f.t*(3-2*f.t),x=f.x+(f.tx-f.x)*e,y=f.y+(f.ty-f.y)*e,im=SPR[f.n.d][0],sc=NOTE.w/(im.width-SPR.m*2*DPR*1.25);ctx.save();ctx.translate(x,y);ctx.rotate(f.n.r+f.t*3);ctx.scale(sc,sc);ctx.drawImage(im,-im.width/2,-im.height/2);ctx.restore()}
+ if(mode==='mach'&&ptr==null){ctx.font='15px serif';ctx.fillStyle='#ffe9b8';ctx.textAlign='center';ctx.fillText('點一塊錢堆，送進點鈔機',W/2,P.y+22)}
+ if(tut===1)hint(`先找${G.DENOMS[S.clueD].color}的 ${G.DENOMS[S.clueD].v} 元，點一下拿起來；手指拖動可以撥開錢堆`);
+}
+let lt=0,fastUI=false;
+function loop(t){const dt=Math.min(.1,(t-lt)/1000||0);lt=t;update(dt);render(dt);requestAnimationFrame(loop)}
+/* 綁定 */
+cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}down(e)});
+cv.addEventListener('pointermove',move);cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',()=>{ptr=null;uvOn=null});
+let lensDrag=null;const ip=$('insp');
+ip.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;lensDrag={x:e.clientX,y:e.clientY};try{ip.setPointerCapture(e.pointerId)}catch(_){}});
+ip.addEventListener('pointermove',e=>{if(!lensDrag)return;lens.x+=(e.clientX-lensDrag.x)*1.0;lens.y+=(e.clientY-lensDrag.y)*1.0;lensDrag={x:e.clientX,y:e.clientY};drawLens()});
+ip.addEventListener('pointerup',()=>lensDrag=null);ip.addEventListener('pointercancel',()=>lensDrag=null);
+on('bPass',()=>decide(false));on('bFake',()=>decide(true));
+on('bUV',()=>{inspUV=!inspUV;$('bUV').classList.toggle('on',inspUV);drawInspect()});
+on('tHand',()=>setMode('hand'));on('tMach',()=>setMode(mode==='mach'?'hand':'mach'));on('tUV',()=>setMode(mode==='uv'?'hand':'uv'));
+on('tTray',()=>{if(S&&S.tray.length)pick(S.tray[0],'tray');else toast('退鈔匣是空的')});
+on('clue',()=>{if(S&&!cur)screenBrief(true)});
+addEventListener('resize',()=>{resize()});
+load();resize();
+
+/* ====== 測試入口 ====== */
+const Q=new URLSearchParams(location.hash.slice(1));
+if(Q.has('fuzz')){
+ fastUI=true;window.onerror=(m,s,l)=>{document.title='FAIL '+m+' @'+l};
+ const n=+Q.get('n')||600,seed=+Q.get('seed')||1,r=G.rng(seed);let err='';
+ try{
+  save={day:+Q.get('day')||0,money:2000,machine:true,uv:true,bonus:0,seed};screenTitle();
+  const clickAny=()=>{const bs=[...document.querySelectorAll('button')].filter(b=>b.offsetParent&&!b.disabled);if(bs.length)bs[Math.floor(r()*bs.length)].click()};
+  for(let i=0;i<n;i++){
+   const a=r(),x=r()*W,y=r()*H,ev={clientX:x,clientY:y};
+   if($('sheet').classList.contains('show')||a<.25)clickAny();
+   else if(cur){const e={clientX:x,clientY:y};lens.x+=(r()-.5)*400;lens.y+=(r()-.5)*400;drawLens();if(a<.5)clickAny()}
+   else if(a<.6){down(ev);up(ev)}
+   else{down(ev);for(let k=0;k<6;k++)move({clientX:x+(r()-.5)*260,clientY:y+(r()-.5)*260});up({})}
+   update(r()*.25);render(.05);
+   if(i%50===0&&S){S.left=r()<.3?.2:S.left}
+   if(S){for(const m of S.notes){if(!isFinite(m.x+m.y+m.r))throw new Error('NaN note')}
+    if(S.status==='play'&&!cur&&!mach.busy){const all=[...S.notes,...S.tray];if(!all.includes(S.fake))throw new Error('fake lost day'+S.day)}
+    if(cur&&!$('insp').classList.contains('show'))throw new Error('stuck insp');}
+  }
+ }catch(e){err=e.message+' '+(e.stack||'').split('\n')[1]}
+ document.title=(err?'FAIL '+err:'OK fuzz seed '+seed)+' day='+save.day;
+ document.body.setAttribute('data-r',document.title);
+}else if(Q.has('shot')){
+ fastUI=true;save={day:+Q.get('day')||0,money:900,machine:+Q.get('day')>=2,uv:+Q.get('day')>=3,bonus:0,seed:+Q.get('seed')||5};screenBrief();
+ const sh=Q.get('shot');
+ if(sh==='play'||sh==='note'||sh==='uv'){hideSheet();$('top').style.display='block';resize();hud();
+  if(sh==='note'){pick(Q.has('fake')?S.fake:S.notes[S.notes.length-1],'pile');$('nw').style.animation='none';if(Q.has('uv'))$('bUV').click();setTimeout(()=>{const r=noteRect(),k=r.width/NW;if(Q.has('hx')){lens.x=r.left+Q.get('hx')*k;lens.y=r.top+Q.get('hy')*k}drawLens()},1500)}
+  if(sh==='uv'){uvOn={x:W/2,y:H/2}}}
+ requestAnimationFrame(loop);
+}else{screenTitle();requestAnimationFrame(loop)}
+</script>
+</body>
+</html>
