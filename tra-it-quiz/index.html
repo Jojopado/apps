@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>臺鐵資訊練習</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2733;--mute:#5c6b7a;--line:#d8dfe6;--main:#1f4e79;--main2:#2f6ea5;--good:#1d7a46;--goodbg:#e6f5ec;--bad:#b3362d;--badbg:#fbeaea;--sel:#e6f0fa}
+@media (prefers-color-scheme:dark){:root{--bg:#141a21;--card:#1e2730;--ink:#e8edf2;--mute:#9dabb8;--line:#33404d;--main:#7db4e6;--main2:#9ac7ef;--good:#6fd39a;--goodbg:#17352a;--bad:#f09a92;--badbg:#3a2222;--sel:#22384d}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
+#app{max-width:680px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-size:24px;margin:8px 0 2px;color:var(--main)}
+h2{font-size:17px;margin:22px 0 8px}
+.sub{color:var(--mute);font-size:14px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 10px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:11px 14px;min-height:44px}
+.btn.main{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
+@media (prefers-color-scheme:dark){.btn.main{color:#10202e}}
+.btn:disabled{opacity:.45;cursor:default}
+.subject{width:100%;text-align:left;display:block}
+.subject b{display:block}
+.subject small{color:var(--mute)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.seg button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;min-height:44px}
+.seg button.on{background:var(--sel);border-color:var(--main);font-weight:700}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0 14px}
+.bar i{display:block;height:100%;background:var(--main2);width:0}
+.top{font-size:14px;color:var(--mute)}
+.q{font-size:18px;font-weight:600;margin:4px 0 12px}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:11px 12px;margin:0 0 8px;min-height:48px}
+.opt.sel{background:var(--sel);border-color:var(--main)}
+.opt.right{background:var(--goodbg);border-color:var(--good)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad)}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.fix{font-size:13px;color:var(--mute);margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:12px}
+.grid button{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:0;height:34px;font-size:13px}
+.grid button.done{background:var(--sel)}
+.grid button.cur{border-color:var(--main);border-width:2px}
+.score{font-size:44px;font-weight:800;color:var(--main);margin:0}
+.tag{font-size:13px;padding:2px 8px;border-radius:99px;background:var(--badbg);color:var(--bad)}
+.tag.ok{background:var(--goodbg);color:var(--good)}
+.link{background:none;border:0;color:var(--main2);text-decoration:underline;padding:6px 0}
+</style>
+</head>
+<body><div id="app"></div>
+<script>
+const DATA={"net":{"name":"網路通訊與資通安全概要","q":[{"n":1,"q":"關於網路的主要目的，下列何者不正確?","o":["資源共享","提高可靠度","節省成本","限制資料交流的範圍"],"a":"D"},{"n":2,"q":"在網路連接設備中，哪一項設備工作於OSI模型中的第三層?","o":["集線器(Hub)","橋接器( Bridge)","路由器(Router)","交換式集線器(Switching Hub)"],"a":"C"},{"n":3,"q":"下列哪種網路拓樸(topology)結構，一旦中央設備故障，整個網路就會中斷?","o":["星型拓樸(Star topology)","匯流排拓樸(Bus topology)","網狀拓樸(Mesh topology)","環狀拓樸(Ring topology)"],"a":"A"},{"n":4,"q":"關於OSI七層模型，下列敘述何者錯誤?","o":["實體層負責數據的電氣特性","網路層負責定址和路由","傳輸層確保端對端的可靠傳輸","表現層負責路由選擇"],"a":"D"},{"n":5,"q":"下列何者不是廣播網路的特點?","o":["實體層負責數據的電氣特性","網路層負責定址和路由","傳輸層確保端對端的可靠傳輸","表現層負責路由選擇"],"a":"C","flag":1},{"n":6,"q":"關於網路分層設計的優點，下列何者錯誤？","o":["使整體網路架構模組化","降低系統維護複雜度","增加系統設計彈性","提高網路傳輸延遲"],"a":"D"},{"n":7,"q":"X.25協定的特點不包括下列何者？","o":["虛擬電路","錯誤控制","無連接服務","訪問控制"],"a":"C"},{"n":8,"q":"下列何者不是數位訊號的優點？","o":["具有較強的抗干擾性","可進行誤差檢測和修正","可以表示無窮多的連續數值","容易壓縮和處理"],"a":"C"},{"n":9,"q":"頻譜的作用為何？","o":["用來量測訊號的振幅","顯示信號在不同頻率下的強度分佈","測量訊號的相位差","計算訊號的傳輸速率"],"a":"B"},{"n":10,"q":"什麼是位元率(bit rate)？","o":["每秒傳輸的符號數量","每秒傳輸的位元數量","訊號的頻率","訊號的振幅"],"a":"B"},{"n":11,"q":"在數位資料轉換成數位訊號的編碼方式中，下列何者特點描述錯誤？","o":["RZ編碼在每個位元之間有明確的時鐘邊緣","NRZ-L編碼的傳輸效率比RZ高","NRZI碼在連續的0或1序列時容易發生時鐘恢復問題","曼徹斯特編碼不會有連續0或1的問題"],"a":"C"},{"n":12,"q":"漢明距離(Hamming distance)2可以做什麼？","o":["偵測一位元錯誤並修正","只能偵測一位元錯誤","可以修正兩位元錯誤","偵測兩位元錯誤並修正"],"a":"B"},{"n":13,"q":"下列何者不是同位位元檢查(Parity check)的特點？","o":["實現簡單","成本低","可以修正錯誤","只能偵測單一位元錯誤"],"a":"C"},{"n":14,"q":"SLIP協定的特色為何？","o":["提供錯誤檢測功能","可自動分配IP地址","支援多種網路協定","結構簡單易實現"],"a":"D"},{"n":15,"q":"在流量控制中使用滑動視窗協定的目的是什麼？","o":["增加傳輸速度","確保資料的完整性和順序性","減少封包大小","增加網路頻寬"],"a":"B"},{"n":16,"q":"在IEEE 802.3中，最小訊框長度為多少位元組？","o":["46","64","512","15"],"a":"B"},{"n":17,"q":"在CSMA/CD中，當檢測到碰撞時，節點會採取什麼動作？","o":["立即重新傳送","等待一個固定時間後重傳","放棄傳送","依據二元指數倒退演算法等待後重傳"],"a":"D"},{"n":18,"q":"802.11無線網路架構中， BSS代表什麼？","o":["Basic Station Service","Basic Service Set","Base Station System","Backup Service Statio"],"a":"B"},{"n":19,"q":"在IEEE 802.3中，100BASE-TX的最大傳輸距離為多少？","o":["100m","185m","500m","2000m"],"a":"A"},{"n":20,"q":"CSMA/CA協定主要應用於哪種網路？","o":["乙太網路","無線網路","光纖網路","Token Ring網路"],"a":"B"},{"n":21,"q":"InfiniBand技術主要應用於下列何種場景？","o":["家庭網路","高性能計算(HPC)","行動通訊","個人電腦網路"],"a":"B"},{"n":22,"q":"何者不是虛擬線路的特性？","o":["需要建立連結","分封依序到達","路由器失敗會造成傳輸不暢通","每個分封獨立路徑"],"a":"D"},{"n":23,"q":"IPv4 的位址有幾個等級？","o":["三個等級","四個等級","五個等級","六個等級"],"a":"C"},{"n":24,"q":"私有 IP 位址範圍不包括下列何者？","o":["10.0.0.0 到 10.255.255.255","172.16.0.0 到 172.31.255.255","192.168.0.0 到 192.168.255.255","224.0.0.0 到 239.255.255.2"],"a":"D"},{"n":25,"q":"下列何者不是 BGP 的主要功能？","o":["鄰居取得","鄰居可達性","網路可達性","頻寬分配"],"a":"D"},{"n":26,"q":"NAT 的主要目的是什麼？","o":["增加網路安全性","提高傳輸速率","解決 IPv4 地址耗盡問題","改善網路效能"],"a":"C"},{"n":27,"q":"關於QoS(Quality of Service)參數，下列何者不正確？","o":["Delay代表資料傳送的延遲時間","Jitter代表封包到達時間的變化","Throughput代表實際的傳輸量","Bandwidth代表最小可用的頻寬"],"a":"D"},{"n":28,"q":"TCP的可靠傳輸機制不包含下列何者？","o":["序號與確認","流量控制","路由選擇","錯誤檢測"],"a":"C"},{"n":29,"q":"TCP的PUSH功能主要用途為何？","o":["強制關閉連接","立即傳送緩衝區資料","重設連接","建立新連接"],"a":"B"},{"n":30,"q":"要提高CPU效能，下列何者效果最差？","o":["提高CPU時脈","增加快取記憶體","增加中斷次數","使用管線技術"],"a":"C"},{"n":31,"q":"SMTP協定主要用於什麼功能？","o":["收取郵件","發送郵件","管理郵件","儲存郵件"],"a":"B"},{"n":32,"q":"何者不是HTTP的請求方法？","o":["GET","POST","LINK","DELETE"],"a":"C"},{"n":33,"q":"串流協定的主要特點為何？","o":["高壓縮率","即時傳輸","高畫質","低頻寬需求"],"a":"B"},{"n":34,"q":"Telnet 協定的主要功能是什麼？","o":["遠端登入","檔案共享","網路監控","資料備份"],"a":"A"},{"n":35,"q":"在SNMP協定中，TRAP訊息的主要用途是什麼？","o":["查詢設備狀態","設定設備參數","警報通知","效能監控"],"a":"C"},{"n":36,"q":"下列何者不是預防電腦機房火災的方法？","o":["設置二氧化碳滅火器","設置自動噴灑氣系統","設置一般水柱型滅火器","製定完善的疏散計畫"],"a":"C"},{"n":37,"q":"依據個人資料保護法，下列何者不是蒐集個人資料時應告知當事人的事項？","o":["個人資料的類別","個人資料利用之期間","蒐集者的員工人數","個人資料利用之地區"],"a":"C"},{"n":38,"q":"關於PKI中CA(認證中心)的主要功能,下列何者錯誤？","o":["產生及更新數位憑證","公布憑證廢止清冊(CRL)","儲存所有使用者的私密金鑰","管理憑證的生命週期"],"a":"C"},{"n":39,"q":"數位鑑識的處理程序順序,下列何者正確？","o":["蒐證、保存、檢驗、結果呈現","檢驗、蒐證、保存、結果呈現","結果呈現、檢驗、蒐證、保存","保存、結果呈現、檢驗、蒐證"],"a":"A"},{"n":40,"q":"下列何種生物特徵辨識技術的錯誤接受率(FAR)最低？","o":["指紋辨識","聲紋辨識","DNA辨識","臉部辨識"],"a":"C"},{"n":41,"q":"關於存取控制政策,下列何者正確？","o":["白名單比黑名單更寬鬆","白名單定義允許的使用者清單","黑名單定義允許的使用者清單","兩者沒有差異"],"a":"B"},{"n":42,"q":"關於軟體簡單化原則(Simplicity),下列敘述何者錯誤？","o":["程式越複雜越安全","建立瓶頸點(Choke Point)","利用元件再利用(Component Reuse)","避免不必要的安全機制"],"a":"A"},{"n":43,"q":"資料庫安全規劃應優先考慮下列何者？","o":["實體安全","邏輯安全","管理安全","應用安全"],"a":"B"},{"n":44,"q":"數位浮水印的主要目的為何？","o":["增加檔案大小","提高影像品質","保護著作權","加速傳輸速度"],"a":"C"},{"n":45,"q":"DVD防盜拷技術CSS主要保護什麼？","o":["DVD播放器","DVD內容","DVD包裝","DVD標籤"],"a":"B"},{"n":46,"q":"下列何者不是數位簽章的特性？","o":["簽章與訊息有關","可以任意重複使用","無法偽造","無法否認"],"a":"B"},{"n":47,"q":"關於 DES (Data Encryption Standard) 的描述，何者正確？","o":["DES 使用 128 位元的金鑰","DES 目前仍被視為最安全的加密標準","DES 是對稱式加密演算法","DES 不需要金鑰就能進行加密"],"a":"C"},{"n":48,"q":"以下何者是確保資料完整性的主要機制？","o":["加密","雜湊函數","金鑰交換","壓縮"],"a":"B"},{"n":49,"q":"下列何者不是社交工程攻擊常見的方式？","o":["釣魚郵件","偽裝網站","緩衝區溢位","假冒身分"],"a":"C"},{"n":50,"q":"路由攻擊（Routing Attack）的主要目的是什麼？","o":["竊取資料","改變網路傳輸路徑","入侵資料庫","破壞加密系統"],"a":"B"}]},"sys":{"name":"系統程式分析與設計概要","q":[{"n":1,"q":"關於「即時處理系統」的敘述，下列何者錯誤？","o":["回應時間極短","成本最低","系統可即時回覆使用者需求","一定是連線系統"],"a":"B"},{"n":2,"q":"在決策層級中，資訊系統必須提供何種資訊？","o":["細節性資訊","整合性資訊","圖表化與預測性資訊","作業性資訊"],"a":"C"},{"n":3,"q":"物件導向技術的主要特色為何？","o":["資料與程序分開處理","資料與程序合併處理","僅處理資料部分","僅處理程序部分"],"a":"B"},{"n":4,"q":"專家系統必須具備的四項子系統中，不包含下列何者？","o":["知識庫","推理機","資料庫管理系統","知識獲取子系統"],"a":"C"},{"n":5,"q":"下列何種系統開發模式最常被使用？","o":["瀑布模式","雛型模式","螺旋模式","同步模式"],"a":"A"},{"n":6,"q":"螺旋模式(Spiral Model)的主要特色為何？","o":["注重文件產出的完整性","強調使用者參與度","每個循環都進行風險分析","重視系統的可維護性"],"a":"C"},{"n":7,"q":"同步模式的三個主要構想不包含下列何者？","o":["活動同步","資訊同步","整合性管理系統","需求分析"],"a":"D"},{"n":8,"q":"拋棄式雛型的主要特性為何？","o":["重視系統效率","重視系統維護","重視系統穩定性","不需考慮系統效率及維護性"],"a":"D"},{"n":9,"q":"瀑布模式最適合應用在下列何種系統開發？","o":["需求經常變動的系統","具有標準化程序的系統","高風險的系統","需要快速開發的系統"],"a":"B"},{"n":10,"q":"下列何者是漸增模式的優點？","o":["系統開發由多個週期完成","使用者充分參與","嚴謹的文件管理","以上皆是"],"a":"D"},{"n":11,"q":"在了解現行作業環境時，可以從哪些方向著手？","o":["作業程序與流程","目前使用的輸入/輸出表單","現有軟體與硬體設備","以上皆是"],"a":"D"},{"n":12,"q":"關於作業可行性的評估內容，下列何者正確？","o":["評估系統是否影響現有作業","評估系統是否被使用者接受","評估系統是否被管理階層支持","以上皆是"],"a":"D"},{"n":13,"q":"使用甘特圖(Gantt Chart)的主要特性為何？","o":["製作簡單","易於管理","適用於小型系統開發","A和B皆是"],"a":"D"},{"n":14,"q":"在制定工作時程時，最常使用的工具為何？","o":["甘特圖(Gantt Chart)","PERT","CPM","程式流程圖"],"a":"A"},{"n":15,"q":"關於數值分析法，下列何者正確？","o":["僅適用於質化資料分析","可用圓形圖、表格圖等方式呈現","不需考慮資料的準確性","只能使用長條圖表示"],"a":"B"},{"n":16,"q":"軟體需求規格書(SRS)的主要功能為何？","o":["系統設計的依據","程式碼的參考","測試案例的設計","系統維護手冊"],"a":"A"},{"n":17,"q":"進行觀察法時的主要原則是什麼？","o":["觀察時間的長短","觀察地點的選擇","避免干擾被觀察對象","觀察工具的準備"],"a":"C"},{"n":18,"q":"曲線圖(Line Chart)最適合表達什麼類型的資料？","o":["部分與整體的關係","類別間的比較","時間序列的變化","地理分布情況"],"a":"C"},{"n":19,"q":"DFD中的「處理」(Process)具有什麼特性？","o":["只能接收資料輸入","只能產生資料輸出","負責將輸入資料流轉換成輸出資料流","不需要編號識別"],"a":"C"},{"n":20,"q":"關於資料儲存檔(Data Files)的表示方式，下列何者正確？","o":["以圓形表示","以矩形表示","以平行線或便利貼標籤表示","以箭頭表示"],"a":"C"},{"n":21,"q":"在DFD中，處理程序的編號規則為何？","o":["隨機編號","按照1.0、2.0、3.0等流水號編排","使用英文字母編排","不需要編號"],"a":"B"},{"n":22,"q":"關於DFD的「向下階層化」處理，下列何者正確？","o":["只能向下分解一層","分解後的子程序編號必須連續","分解時必須保持父子層的平衡性","可以任意增加新的外部實體"],"a":"C"},{"n":23,"q":"關於結構化分析工具的功能，下列敘述何者正確？","o":["是專門用來分析程式碼結構","用於分析系統運作流程與資料流向","僅用於資料庫設計","只能用於小型系統分析"],"a":"B"},{"n":24,"q":"一個完整的資料字典(Data Dictionary)應包含哪些內容？","o":["僅需包含資料元素","只需包含資料流與處理程序","需包含資料元素、資料流、資料儲存檔及處理程序","只需包含資料儲存檔"],"a":"C"},{"n":25,"q":"資料流程圖(DFD)中的「處理」(Process)代表什麼？","o":["實體資料的儲存位置","資料的來源或目的地","系統執行的功能或運算","資料的傳輸媒介"],"a":"C"},{"n":26,"q":"關於「向下階層化」的敘述，下列何者正確？","o":["是將程式由小模組組合成大系統","是將複雜的系統由上而下逐步分解成較小的單元","只能用於資料流程圖的設計","僅用於硬體系統的規劃"],"a":"B"},{"n":27,"q":"在系統設計中，最重要的產出是什麼？","o":["系統建議書","軟體設計規格書","軟體需求規格書","可用的資訊系統"],"a":"B"},{"n":28,"q":"下列何者不是輸出設計前需要探討的問題？","o":["What(要輸出什麼內容)","Who(誰要這些資訊)","Where(在何處執行程式)","When(資訊何時提供)"],"a":"C"},{"n":29,"q":"下列何者屬於軟式輸出設備？","o":["影印機","印表機","電腦螢幕","打卡機"],"a":"C"},{"n":30,"q":"下列何者不屬於代碼設計的原則？","o":["擴充性","唯一性","代表性","複雜性"],"a":"D"},{"n":31,"q":"HIPO圖是由哪些部分所組成？","o":["VTOC圖、總覽圖、細部圖","系統圖、流程圖、細部圖","樹狀圖、總覽圖、細部圖","結構圖、流程圖、總覽圖"],"a":"A"},{"n":32,"q":"關於第二正規化(2NF)的敘述，下列何者正確？","o":["必須完全功能相依於主鍵","必須要消除重複資料","必須消除遞移相依","必須完全消除部分功能相依"],"a":"D"},{"n":33,"q":"第一正規化(1NF)的主要目的為何？","o":["消除部分功能相依","消除遞移相依","確保所有欄位都具有基元值","消除多值相依"],"a":"C"},{"n":34,"q":"下列何者不是複合屬性(Composite Attribute)？","o":["地址","姓名","學號","身分證字號"],"a":"C"},{"n":35,"q":"當一個實體的屬性值在某個環境下具有唯一性時，該屬性稱為：","o":["複合屬","多值屬性","鍵值屬性","衍生屬性"],"a":"C"},{"n":36,"q":"一對多(1:M)關係的例子為何？","o":["學生與課程","老師與課程","學生與學號","學生與宿舍"],"a":"B"},{"n":37,"q":"在ER Model中,關於屬性(Attribute)的敘述,下列何者正確?","o":["複合屬性不可再細分","單值屬性可以有多個值","導生屬性可由其他屬性計算而得","主鍵屬性可以為空值"],"a":"C"},{"n":38,"q":"ER圖轉換成關聯表時,下列何者錯誤?","o":["實體轉換成資料表","屬性轉換成欄位","1:N關係可以用外來鍵表示","M:N關係不需要建立關聯表"],"a":"D"},{"n":39,"q":"在軟體測試的四個階段中，何者為正確順序？","o":["單元測試→整合測試→驗收測試→系統測試","整合測試→系統測試→單元測試→驗收測試","單元測試→整合測試→系統測試→驗收測試","整合測試→單元測試→驗收測試→系統測試"],"a":"C"},{"n":40,"q":"關於系統轉換的四種方法，何者最適合用於小規模的資訊系統？","o":["平行轉換","直接轉換","試驗轉換","階段轉換"],"a":"B"},{"n":41,"q":"Beta測試的特性包含哪些？","o":["只能由特定對象使用者測試","僅在開發環境中進行","不需依照驗收規格書進行","測試地點在顧客所在環境"],"a":"D"},{"n":42,"q":"關於整合測試的目的，何者正確？","o":["檢查單一模組的bug","測試使用者介面的友善度","驗證模組間介面的一致性","確認系統效能問題"],"a":"C"},{"n":43,"q":"有關黑箱測試的特點，何者正確？","o":["需要了解程式內部結構","強調如何運作(HOW)","著重於程序功能(WHAT)","只能由程式設計師執行"],"a":"C"},{"n":44,"q":"更正性維護主要是針對下列何種情況?","o":["外部環境改變","使用者需求變更","系統錯誤修正","系統效能提升"],"a":"C"},{"n":45,"q":"下列何者屬於適應性維護的範例?","o":["修正程式bug","新增功能模組","調整操作介面","因應作業系統升級而修改"],"a":"D"},{"n":46,"q":"將未更正規化的大量資料納入系統,會造成何種問題?","o":["系統效能降低","資料重複與不一致","功能執行錯誤","使用者操作不便"],"a":"B"},{"n":47,"q":"下列何者不是系統維護的需求原因?","o":["政府政策要求","企業外在環境影響","系統測試階段產生錯誤","規劃新系統開發"],"a":"D"},{"n":48,"q":"學校成績處理系統由七等第改為五等第,這是屬於何種維護?","o":["更正性維護","適應性維護","完善性維護","預防性維護"],"a":"B"},{"n":49,"q":"關於學生學號的資料型態設計，下列敘述何者正確？","o":["使用int型態即可","使用char(8)型態","使用varchar型態","使用float型態"],"a":"B"},{"n":50,"q":"LMS中的教材可以支援哪些格式？","o":["只支援文字檔","只支援影片檔","只支援PDF","支援PowerPoint、HTML、Flash等多種格式"],"a":"D"}]},"pm":{"name":"系統專案管理概要","q":[{"n":1,"q":"資訊系統開發專案管理中，「專案」的定義是什麼？","o":["臨時的工作，為了創造一個產品、服務或結果","日常業務運營，為了保持獨特的產品、服務或結果","固定的長期工作，為了維持產品、服務或結果","有目的性的資源分配"],"a":"A"},{"n":2,"q":"在資訊系統開發範疇管理中，範疇定義的主要目的是什麼？","o":["確保專案的預算不超支","確保所有利益相關者的需求被正確識別","確保專案的管理風險最低","確保計劃專案時間表不超支"],"a":"B"},{"n":3,"q":"在資訊系統開發時間管理中，哪一項是主要目標？","o":["確定計劃專案在各種情況下的預算最低","確定專案在各種情況下的最短完成時間","確定專案在各種情況下的範疇最小","確定專案在各種情況下的風險最低"],"a":"B"},{"n":4,"q":"資訊系統開發成本管理中的「成本估算」主要目的是什麼？","o":["確定專案的預算","減少專案的財務風險","計算專案的資源需求","評估專案執行時間"],"a":"A"},{"n":5,"q":"在資訊系統開發風險管理中，風險識別的主要目的是什麼？","o":["預測風險的影響","評估風險的機會","確定風險的來源","監控風險的變化"],"a":"C"},{"n":6,"q":"品質保證與品質控制的區別是什麼？","o":["品質保證是測量品質的工具","品質控制是預防性措施","品質保證是預防措施","品質控制要關心預算"],"a":"C"},{"n":7,"q":"在資訊系統開發範疇管理中，範疇控制的主要目的是什麼？","o":["確保專案目標達成","評估專案的進度","監控範疇變更","管理資源分配"],"a":"C"},{"n":8,"q":"關鍵路徑法(CPM)是用來計算什麼？","o":["最差情況下的最短專案完成時間","任何情況下的最低的專案風險影響","任何情況下的最少的資源分配計劃","任何情況下的最小的預算花費"],"a":"A"},{"n":9,"q":"在資訊系統開發溝通管理中，溝通計劃的目的是什麼？","o":["定義專案的工作及進度","確保信息的有效傳遞","管理專案的最小成本資金","控制專案的變動範疇"],"a":"B"},{"n":10,"q":"在風險評估過程中，哪一項是常見的方法？","o":["風險矩陣","進度控制圖","預算估算表","資源平衡表"],"a":"A"},{"n":11,"q":"在範疇管理中，範疇驗證的目的是什麼？","o":["評估專案範疇的效果","確保交付成果符合範圍要求","測量專案進度","設計風險應對策略"],"a":"B"},{"n":12,"q":"資訊系統開發資源管理中，資源分配的主要目的是什麼？","o":["確保資源浪費最少","確保資源均勻分配","確保專案成本優化","確保專案準時完成"],"a":"B"},{"n":13,"q":"當資訊系統開發面臨高風險時，哪一項風險應對策略最常被採用？","o":["風險接受","風險轉移","風險減緩","風險迴避"],"a":"C"},{"n":14,"q":"在範疇管理中，需求收集的主要目的是什麼？","o":["確定專案的時間表","確保利益相關者的需求被識別","確保專案風險能被識別","確保專案預算最少"],"a":"B"},{"n":15,"q":"進度控制的主要目的是什麼？","o":["確保專案按計劃完成","確保專案的風險受到控制","確保專案效能能夠測量","確保資源不過度使用"],"a":"A"},{"n":16,"q":"在品質管理中，品質控制的主要目的是什麼？","o":["預防品質問題","測量並改進品質","減少專案風險","增加專案資源"],"a":"B"},{"n":17,"q":"在資訊系統開發進度管理中，處理時間延遲的常見方法是什麼？","o":["延長專案時間","調整資源分配","確保任務按時完成","確保足夠的預算"],"a":"B"},{"n":18,"q":"預算編制過程中的主要目的是什麼？","o":["確定所需的資金","確定所需的分配資源","確定所需的風險應對策略","確定所需的專案的時間"],"a":"A"},{"n":19,"q":"範疇定義的主要目的是什麼？","o":["設定專案的時間表","確定專案的邊界","計算資源需求","評估專案的風險"],"a":"B"},{"n":20,"q":"資訊系統開發範疇管理中，哪一項不屬於範疇定義的步驟？","o":["需求收集","風險識別","範疇確定","範疇驗證"],"a":"B"},{"n":21,"q":"下列哪一項不屬於專案管理的五大過程組？","o":["啟動","設計","執行","結束"],"a":"B"},{"n":22,"q":"資源負荷圖主要用來顯示什麼？","o":["每個任務的預算","每個資源的需求量","風險評估","資源調度時間"],"a":"B"},{"n":23,"q":"下列哪一項是定性風險分析的主要特徵？","o":["數量化的風險影響評估","風險影響和可能性的分類","計算風險成本","評估資源負荷"],"a":"B"},{"n":24,"q":"在風險評估中，評估風險的「可能性」和「影響」屬於哪一類活動？","o":["風險識別","風險分析","風險應對","風險監控"],"a":"B"},{"n":25,"q":"在資訊系統開發進度控制中，哪一項是主要挑戰？","o":["資源分配變更","範圍變更","資金追加管理","品質檢查保證"],"a":"B"},{"n":26,"q":"哪一項是製定資訊系統開發時間表的基本步驟？","o":["確定關鍵路徑","進行資源負荷分析","設計品質標準","確定專案範疇"],"a":"A"},{"n":27,"q":"在面對無法避免的有限風險時，通常選擇的風險應對策略是什麼？","o":["風險減緩","風險轉移","風險接受","風險迴避"],"a":"C"},{"n":28,"q":"在面對無法避免的有限風險時，通常選擇的風險應對策略是什麼？","o":["追蹤制定實際支出與預算","追蹤制定新的預算","追蹤制定與增加資源","追蹤制定合適的風險應對策略"],"a":"A"},{"n":29,"q":"在專案開發的品質控制過程中，品質檢查主要是為了達到什麼目的？","o":["預防品質問題","及時發現並修正問題","隨時測量專案效能","確定專案預算"],"a":"B"},{"n":30,"q":"進度差異分析的主要目的是什麼？","o":["追蹤評估風險的影響","追蹤監控專案範疇","追蹤比較實際進度與預期進度","追蹤計算專案的實際成本"],"a":"C"},{"n":31,"q":"在資訊系統開發成本管理中，「成本控制」的目的是什麼？","o":["監控實際支出，防止超支","增加資源以提高品質","設定預算標準","計算風險成本"],"a":"A"},{"n":32,"q":"在品質管理中，品質標準通常用來做什麼？","o":["評估專案的風險","定義達到品質要求的具體條件","預測專案的完成時間","計算成本效益"],"a":"B"},{"n":33,"q":"風險應對計劃的主要目的是什麼？","o":["評估風險的發生機率","計算風險影響的成本","確定如何處理風險","減少專案成本"],"a":"C"},{"n":34,"q":"範疇確認的目的是什麼？","o":["確保專案目標達成","評估範疇變更的影響","確認專案交付物符合要求","計算專案時間表"],"a":"C"},{"n":35,"q":"資源配置的主要目的是什麼？","o":["確定開發資源的最大化使用","減少開發資源浪費","分配開發資源給具體的任務","評估開發資源需求"],"a":"C"},{"n":36,"q":"在品質控制中，控制圖主要用來做什麼？","o":["測量生產過程中品質的代表指標","記錄生產過程中品質偏差","分析生產過程中品質發生的問題","監控生產過程中品質的變異"],"a":"D"},{"n":37,"q":"專案進行中，做為進度監控，什麼是最常用的工具？","o":["甘特圖","關鍵路徑法","進度差異分析","預算控制"],"a":"C"},{"n":38,"q":"風險管理計劃的主要目的是什麼？","o":["識別專案風險","評估風險的影響","制定風險應對策略","全面規劃風險管理過程"],"a":"D"},{"n":39,"q":"品質檢查清單的主要用途是什麼？","o":["測量產品的品質的方法","指導品質改進的方法","全面檢查產品或服務的品質要求","預測產品的未來需求"],"a":"C"},{"n":40,"q":"資源平行調度的主要目的是什麼？","o":["提高資源的使用效率","減少專案時間","進行成本控制","增加專案預算"],"a":"A"},{"n":41,"q":"下面哪一項是品質標準的最常見內容？","o":["資源調度要求","交付物要求","預算計劃內容","風險識別內容"],"a":"B"},{"n":42,"q":"在專案管理中，哪一項是用來識別並描述專案的可交付成果？","o":["活動列表","工作分解結構(WBS)","風險清單","預算計劃"],"a":"B"},{"n":43,"q":"在資訊系統開發成本管理中，哪一項是常用的成本估算方法？","o":["類比估算","需求估算","風險估算","進度估算"],"a":"A"},{"n":44,"q":"專案的「工作分解結構(WBS)」是一種用來：","o":["管理專案成本的工具","定義專案工作內容並分解成小單位的工具","評估專案風險的工具","計算專案資金流的工具"],"a":"B"},{"n":45,"q":"甘特圖的主要用途是什麼？","o":["監控專案品質與專案進度","規劃專案進度與依賴關係","管理資源分配與專案進度","進行專案進度的風險評估"],"a":"B"},{"n":46,"q":"在資訊系統開發專案中，系統交付的測試階段發現了一個關鍵功能的缺陷。為了 避免影響交付期限，哪一種處理方式最為合理？","o":["將缺陷記錄到缺陷清單中，並安排在下一版本修復","中止交付，優先修復所有缺陷","通知客戶，討論是否調整交付範圍或延後交付","暫時屏蔽該功能，保留其界面，但不提供該功能的具體實現"],"a":"C"},{"n":47,"q":"資源平衡的主要目的是什麼？","o":["減少資源浪費","優化專案範疇","調整專案進度","減少專案成本"],"a":"A"},{"n":48,"q":"預算編制的過程中，通常會參考什麼因素？","o":["資源需求","專案風險","資源調度","進度計劃"],"a":"A"},{"n":49,"q":"品質改進計劃的主要目的是什麼？","o":["提高專案效能品質","改善品質控制過程","減少品質成本","增加資源配置品質"],"a":"B"},{"n":50,"q":"在資訊系統開發專案中，下列哪一種工作依賴性類型表明後續工作必須等前置工 作完成後才能開始？","o":["開始到開始(Start-to-Start, SS)","完成到完成(Finish-to-Finish, FF)","完成到開始(Finish-to-Start, FS)","開始到完成(Start-to-Finish, SF)"],"a":"C"}]}};
+const OLD='ABCD';
+const K='tra-it-quiz-v1';
+function load(){try{return JSON.parse(localStorage.getItem(K))||{}}catch(e){return {}}}
+function save(s){try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}}
+let store=load();store.best=store.best||{};store.wrong=store.wrong||{};
+let S=null,timer=null,mode='exam';
+const app=document.getElementById('app');
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function btn(t,c,f){const b=el('button',c,t);b.onclick=f;return b}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function ref(k,n){return k+':'+n}
+function getQ(r){const [k,n]=r.split(':');const d=DATA[k];const q=d.q.find(x=>x.n==n);return q?Object.assign({k,name:d.name,r},q):null}
+function wrongList(){return Object.keys(store.wrong).filter(getQ)}
+function stop(){if(timer){clearInterval(timer);timer=null}}
+function home(){
+  stop();S=null;app.innerHTML='';
+  app.append(el('h1',null,'臺鐵資訊練習'),el('p','sub','113 年第 2 次第 9 階事務員資訊真題，三科各 50 題'));
+  app.append(el('h2',null,'模式'));
+  const seg=el('div','seg');
+  [['exam','模擬考（交卷才看答案）'],['learn','練習（選完就對答）']].forEach(([m,t])=>{const b=btn(t,mode==m?'on':'',()=>{mode=m;home()});seg.append(b)});
+  app.append(seg);
+  app.append(el('p','fix',mode=='exam'?'一科 50 題，限時 60 分鐘（練習用時間，不是官方規定）。':'不計時，每題立刻看到答案。'));
+  app.append(el('h2',null,'選科目'));
+  Object.keys(DATA).forEach(k=>{
+    const b=btn('', 'btn subject',()=>start(DATA[k].q.map(q=>ref(k,q.n)),DATA[k].name,k));
+    b.append(el('b',null,DATA[k].name));
+    const best=store.best[k];b.append(el('small',null,best!=null?'最佳 '+best+' 分':'50 題｜尚未作答'));
+    app.append(b,el('div',null,''));app.lastChild.style.height='8px';
+  });
+  const all=Object.keys(DATA).flatMap(k=>DATA[k].q.map(q=>ref(k,q.n)));
+  const mix=btn('', 'btn subject',()=>start(shuffle(all).slice(0,30),'三科混合 30 題','mix'));
+  mix.append(el('b',null,'三科混合 30 題'));mix.append(el('small',null,store.best.mix!=null?'最佳 '+store.best.mix+' 分':'隨機抽題'));app.append(mix);
+  const w=wrongList();
+  app.append(el('h2',null,'錯題本'));
+  const c=el('div','card');
+  c.append(el('div',null,w.length?`目前 ${w.length} 題`:'還沒有錯題，先考一科。'));
+  if(w.length){const r=el('div','row');r.style.marginTop='10px';
+    r.append(btn('重做錯題','btn main',()=>start(shuffle(w),'錯題本','wrong')));
+    r.append(btn('清空','btn',()=>{store.wrong={};save(store);home()}));c.append(r)}
+  app.append(c);
+}
+function start(list,title,key){
+  const ms=mode=='exam'?Math.round(list.length*72000):0;
+  S={list,title,key,i:0,ans:{},end:ms?Date.now()+ms:0,done:false};
+  screen();
+  if(ms)timer=setInterval(tick,1000);
+}
+function tick(){if(!S||S.done)return stop();const left=S.end-Date.now();if(left<=0){finish();return}
+  const t=document.getElementById('time');if(t)t.textContent=fmt(left)}
+function fmt(ms){const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function screen(){
+  const q=getQ(S.list[S.i]);const learn=mode=='learn';const cur=S.ans[q.r];const show=learn&&cur!=null;
+  app.innerHTML='';
+  const top=el('div','row top');top.append(el('span',null,`${S.title}｜第 ${S.i+1}/${S.list.length} 題`));
+  if(S.end){const t=el('span',null,fmt(S.end-Date.now()));t.id='time';top.append(t)}else top.append(btn('離開','link',home));
+  app.append(top);
+  const bar=el('div','bar');const fill=el('i');fill.style.width=(Object.keys(S.ans).length/S.list.length*100)+'%';bar.append(fill);app.append(bar);
+  if(q.name!=S.title&&S.key!='wrong')app.append(el('div','fix',q.name));
+  app.append(el('div','q',q.q));
+  if(q.flag)app.append(el('div','fix','這題原卷的選項看起來有誤，可先跳過。'));
+  q.o.forEach((o,i)=>{const L=OLD[i];let c='opt';
+    if(show){if(L==q.a)c+=' right';else if(L==cur)c+=' wrong'}else if(cur==L)c+=' sel';
+    app.append(btn(`(${L}) ${o}`,c,()=>{if(show||!S)return;S.ans[q.r]=L;if(learn){if(L!=q.a){store.wrong[q.r]=1}else delete store.wrong[q.r];save(store)}screen()}))});
+  if(show)app.append(el('div','fix',cur==q.a?'答對':`答錯，正確答案是 ${q.a}`));
+  const nav=el('div','nav');
+  const p=btn('上一題','btn',()=>{if(!S)return;S.i--;screen()});p.disabled=S.i==0;nav.append(p);
+  const last=S.i==S.list.length-1;
+  nav.append(btn(last?'交卷':'下一題',last?'btn main':'btn',()=>{if(!S)return;if(last)finish();else{S.i++;screen()}}));
+  app.append(nav);
+  const g=el('div','grid');S.list.forEach((r,i)=>{const b=btn(String(i+1),(S.ans[r]?'done':'')+(i==S.i?' cur':''),()=>{if(!S)return;S.i=i;screen()});g.append(b)});app.append(g);
+  if(S.end){const r=el('div','row');r.style.marginTop='12px';r.append(btn('交卷','btn main',finish),btn('放棄','link',home));app.append(r)}
+}
+function finish(){
+  if(!S||S.done)return;S.done=true;stop();
+  const qs=S.list.map(getQ);const wrong=qs.filter(q=>S.ans[q.r]!=q.a);
+  const right=qs.length-wrong.length;const score=Math.round(right/qs.length*100);
+  qs.forEach(q=>{if(S.ans[q.r]===q.a)delete store.wrong[q.r];else store.wrong[q.r]=1});
+  if(S.key!='wrong')store.best[S.key]=Math.max(store.best[S.key]||0,score);
+  save(store);
+  app.innerHTML='';
+  app.append(el('h1',null,'考完了'),el('p','sub',S.title));
+  const c=el('div','card');c.append(el('p','score',score+' 分'),el('div',null,`答對 ${right}／${qs.length} 題，未作答 ${qs.filter(q=>!S.ans[q.r]).length} 題`));app.append(c);
+  const r=el('div','nav');const list=S.list.slice(),title=S.title,key=S.key;
+  r.append(btn('回首頁','btn',home));r.append(btn('再考一次','btn main',()=>start(list,title,key)));app.append(r);
+  if(wrong.length){app.append(el('h2',null,`錯題 ${wrong.length} 題`));
+    wrong.forEach(q=>{const b=el('div','card');
+      b.append(el('div','fix',`${q.name} 第 ${q.n} 題`),el('div',null,q.q));
+      const a=el('div');a.style.marginTop='6px';
+      a.append(el('span','tag',`你選 ${S.ans[q.r]||'未答'}`));a.append(document.createTextNode(' '));
+      a.append(el('span','tag ok',`答案 ${q.a}：${q.o[OLD.indexOf(q.a)]}`));b.append(a);
+      if(q.flag)b.append(el('div','fix','這題原卷的選項看起來有誤。'));
+      app.append(b)})}
+  else app.append(el('p',null,'全對。'));
+  S=null;
+}
+home();
+</script>
+</body>
+</html>
