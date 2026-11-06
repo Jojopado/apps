@@ -2,11 +2,14 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#12262d">
 <title>磨石打水漂</title>
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;font-family:system-ui,"Microsoft JhengHei","PingFang TC",sans-serif}
-#unity-canvas{position:fixed;inset:0;width:100%;height:100%;display:block;background:#12262d}
+html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;font-family:system-ui,"Microsoft JhengHei","PingFang TC",sans-serif;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#unity-canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:block;background:#12262d;touch-action:none;outline:none}
 #load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#12262d}
 #load h1{margin:0;font-size:34px;letter-spacing:.08em}
 #load p{margin:0;font-size:15px;opacity:.7}
@@ -23,6 +26,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;
 <script>
   var canvas = document.getElementById("unity-canvas");
   function showErr(m) { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = m; }
+  var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   var config = {
     dataUrl: "Build/Web.data.unityweb",
     frameworkUrl: "Build/Web.framework.js.unityweb",
@@ -30,12 +34,16 @@ html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;
     streamingAssetsUrl: "StreamingAssets",
     companyName: "BluePudding",
     productName: "SkipStone",
-    productVersion: "0.2.0",
+    productVersion: "0.5.0",
     autoSyncPersistentDataPath: true,
     matchWebGLToCanvasSize: true,
+    // 手機螢幕的像素密度很高，全解析度畫會卡，所以壓一下
+    devicePixelRatio: Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") showErr(msg); }
   };
-  canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  // 不要讓瀏覽器把手勢拿去捲頁、縮放、叫出選單
+  ["contextmenu", "gesturestart", "gesturechange", "dblclick"].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
   createUnityInstance(canvas, config, function (p) {
     document.getElementById("fill").style.width = Math.round(p * 100) + "%";
   }).then(function (inst) {
