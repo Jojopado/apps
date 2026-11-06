@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#12262d">
-<title>磨石打水漂</title>
+<title>馬鈴薯打水漂</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;font-family:system-ui,"Microsoft JhengHei","PingFang TC",sans-serif;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #unity-canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:block;background:#12262d;touch-action:none;outline:none}
@@ -20,7 +20,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;
 </head>
 <body>
 <canvas id="unity-canvas" tabindex="-1"></canvas>
-<div id="load"><h1>磨石打水漂</h1><div id="bar"><div id="fill"></div></div><p id="msg">載入中…第一次會比較久</p></div>
+<div id="load"><h1>馬鈴薯打水漂</h1><div id="bar"><div id="fill"></div></div><p id="msg">載入中…第一次會比較久</p></div>
 <div id="err"></div>
 <script src="Build/Web.loader.js"></script>
 <script>
@@ -34,7 +34,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;
     streamingAssetsUrl: "StreamingAssets",
     companyName: "BluePudding",
     productName: "SkipStone",
-    productVersion: "0.5.0",
+    productVersion: "0.6.0",
     autoSyncPersistentDataPath: true,
     matchWebGLToCanvasSize: true,
     // 手機螢幕的像素密度很高，全解析度畫會卡，所以壓一下
@@ -47,7 +47,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#12262d;color:#f4f1e8;
   createUnityInstance(canvas, config, function (p) {
     document.getElementById("fill").style.width = Math.round(p * 100) + "%";
   }).then(function (inst) {
-    window.unityInstance = inst; document.getElementById("load").style.display = "none"; document.title = "磨石打水漂"; canvas.focus();
+    window.unityInstance = inst; document.getElementById("load").style.display = "none"; document.title = "馬鈴薯打水漂"; canvas.focus();
   }).catch(function (m) { showErr("開不起來：" + m); document.getElementById("msg").textContent = "載入失敗"; });
 </script>
 </body>
