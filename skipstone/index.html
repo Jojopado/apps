@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#16323d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>磨石打水漂</title>
+<style>
+:root{--ink:#f4f1e8;--dim:rgba(244,241,232,.72);--glass:rgba(14,30,36,.62);--line:rgba(244,241,232,.16);--accent:#ffcf7a;--accent-ink:#2b2110;--bad:#ff8f7a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#16323d;color:var(--ink);font-family:system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.ui{position:fixed;inset:0;pointer-events:none;padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 12px)}
+.ui>*{pointer-events:auto}
+.hide{display:none!important}
+button{font:inherit;color:var(--ink);background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:10px 14px;min-height:44px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer}
+button:active{transform:scale(.96)}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+button:disabled{opacity:.4}
+
+/* 湖邊 */
+#top{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:flex-start;padding:inherit;padding-bottom:0;pointer-events:none}
+#top>*{pointer-events:auto}
+#chip{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;text-align:left;max-width:58vw}
+#chip canvas,#chip img{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.08);flex:none}
+#chip b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chip span{display:block;font-size:12px;color:var(--dim);white-space:nowrap}
+#top .sp{flex:1}
+#top .col{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+#tilt{position:absolute;right:calc(env(safe-area-inset-right) + 12px);top:50%;transform:translateY(-42%);width:56px;height:min(40vh,300px);background:var(--glass);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);touch-action:none}
+#tilt .lab{position:absolute;top:-62px;left:50%;transform:translateX(-50%);text-align:center;font-size:11px;line-height:1.2;color:var(--dim);white-space:nowrap;background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:5px 9px;min-width:56px}
+#tilt .lab b{display:block;font-size:19px;color:var(--ink);font-variant-numeric:tabular-nums}
+#tilt .track{position:absolute;left:50%;top:16px;bottom:16px;width:4px;margin-left:-2px;border-radius:2px;background:var(--line)}
+#tilt .knob{position:absolute;left:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+#hint{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 34px);text-align:center;font-size:17px;text-shadow:0 1px 8px rgba(0,0,0,.6);pointer-events:none}
+#hint small{display:block;margin-top:6px;font-size:13px;color:var(--dim)}
+#count{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 76px);text-align:center;pointer-events:none;text-shadow:0 2px 14px rgba(0,0,0,.55)}
+#count b{display:inline-block;font-size:84px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums}
+#count b.pop{animation:pop .22s ease-out}
+#count span{display:block;font-size:18px;color:var(--dim);font-variant-numeric:tabular-nums}
+@keyframes pop{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+#result{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 22px);transform:translateX(-50%);width:min(92vw,420px);background:var(--glass);border:1px solid var(--line);border-radius:22px;padding:18px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);text-align:center}
+#result .big{font-size:44px;font-weight:800;line-height:1.1}
+#result .big small{font-size:18px;font-weight:600;color:var(--dim)}
+#result .badge{display:inline-block;margin:8px 4px 0;padding:4px 10px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:13px;font-weight:700}
+#result .facts{margin:12px 0 4px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:12px;color:var(--dim)}
+#result .facts b{display:block;font-size:16px;color:var(--ink)}
+#result .tip{font-size:13px;color:var(--dim);margin:8px 0 0}
+#result .row{display:flex;gap:8px;margin-top:14px}
+#result .row button{flex:1}
+
+/* 工作台 */
+#shopTop{position:absolute;left:0;right:0;top:0;padding:inherit;padding-bottom:0;display:flex;gap:8px;align-items:flex-start;pointer-events:none}
+#shopTop>*{pointer-events:auto}
+#stats{flex:1;min-width:0;background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:8px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;font-size:11px;color:var(--dim);text-align:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#stats b{display:block;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+#stats b.warn{color:var(--bad)}
+#shopBot{position:absolute;left:0;right:0;bottom:0;padding:inherit;padding-top:0;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#shopBot>*{pointer-events:auto}
+#shopTip{text-align:center;font-size:13px;color:var(--dim);text-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:none;min-height:18px}
+.bar{display:grid;gap:6px}
+#tools{grid-template-columns:repeat(4,minmax(0,1fr))}
+#tools button{padding:8px 4px;font-size:15px;font-weight:700}
+#tools button small{display:block;font-size:11px;font-weight:400;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#acts{grid-template-columns:repeat(6,minmax(0,1fr))}
+#acts button{padding:8px 2px;font-size:13px;min-height:40px}
+#ring{position:fixed;left:0;top:0;border:2px solid var(--accent);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+
+/* 面板 */
+#panel{position:fixed;inset:0;background:rgba(6,14,18,.55);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#panel .sheet{width:min(100vw,560px);max-height:86vh;background:#17282f;border:1px solid var(--line);border-radius:22px 22px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);display:flex;flex-direction:column}
+#panel h2{margin:0 0 10px;font-size:18px;display:flex;align-items:center}
+#panel h2 span{flex:1}
+#panel h2 button{min-height:36px;padding:6px 12px}
+#panel .body{overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center}
+.card.cur{border-color:var(--accent)}
+.card img{width:84px;height:84px;border-radius:12px;background:rgba(255,255,255,.06)}
+.card b{display:block;font-size:15px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card span{display:block;font-size:12px;color:var(--dim)}
+.card .row{display:flex;gap:6px;margin-top:8px}
+.card .row button{flex:1;min-width:0;min-height:36px;padding:6px 2px;font-size:13px;white-space:nowrap}
+.card.new{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:190px;border-style:dashed;cursor:pointer;font-size:15px}
+.card.new i{font-style:normal;font-size:38px;line-height:1;margin-bottom:8px;color:var(--accent)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;min-height:38px;padding:6px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+td:nth-child(2),th:nth-child(2){text-align:left;max-width:38vw;overflow:hidden;text-overflow:ellipsis}
+th{font-size:12px;color:var(--dim);font-weight:500}
+tr.me td{color:var(--accent)}
+.note{font-size:12px;color:var(--dim);margin:12px 2px 0;line-height:1.6}
+.empty{padding:28px 8px;text-align:center;color:var(--dim)}
+#dlg{position:fixed;inset:0;background:rgba(6,14,18,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+#dlg .box{width:min(92vw,360px);background:#17282f;border:1px solid var(--line);border-radius:20px;padding:18px}
+#dlg h3{margin:0 0 6px;font-size:17px}
+#dlg p{margin:0 0 12px;font-size:13px;color:var(--dim);line-height:1.6}
+#dlg input{width:100%;font:inherit;font-size:17px;color:var(--ink);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:12px;outline:none;user-select:text;-webkit-user-select:text}
+#dlg .row{display:flex;gap:8px;margin-top:14px}
+#dlg .row button{flex:1}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);background:rgba(10,20,24,.9);border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-size:14px;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;z-index:9}
+#toast.show{opacity:1}
+#err{position:fixed;left:8px;right:8px;bottom:8px;background:#5a1f1a;color:#fff;border-radius:10px;padding:10px;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;z-index:99}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div class="ui" id="lakeUI">
+  <div id="top">
+    <button id="chip" aria-label="我的石頭"><img id="chipImg" alt=""><div><b id="chipName">石頭</b><span id="chipInfo"></span></div></button>
+    <div class="sp"></div>
+    <div class="col">
+      <button id="btnShop" class="pri">磨石頭</button>
+      <button id="btnBoard">排行榜</button>
+      <button id="btnSound" aria-label="音效">🔊</button>
+    </div>
+  </div>
+  <div id="tilt"><div class="lab">仰角<b id="tiltVal">12°</b></div><div class="track"></div><div class="knob" id="tiltKnob"></div></div>
+  <div id="count" class="hide"><b id="countN">0</b><span id="countD">0.0 m</span></div>
+  <div id="hint">往上滑，把石頭丟出去<small id="hintSub">滑得越快丟得越用力</small></div>
+  <div id="result" class="hide">
+    <div class="big"><span id="resN">0</span> <small>下</small>　<span id="resD">0</span> <small>公尺</small></div>
+    <div id="resBadges"></div>
+    <div class="facts"><div><b id="resV">0</b>出手 m/s</div><div><b id="resS">0</b>轉速 圈/秒</div><div><b id="resT">0</b>仰角</div></div>
+    <p class="tip" id="resTip"></p>
+    <div class="row"><button id="btnShop2">磨石頭</button><button id="btnAgain" class="pri">再丟一次</button></div>
+  </div>
+</div>
+
+<div class="ui hide" id="shopUI">
+  <div id="shopTop">
+    <button id="btnBack">返回</button>
+    <div id="stats">
+      <div><b id="stMass">0</b>重量 g</div><div><b id="stDia">0</b>直徑 mm</div><div><b id="stThick">0</b>厚 mm</div><div><b id="stWob">0</b>歪斜</div>
+    </div>
+    <button id="btnDone" class="pri">完成</button>
+  </div>
+  <div id="shopBot">
+    <div id="shopTip"></div>
+    <div class="bar" id="acts">
+      <button id="actLathe">轉盤</button><button id="actTop">俯視</button><button id="actSide">側視</button><button id="actFlip">翻面</button><button id="actUndo">復原</button><button id="actNew">重撿</button>
+    </div>
+    <div class="bar" id="tools">
+      <button data-tool="turn">轉<small>換角度</small></button>
+      <button data-tool="cut">切<small>整塊切掉</small></button>
+      <button data-tool="grind">磨<small>磨平</small></button>
+      <button data-tool="polish">拋<small>磨圓</small></button>
+    </div>
+  </div>
+  <div id="ring" class="hide"></div>
+</div>
+
+<div id="panel" class="hide"><div class="sheet"><h2><span id="panelTitle"></span><button id="panelClose">關閉</button></h2><div class="body" id="panelBody"></div></div></div>
+<div id="dlg" class="hide"><div class="box"><h3 id="dlgTitle"></h3><p id="dlgText"></p><input id="dlgInput" maxlength="12" autocomplete="off"><div class="row"><button id="dlgNo">取消</button><button id="dlgYes" class="pri">好</button></div></div></div>
+<div id="toast"></div>
+<script>
+window.addEventListener('error', e => { const d = document.createElement('div'); d.id = 'err'; d.textContent = '出錯了：' + (e.message || e) + '\n' + (e.filename || '') + ':' + (e.lineno || ''); document.body.appendChild(d); window.__err = (window.__err || 0) + 1; });
+window.addEventListener('unhandledrejection', e => { window.__err = (window.__err || 0) + 1; console.error(e.reason); });
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
