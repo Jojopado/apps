@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#16181c">
+<title>Gym Simulator</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#16181c;color:#f4f1e8;font-family:system-ui,"Microsoft JhengHei","PingFang TC",sans-serif;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#unity-canvas{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh;display:block;background:#16181c;touch-action:none;outline:none}
+#load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#16181c}
+#load h1{margin:0;font-size:34px;letter-spacing:.08em}
+#load p{margin:0;font-size:15px;opacity:.7}
+#bar{width:min(60vw,360px);height:10px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
+#fill{height:100%;width:0;background:#c6ff3d;transition:width .15s}
+#err{position:fixed;left:12px;right:12px;bottom:12px;padding:10px;border-radius:10px;background:#5a1f1a;font-size:13px;display:none;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<canvas id="unity-canvas" tabindex="-1"></canvas>
+<div id="load"><h1>削不完的馬鈴薯</h1><div id="bar"><div id="fill"></div></div><p id="msg">載入中…第一次會比較久</p></div>
+<div id="err"></div>
+<script src="Build/Web.loader.js"></script>
+<script>
+  var canvas = document.getElementById("unity-canvas");
+  function showErr(m) { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = m; }
+  var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  var config = {
+    dataUrl: "Build/Web.data.unityweb",
+    frameworkUrl: "Build/Web.framework.js.unityweb",
+    codeUrl: "Build/Web.wasm.unityweb",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "BluePudding",
+    productName: "GymSimulator",
+    productVersion: "0.1.0",
+    autoSyncPersistentDataPath: true,
+    matchWebGLToCanvasSize: true,
+    // 手機螢幕的像素密度很高，全解析度畫會卡，所以壓一下
+    devicePixelRatio: Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2),
+    showBanner: function (msg, type) { if (type === "error") showErr(msg); }
+  };
+  // 不要讓瀏覽器把手勢拿去捲頁、縮放、叫出選單
+  ["contextmenu", "gesturestart", "gesturechange", "dblclick"].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }, { passive: false }); });
+  document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+  createUnityInstance(canvas, config, function (p) {
+    document.getElementById("fill").style.width = Math.round(p * 100) + "%";
+  }).then(function (inst) {
+    window.unityInstance = inst; document.getElementById("load").style.display = "none"; document.title = "Gym Simulator"; canvas.focus();
+  }).catch(function (m) { showErr("開不起來：" + m); document.getElementById("msg").textContent = "載入失敗"; });
+</script>
+</body>
+</html>
