@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#071014">
+<title>第九防線</title>
+<style>
+:root{--bg:#071014;--panel:#0d1a20f2;--line:#24414c;--tx:#d8f0ec;--dim:#7fa39f;--cyan:#4ff0d0;--amber:#ffc24d;--red:#ff5a4d;--grn:#7dff9a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.35 system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;background:#13262e;border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:42px;cursor:pointer}
+button:active{background:#1d3a44}
+button[disabled]{opacity:.45}
+#view{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.hide{display:none!important}
+#top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 6px) 8px 6px;background:linear-gradient(#071014f0,#07101499 75%,#07101400);display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.row{display:flex;align-items:center;gap:8px}
+#night{font-weight:700;color:var(--cyan);white-space:nowrap}
+#clock{flex:1;height:6px;background:#1a2f37;border-radius:3px;overflow:hidden}
+#clock i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3b6fff,var(--amber))}
+.stat{white-space:nowrap;font-variant-numeric:tabular-nums}
+.stat b{color:var(--cyan);font-weight:600}
+#top button{pointer-events:auto;min-height:36px;min-width:42px;padding:4px 8px}
+#alert{pointer-events:auto;display:block;width:100%;text-align:left;min-height:34px;padding:6px 10px;background:#2a1a12ee;border-color:#6d4322;color:var(--amber);font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#alert.l2{background:#361414ee;border-color:#8a2f2a;color:#ffb0a8}
+#alert.l0{background:#10302aee;border-color:#256354;color:var(--grn)}
+#coach{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 190px);padding:8px 12px;background:#0b2b3aee;border:1px solid #2f7796;border-radius:10px;color:#bfeaff;font-size:14px;pointer-events:none;text-align:center}
+#bottom{position:fixed;left:0;right:0;bottom:0;padding:6px 8px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(#07101400,#071014ee 14%);display:flex;flex-direction:column;gap:6px}
+#panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+#panel .name{font-weight:700;color:var(--cyan)}
+#info{font-size:13px;color:var(--tx)}
+#info .dim{color:var(--dim)}
+#acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+#acts button{flex:1 1 30%;font-size:13px}
+#dock{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+#dock::-webkit-scrollbar{display:none}
+.card{flex:0 0 auto;width:74px;min-height:56px;padding:5px 6px;text-align:left;font-size:12px;position:relative}
+.card.sel{border-color:var(--cyan);background:#123a3a}
+.card .bar{height:4px;margin-top:3px;background:#1a2f37;border-radius:2px;overflow:hidden}
+.card .bar i{display:block;height:100%;background:var(--grn);width:100%}
+.card .bar.am i{background:var(--amber)}
+#sup{display:flex;gap:6px}
+#sup button{flex:1}
+#sup button.on{border-color:var(--red);background:#3a1712;color:#ffc9c2}
+.modal{position:fixed;inset:0;background:#040a0dd9;display:flex;align-items:center;justify-content:center;padding:18px}
+.box{width:min(440px,100%);max-height:92%;overflow:auto;background:#0d1a20;border:1px solid var(--line);border-radius:14px;padding:18px}
+.box h1{margin:0 0 4px;font-size:32px;color:var(--cyan);letter-spacing:.08em}
+.box h2{margin:0 0 8px;font-size:22px;color:var(--cyan)}
+.box p{margin:6px 0;color:#b9d4d0}
+.box .big{width:100%;min-height:52px;margin-top:12px;font-size:17px;font-weight:700;background:#14463f;border-color:#2c8f7f}
+.upg{display:block;width:100%;text-align:left;margin-top:8px}
+.upg b{display:block;color:var(--amber)}
+.upg span{font-size:13px;color:#b9d4d0}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-variant-numeric:tabular-nums}
+td{padding:4px 2px;border-bottom:1px solid #1b323b}
+td:last-child{text-align:right;color:var(--cyan)}
+.rank{font-size:56px;font-weight:800;color:var(--amber);text-align:center;line-height:1}
+ul{margin:6px 0;padding-left:20px;color:#b9d4d0}
+li{margin:3px 0}
+@media (orientation:landscape) and (max-height:520px){
+  #bottom{left:auto;width:340px;top:auto}
+  #coach{left:10px;right:360px;bottom:12px}
+  .card{min-height:46px}
+}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="top" class="hide">
+  <div class="row">
+    <span id="night"></span>
+    <div id="clock"><i></i></div>
+    <button id="zoom" aria-label="全圖或放大">全圖</button>
+    <button id="speed" aria-label="遊戲速度">1×</button>
+    <button id="pause" aria-label="暫停">❚❚</button>
+  </div>
+  <div class="row">
+    <span class="stat">基地 <b id="s-hq"></b></span>
+    <span class="stat">補給 <b id="s-stock"></b></span>
+    <span class="stat">已救 <b id="s-saved"></b></span>
+    <span class="stat">殭屍 <b id="s-z"></b></span>
+  </div>
+  <button id="alert" class="hide"></button>
+</div>
+
+<div id="coach" class="hide"></div>
+
+<div id="bottom" class="hide">
+  <div id="panel" class="hide">
+    <div id="info"></div>
+    <div id="acts"></div>
+  </div>
+  <div id="sup">
+    <button id="sup-arty" data-sup="arty"></button>
+    <button id="sup-strafe" data-sup="strafe"></button>
+  </div>
+  <div id="dock"></div>
+</div>
+
+<div id="m-title" class="modal">
+  <div class="box">
+    <h1>第九防線</h1>
+    <p>山谷北方湧出屍潮。你指揮最後一支駐軍，撐過三夜，把平民運回第九基地。</p>
+    <ul>
+      <li>點部隊，再點地圖下令。卡車點據點就會來回送補給、載平民。</li>
+      <li>雙指縮放，放大就看得到每個士兵。</li>
+      <li>士兵沒彈藥就只能肉搏，彈藥要靠卡車送到據點。</li>
+      <li>砲擊威力大，但會炸到自己人。</li>
+    </ul>
+    <p id="best"></p>
+    <button id="start" class="big">開始指揮</button>
+  </div>
+</div>
+
+<div id="m-pause" class="modal hide">
+  <div class="box">
+    <h2>戰術暫停</h2>
+    <p>也可以不開這個畫面，用右上角速度鍵切到 ❚❚ 再下指令。</p>
+    <button id="sound" class="big" style="background:#13262e;border-color:var(--line)"></button>
+    <button id="resume" class="big">繼續</button>
+    <button id="abandon" class="big" style="background:#3a1712;border-color:#8a2f2a">放棄這局</button>
+  </div>
+</div>
+
+<div id="m-up" class="modal hide">
+  <div class="box">
+    <h2 id="up-title"></h2>
+    <table id="up-report"></table>
+    <p>天亮了，選一項強化：</p>
+    <div id="up-list"></div>
+  </div>
+</div>
+
+<div id="m-end" class="modal hide">
+  <div class="box">
+    <div class="rank" id="end-rank"></div>
+    <h2 id="end-title" style="text-align:center;margin-top:6px"></h2>
+    <p id="end-why" style="text-align:center"></p>
+    <table id="end-report"></table>
+    <button id="again" class="big">再打一局</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
