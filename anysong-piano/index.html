@@ -69,6 +69,7 @@ h2{font-size:14px;color:var(--mute);font-weight:600;margin:0 0 8px}
 .overlay.on{display:flex}
 .overlay button{width:200px;padding:14px;border-radius:12px;background:var(--panel2);font-weight:600}
 .overlay button.go{background:var(--cyan);color:#06222b}
+.overlay .slider{width:260px;margin-bottom:8px}.overlay .slider[hidden]{display:none}
 .overlay .danger{background:none;color:var(--mute)}
 #res-title{font-size:24px;margin:0 0 4px;text-align:center}
 .res-rank{font-size:82px;font-weight:800;color:var(--cyan);text-align:center;line-height:1.15}
@@ -144,6 +145,7 @@ h2{font-size:14px;color:var(--mute);font-weight:600;margin:0 0 8px}
   <div id="hud"><span id="hud-name"></span><span id="hud-score"></span><button id="pause" aria-label="暫停">❚❚</button></div>
   <div id="hint"></div>
   <div id="pause-menu" class="overlay">
+    <div class="slider" id="pause-back-row"><label for="pause-back">原曲音量</label><input id="pause-back" type="range" min="0" max="1" step="0.05"></div>
     <button id="resume" class="go">繼續</button>
     <button id="restart">重新開始</button>
     <button id="quit" class="danger">離開這首</button>
