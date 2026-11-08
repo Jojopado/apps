@@ -4,40 +4,40 @@
 
   // ---------- attack definitions ----------
   const ATTACKS = {
-    slash:  { name: '橫斬',   kind: 'red',    windup: [650, 950],   dmg: 14, posture: 22, dir: 'side' },
-    quick:  { name: '快刺',   kind: 'red',    windup: [380, 520],   dmg: 9,  posture: 15, dir: 'side' },
-    heavy:  { name: '重劈',   kind: 'purple', windup: [950, 1300],  dmg: 26, posture: 0,  dir: 'over', unparryable: true },
-    feint:  { name: '假動作', kind: 'red',    windup: [550, 750], pause: [280, 480], dmg: 15, posture: 22, dir: 'side' },
-    grab:   { name: '擒抱',   kind: 'gold',   windup: [850, 1100],  dmg: 22, posture: 45, dir: 'over', unblockable: true },
-    chain:  { name: '連段',   kind: 'red',    windup: [600, 800], gap: [300, 480], dmg: 10, posture: 14, dir: 'side' },
-    punish: { name: '懲擊',   kind: 'red',    windup: [300, 380],   dmg: 18, posture: 20, dir: 'side' },
+    slash:  { name: '橫斬',   kind: 'red',    windup: [420, 560],   dmg: 14, posture: 20, dir: 'side' },
+    quick:  { name: '快刺',   kind: 'red',    windup: [250, 330],   dmg: 9,  posture: 14, dir: 'side' },
+    heavy:  { name: '重劈',   kind: 'purple', windup: [620, 820],   dmg: 26, posture: 0,  dir: 'over', unparryable: true },
+    feint:  { name: '假動作', kind: 'red',    windup: [380, 480], pause: [200, 330], dmg: 15, posture: 20, dir: 'side' },
+    grab:   { name: '擒抱',   kind: 'gold',   windup: [560, 720],   dmg: 22, posture: 45, dir: 'over', unblockable: true },
+    chain:  { name: '連段',   kind: 'red',    windup: [380, 480], gap: [190, 290], dmg: 10, posture: 13, dir: 'side' },
+    punish: { name: '反擊',   kind: 'red',    windup: [230, 290],   dmg: 16, posture: 18, dir: 'side' },
   };
 
   const ENEMIES = [
-    { id: 'goblin', name: '野武士', hp: 90,  posture: 60,  speed: 1.0,  idle: [500, 1200], exploit: 0.6,
-      weights: { slash: 4, quick: 3, feint: 1, chain: 1.5 }, chainMax: 2, color: '#6cbf4a',
-      intro: '出手快、愛耍小聰明。紅光→命中前一刻按 Parry。' },
-    { id: 'knight', name: '鎧武者',   hp: 170, posture: 90,  speed: 1.15, idle: [600, 1300], exploit: 0.9,
-      weights: { slash: 3, heavy: 3, grab: 1.5, chain: 1.5, quick: 1 }, chainMax: 3, color: '#9aa3b2',
-      intro: '紫光重劈不能彈反、只能長按 Def；金光擒抱防不住、只能 Parry。' },
-    { id: 'shade',  name: '影忍',       hp: 260, posture: 100, speed: 0.9,  idle: [350, 1000], exploit: 1.3,
-      weights: { slash: 3, quick: 2.5, feint: 2.5, heavy: 1.5, grab: 1.5, chain: 3 }, chainMax: 4, color: '#7a4fd1',
-      intro: '會記住你的習慣，專挑你擋不好的招。', phase2: true },
+    { id: 'goblin', name: '野武士', hp: 80,  posture: 110,  speed: 1.0,  idle: [250, 600], exploit: 0.6, lives: 1,
+      weights: { slash: 4, quick: 3, feint: 1, chain: 2.5 }, chainMax: 3, color: '#6cbf4a',
+      intro: '紅光→命中前一刻 Parry。彈開會累積它的黃色架勢條，滿了按 ATTACK 一閃斬殺。' },
+    { id: 'knight', name: '鎧武者',   hp: 100, posture: 140, speed: 1.1,  idle: [300, 650], exploit: 0.9, lives: 2,
+      weights: { slash: 3, heavy: 2.5, grab: 1.5, chain: 2.5, quick: 1 }, chainMax: 4, color: '#9aa3b2',
+      intro: '紫光重劈不能彈反、只能長按 Def；金光擒抱防不住、只能 Parry。要斬殺兩次。' },
+    { id: 'shade',  name: '影忍',       hp: 120, posture: 150, speed: 0.9,  idle: [180, 480], exploit: 1.3, lives: 2,
+      weights: { slash: 3, quick: 2.5, feint: 2.5, heavy: 1.5, grab: 1.5, chain: 4 }, chainMax: 5, color: '#7a4fd1',
+      intro: '會記住你的習慣，專挑你擋不好的招。斬殺一次後進入第二階段。', phase2: true },
   ];
 
   const PARRY_WINDOW = 170;     // ms active after press
-  const PARRY_RECOVER = 220;    // ms after window before next parry
+  const PARRY_RECOVER = 170;    // ms after window before next parry
   const STRIKE_MS = 140;        // blade travel time
-  const SWING_MS = 260;         // player attack commitment
-  const SWING_HIT_AT = 110;
+  const SWING_MS = 220;         // player attack commitment
+  const SWING_HIT_AT = 90;
   const EXPOSED_MS = 650;
-  const PLAYER_ATK = 12;
+  const PLAYER_ATK = 9;
 
   const TAUNTS = {
     feint: '👁 它發現你愛提早按',
     grab: '👁 它注意到你老是長按 Def',
     heavy: '👁 它看你一直狂按 Parry',
-    greed: '👁 它看穿你亂揮',
+    greed: '👁 它看穿你只會亂砍',
     weak: '👁 它專挑你擋不好的招',
     wary: '它受傷了，開始保持距離',
     phase2: '影忍進入第二階段！',
@@ -74,9 +74,9 @@
       };
       this.profile = {
         defEMA: 0, offsets: [], earlyMiss: 0, attempts: 0, spamPress: 0,
-        encounter: {}, perfect: {}, whiffs: [], parryPresses: [], hitsBy: {},
+        encounter: {}, perfect: {}, whiffs: [], blocked: [], parryPresses: [], hitsBy: {},
       };
-      this.stats = { perfect: 0, hits: 0, whiffs: 0, blocks: 0, time: 0, damageTaken: 0 };
+      this.stats = { perfect: 0, hits: 0, whiffs: 0, blocks: 0, time: 0, damageTaken: 0, finishers: 0 };
       this.lastTaunt = { key: null, at: -99999 };
     }
 
@@ -97,12 +97,13 @@
         def: def, hp: def.hp, maxHp: def.hp, posture: 0, postureMax: def.posture,
         state: 'idle', stateUntil: 0, attack: null, lastParriedAt: -9999, phase: 1,
         punishCooldownUntil: 0, wary: false, mood: 'idle', deadAt: 0, flinchUntil: 0, greedy: false,
+        lives: def.lives || 1, livesMax: def.lives || 1, blockCount: 0, blockFlashUntil: 0,
       };
       if (this.wave > 0) this.player.hp = Math.min(this.player.maxHp, this.player.hp + 30);
       this.player.guard = this.player.guardMax;
       this.player.exposedUntil = 0; this.player.stunUntil = 0; this.player.swingResolved = true; this.player.swingUntil = 0;
       this.state = 'intro';
-      this.introUntil = this.rt + 2200;
+      this.introUntil = this.rt + 1800;
       this.emit('intro', { name: def.name, text: def.intro, wave: this.wave });
     }
 
@@ -161,7 +162,7 @@
       dtReal = Math.min(dtReal, 50);
       this.rt += dtReal;
       if (this.state === 'intro') {
-        if (this.rt >= this.introUntil) { this.state = 'fight'; this.enemy.stateUntil = this.ft + this.rand(600, 1000); this.emit('fightStart'); }
+        if (this.rt >= this.introUntil) { this.state = 'fight'; this.enemy.stateUntil = this.ft + this.rand(400, 700); this.emit('fightStart'); }
         return;
       }
       if (this.state === 'clear') {
@@ -188,7 +189,7 @@
       }
 
       // enemy posture decay
-      if (e.state !== 'stagger' && this.ft - e.lastParriedAt > 1500) e.posture = Math.max(0, e.posture - 9 * dt / 1000);
+      if (e.state !== 'stagger' && this.ft - e.lastParriedAt > 1200) e.posture = Math.max(0, e.posture - 16 * (0.2 + 0.8 * e.hp / e.maxHp) * dt / 1000);
 
       // enemy state machine
       if (e.state === 'dead') {
@@ -218,8 +219,9 @@
           e.stateUntil = this.ft + this.idleTime();
           break;
         case 'stagger':
-          e.state = 'idle'; e.mood = 'idle'; e.posture = e.postureMax * 0.25;
-          e.stateUntil = this.ft + this.rand(300, 600);
+          e.state = 'idle'; e.mood = 'idle'; e.posture = e.postureMax * 0.5;
+          if (e.hp <= 0) e.hp = Math.round(e.maxHp * 0.15);
+          e.stateUntil = this.ft + this.rand(150, 350);
           break;
       }
     }
@@ -230,7 +232,7 @@
       if (e.greedy) t *= 0.45;
       if (p.hp < 30) t *= 0.7;
       if (e.phase === 2) t *= 0.75;
-      if (e.hp < e.maxHp * 0.25 && this.rng() < 0.35) { t = this.rand(1200, 2000); e.wary = true; e.mood = 'wary'; this.showTaunt('wary'); }
+      if (e.hp < e.maxHp * 0.25 && this.rng() < 0.25) { t = this.rand(600, 1000); e.wary = true; e.mood = 'wary'; this.showTaunt('wary'); }
       else e.wary = false;
       return t;
     }
@@ -261,7 +263,8 @@
       if (spamRatio > 1.8 && w.heavy) { w.heavy *= 1 + 1.8 * ex; mark('heavy', (spamRatio - 1.5) * ex); }
       // 4) whiffer -> greed punish (fast follow-ups)
       const recentWhiffs = pr.whiffs.filter(t => this.ft - t < 8000).length;
-      e.greedy = recentWhiffs >= 2;
+      const recentBlocked = pr.blocked.filter(t => this.ft - t < 6000).length;
+      e.greedy = recentWhiffs >= 2 || recentBlocked >= 4;
       if (e.greedy) { if (w.quick) w.quick *= 1 + 1.5 * ex; if (w.chain) w.chain *= 1 + 1.2 * ex; mark('greed', 0.9 * ex); }
       // 5) generic: prefer what the player handles worst
       let worst = null, worstRate = 1;
@@ -381,14 +384,14 @@
         atk.dir = this.rng() < 0.5 ? 'L' : 'R';
         atk.pauseMs = 0;
         let gap = this.rand(ATTACKS.chain.gap[0], ATTACKS.chain.gap[1]) * e.def.speed;
-        if (e.def.id === 'shade') gap = this.rand(220, 600) * (e.phase === 2 ? 0.85 : 1);
+        if (e.def.id === 'shade') gap = this.rand(170, 380) * (e.phase === 2 ? 0.85 : 1);
         atk.windupStart = this.ft; atk.windupMs = gap;
         e.state = 'windup'; e.stateUntil = this.ft + gap;
         this.emit('windup', { kind: atk.kind, dir: atk.dir, key: atk.key, chain: true });
         return;
       }
-      let rec = result === 'perfect' ? 750 : result === 'block' ? 480 : 340;
-      if (atk.kind === 'purple' && result === 'block') rec = 820;
+      let rec = result === 'perfect' ? 620 : result === 'block' ? 380 : 280;
+      if (atk.kind === 'purple' && result === 'block') rec = 650;
       if (atk.key === 'quick' || atk.key === 'punish') rec *= 0.75;
       e.state = 'recover'; e.mood = 'recover';
       e.stateUntil = this.ft + rec;
@@ -398,8 +401,8 @@
     stagger() {
       const e = this.enemy;
       e.state = 'stagger'; e.mood = 'stagger';
-      e.stateUntil = this.ft + 1700;
-      e.attack = null;
+      e.stateUntil = this.ft + 1500;
+      e.attack = null; e.posture = e.postureMax;
       this.player.combo = 0;
       this.emit('stagger');
     }
@@ -416,18 +419,46 @@
 
     resolveSwing() {
       const e = this.enemy, p = this.player;
-      if (e.state === 'stagger') {
-        if (p.combo >= 3) { this.whiff(); return; }
-        p.combo++;
-        const mult = [1, 1.3, 1.7][p.combo - 1];
-        this.damageEnemy(Math.round(PLAYER_ATK * mult), p.combo);
-      } else if (e.state === 'recover' || (p.swingValid && e.state === 'idle')) {
-        this.damageEnemy(PLAYER_ATK, 0);
+      if (e.state === 'stagger') { this.finisher(); return; }
+      if (e.state === 'recover' || (p.swingValid && e.state === 'idle')) {
+        p.combo = (this.ft - (p.lastHitAt || -9999) < 600) ? p.combo + 1 : 1; p.lastHitAt = this.ft;
+        e.posture = Math.min(e.postureMax, e.posture + 6);
+        this.damageEnemy(PLAYER_ATK, p.combo >= 2 ? p.combo : 0);
+      } else if (e.state === 'idle') {
+        // enemy guards your swing: a little posture, but it counters soon
+        e.posture = Math.min(e.postureMax, e.posture + 3);
+        e.blockCount++; e.blockFlashUntil = this.ft + 160;
+        this.profile.blocked.push(this.ft);
+        this.emit('enemyBlock');
+        if (e.posture >= e.postureMax) { this.stagger(); return; }
+        const limit = e.def.id === 'goblin' ? 3 : 2;
+        if (e.blockCount >= limit || (e.greedy && this.rng() < 0.6)) {
+          e.blockCount = 0;
+          this.startAttack('punish');
+        } else if (e.stateUntil - this.ft > 400) e.stateUntil = this.ft + 400;
       } else if (e.state === 'dead') {
         // nothing
       } else {
-        this.whiff();
+        this.whiff();   // swung into its attack -> exposed
       }
+    }
+
+    finisher() {
+      const e = this.enemy;
+      this.stats.finishers++;
+      e.lives--; e.flinchUntil = this.ft + 300;
+      this.slowUntil = this.rt + 380;
+      this.emit('finisher', { last: e.lives <= 0 });
+      if (e.lives <= 0) {
+        e.hp = 0; e.state = 'dead'; e.mood = 'dead'; e.deadAt = this.ft; e.attack = null;
+        this.state = 'clear'; this.clearUntil = this.rt + 1600;
+        this.emit('enemyDead', { name: e.def.name });
+        return;
+      }
+      e.hp = e.maxHp; e.posture = 0; e.blockCount = 0;
+      e.state = 'recover'; e.mood = 'recover'; e.stateUntil = this.ft + 900; e.attack = null;
+      if (e.def.phase2 && e.phase === 1) { e.phase = 2; this.showTaunt('phase2'); this.emit('phase2'); }
+      else this.emit('lifeLost');
     }
 
     whiff() {
@@ -447,14 +478,7 @@
       e.hp = Math.max(0, e.hp - amount);
       e.flinchUntil = this.ft + 180;
       this.emit('enemyHit', { amount: amount, combo: combo });
-      if (e.def.phase2 && e.phase === 1 && e.hp <= e.maxHp * 0.5) {
-        e.phase = 2; this.showTaunt('phase2'); this.emit('phase2');
-      }
-      if (e.hp <= 0) {
-        e.state = 'dead'; e.mood = 'dead'; e.deadAt = this.ft; e.attack = null;
-        this.state = 'clear'; this.clearUntil = this.rt + 1600;
-        this.emit('enemyDead', { name: e.def.name });
-      }
+      if (e.hp <= 0) { e.hp = 0; this.stagger(); }
     }
 
     rank() {

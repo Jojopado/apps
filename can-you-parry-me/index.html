@@ -28,7 +28,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#0b0a10;color:#eee;fon
   <div class="b" id="attack">ATTACK<small>攻擊</small></div>
   <div class="b" id="def">DEF<small>長按防禦</small></div>
 </div>
-<script src="game.js?v=2"></script>
+<script src="game.js?v=3"></script>
 <script>
 (function(){
 'use strict';
@@ -78,11 +78,13 @@ const sfx = {
   win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.25,0.25,'square'),i*120)); },
   lose(){ [300,250,200,150].forEach((f,i)=>setTimeout(()=>tone(f,0.3,0.25,'sawtooth'),i*180)); },
   start(){ tone(440,0.1,0.2,'square'); setTimeout(()=>tone(880,0.15,0.2,'square'),100); },
+  guard(){ noise(0.07,0.35,2500); tone(1300,0.08,0.15,'triangle',800); },
+  finisher(){ noise(0.35,0.7,800); tone(160,0.5,0.5,'sawtooth',40); setTimeout(()=>{ noise(0.2,0.5,4000); tone(2400,0.3,0.2,'triangle',1200); },90); },
 };
 function buzz(ms){ try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
 
 // ---------- visual state ----------
-const fx = { shake:0, flash:0, flashColor:'#fff', red:0, floats:[], sparks:[], hint:null, intro:null, clear:null, parryAt:-9, swingAt:-9, stars:0 };
+const fx = { slash:0, shake:0, flash:0, flashColor:'#fff', red:0, floats:[], sparks:[], hint:null, intro:null, clear:null, parryAt:-9, swingAt:-9, stars:0 };
 let armParryUntil = 0, armSwingStart = -9999;
 function addFloat(text, x, y, color, size, life){ fx.floats.push({text,x,y,color,size:size||12,life:life||900,t:0,vy:-0.02}); }
 function addSparks(x,y,n,color){ for(let i=0;i<n;i++){ const a=Math.random()*6.28, v=0.08+Math.random()*0.2; fx.sparks.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-0.05,t:0,life:300+Math.random()*300,color}); } }
@@ -99,7 +101,10 @@ function handleEvent(ev){
     case 'swing': sfx.swish(); armSwingStart = game.ft; break;
     case 'parryPress': armParryUntil = game.ft + 170; break;
     case 'enemyHit': sfx.hit(); buzz(15); fx.shake=3; addFloat('-'+ev.amount,120+(Math.random()*30-15),H*0.38,ev.combo>=3?'#ffd23c':'#fff',ev.combo?12+ev.combo*2:12,700); addSparks(120,H*0.45,8,'#ff9c9c'); break;
-    case 'stagger': sfx.stagger(); buzz([30,40,30]); addFloat('破綻！',120,H*0.3,'#ffd23c',18,1200); fx.flash=0.3; fx.flashColor='#ffd23c'; break;
+    case 'stagger': sfx.stagger(); buzz([30,40,30]); addFloat('架勢崩潰！',120,H*0.3,'#ffd23c',18,1200); fx.flash=0.3; fx.flashColor='#ffd23c'; break;
+    case 'enemyBlock': sfx.guard(); fx.shake=1.5; addSparks(126,H*0.42,6,'#fff2b0'); addFloat('格開',150,H*0.36,'#cfd6e0',10,500); break;
+    case 'finisher': sfx.finisher(); buzz([60,30,90]); fx.flash=0.85; fx.flashColor='#ffffff'; fx.shake=10; fx.slash=1; addSparks(120,H*0.45,30,'#ff4a4a'); addFloat(ev.last?'一閃・斬殺':'一閃！',120,H*0.3,'#ff4a4a',24,1300); break;
+    case 'lifeLost': addFloat('還沒倒下…',120,H*0.38,'#ddd',11,1200); break;
     case 'windup': sfx.tick(ev.kind); break;
     case 'strikeStart': sfx.swish(); break;
     case 'hint': fx.hint = {text:ev.text, until:game.rt+5000}; break;
@@ -404,6 +409,7 @@ function enemyGeom(e){
 function weaponPoints(e,g){
   const {s,cx,cy,strikeP,windP} = g; const a = e.attack; const ft = game.ft;
   const idle = {h:[cx+0.3*s,cy+0.12*s], t:[cx+0.2*s,cy-0.75*s]};
+  if ((!a || e.state==='idle') && ft < e.blockFlashUntil) return {h:[cx+0.35*s,cy-0.1*s], t:[cx-0.55*s,cy-0.3*s]};
   if (!a || e.state==='idle') return e.state==='stagger'? {h:[cx+0.4*s,cy+0.5*s],t:[cx+0.9*s,cy+0.7*s]} : e.state==='recover'? {h:[cx+0.3*s,cy+0.5*s],t:[cx+0.95*s,cy+0.75*s]} : e.state==='dead'? {h:[cx+0.4*s,cy+0.6*s],t:[cx+1.0*s,cy+0.7*s]} : idle;
   const dir = a.dir;
   const wind = dir==='L'? {h:[cx-0.5*s,cy-0.15*s], t:[cx-0.85*s,cy-0.7*s]} : dir==='R'? {h:[cx+0.5*s,cy-0.15*s], t:[cx+0.85*s,cy-0.7*s]} : {h:[cx,cy-0.75*s], t:[cx,cy-1.4*s]};
@@ -512,12 +518,14 @@ function bar(x,y,w,h,v,max,c,bg){ px(x-1,y-1,w+2,h+2,OUT); px(x,y,w,h,bg||'#000'
 function drawHUD(){
   const e = game.enemy, p = game.player, base = H - BTN();
   // wave dots
-  for(let i=0;i<3;i++) px(W-10-i*7,6,4,4,i<=game.wave?'#ffd23c':'#444');
+  for(let i=0;i<3;i++) px(W-12-i*7,31,4,4,i<=game.wave?'#ffd23c':'#444');
   if (e){
     text(e.def.name,8,10,'#fff',10,'left');
     bar(8,16,W-16,6,e.hp,e.maxHp,'#e04848','#2a1414');
     bar(8,24,W-16,3,e.posture,e.postureMax,'#ffd23c','#2a2414');
-    if (e.phase===2) text('II',W-14,10,'#ff5aff',9);
+    if (e.phase===2) text('II',W-30,10,'#ff5aff',9);
+    for (let i=0;i<e.livesMax;i++){ const x=W-14-i*9; disc(x,11,3,OUT); disc(x,11,2,i<e.lives?'#ff3b3b':'#3a2a2a'); }
+    if (e.state==='stagger' && Math.floor(game.rt/140)%2===0){ px(30,H*0.2-9,W-60,18,'rgba(60,0,0,0.85)'); text('ATTACK 一閃！',120,H*0.2,'#ff6a6a',13); }
   }
   // taunt (enemy thought)
   if (game.taunt && game.ft < game.taunt.until){
@@ -552,10 +560,10 @@ function drawTitle(){
   text('紅光 → 命中前一刻按 PARRY',120,ly,'#ff8a8a',10);
   text('紫光 → 不能彈反，長按 DEF',120,ly+16,'#d8a8ff',10);
   text('金光 → 防不住，只能 PARRY',120,ly+32,'#ffe680',10);
-  text('綠框 → 它露出破綻，ATTACK',120,ly+48,'#9cffb0',10);
-  text('亂揮＝自己露出破綻，傷害加倍',120,ly+64,'#ccc',9);
+  text('綠框 → 破綻，快 ATTACK',120,ly+48,'#9cffb0',10);
+  text('黃色架勢條滿 → ATTACK 一閃斬殺',120,ly+64,'#ffd23c',9);
   if (Math.sin(game.rt*0.005)>-0.2) text('點畫面開始',120,H*0.72,'#fff',12);
-  text('怪物會記住你的習慣',120,H*0.77,'#8a7aa8',9);
+  text('砍進它出招中＝挨打｜它會記住你的習慣',120,H*0.77,'#8a7aa8',9);
 }
 function drawIntro(){
   const i = fx.intro; if(!i) return;
@@ -570,8 +578,8 @@ function drawEnd(){
   px(14,H*0.18,W-28,H*0.5,'rgba(10,8,16,0.92)');
   text(win?'討伐成功！':'被打倒了…',120,H*0.18+24,win?'#ffe066':'#ff7a7a',20);
   if (win) text('評價 '+game.rank(),120,H*0.18+48,'#fff',16);
-  const rows = [['完美彈反',s.perfect],['被擊中',s.hits],['揮空',s.whiffs],['承受傷害',s.damageTaken],['時間',Math.round(s.time/1000)+'s']];
-  rows.forEach((r,k)=>{ const y=H*0.18+72+k*16; text(r[0],60,y,'#aaa',10,'left'); text(String(r[1]),W-60,y,'#fff',10,'right'); });
+  const rows = [['完美彈反',s.perfect],['一閃斬殺',s.finishers],['被擊中',s.hits],['揮空',s.whiffs],['承受傷害',s.damageTaken],['時間',Math.round(s.time/1000)+'s']];
+  rows.forEach((r,k)=>{ const y=H*0.18+68+k*14; text(r[0],60,y,'#aaa',10,'left'); text(String(r[1]),W-60,y,'#fff',10,'right'); });
   // adaptive summary
   const pr = game.profile; const notes=[];
   if (pr.defEMA>0.45) notes.push('你太常長按 Def');
@@ -608,6 +616,8 @@ function frame(now){
     if (game.state==='win'||game.state==='lose') drawEnd();
   }
   ctx.setTransform(1,0,0,1,0,0);
+  fx.slash *= Math.pow(0.88, dt/16);
+  if (fx.slash>0.05){ ctx.globalAlpha=Math.min(1,fx.slash*1.5); const k=1-fx.slash; stamp(10,H*0.25+k*20,230,H*0.6-k*20,4,2,'#ffffff'); stamp(10,H*0.25+k*20+3,230,H*0.6-k*20+3,2,1,'#ff3b3b'); ctx.globalAlpha=1; }
   if (fx.flash>0.02){ ctx.globalAlpha=fx.flash; px(0,0,W,H,fx.flashColor); ctx.globalAlpha=1; }
   if (fx.red>0.02){ ctx.globalAlpha=fx.red*0.5; px(0,0,W,H,'#f00'); ctx.globalAlpha=1; }
   // slow-mo vignette
