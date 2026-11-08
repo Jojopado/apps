@@ -14,13 +14,13 @@
   };
 
   const ENEMIES = [
-    { id: 'goblin', name: '哥布林斥候', hp: 90,  posture: 60,  speed: 1.0,  idle: [500, 1200], exploit: 0.6,
+    { id: 'goblin', name: '野武士', hp: 90,  posture: 60,  speed: 1.0,  idle: [500, 1200], exploit: 0.6,
       weights: { slash: 4, quick: 3, feint: 1, chain: 1.5 }, chainMax: 2, color: '#6cbf4a',
-      intro: '動作快、愛耍小聰明。紅光→命中前一刻按 Parry。' },
-    { id: 'knight', name: '鐵甲衛士',   hp: 170, posture: 90,  speed: 1.15, idle: [600, 1300], exploit: 0.9,
+      intro: '出手快、愛耍小聰明。紅光→命中前一刻按 Parry。' },
+    { id: 'knight', name: '鎧武者',   hp: 170, posture: 90,  speed: 1.15, idle: [600, 1300], exploit: 0.9,
       weights: { slash: 3, heavy: 3, grab: 1.5, chain: 1.5, quick: 1 }, chainMax: 3, color: '#9aa3b2',
       intro: '紫光重劈不能彈反、只能長按 Def；金光擒抱防不住、只能 Parry。' },
-    { id: 'shade',  name: '影刃',       hp: 260, posture: 100, speed: 0.9,  idle: [350, 1000], exploit: 1.3,
+    { id: 'shade',  name: '影忍',       hp: 260, posture: 100, speed: 0.9,  idle: [350, 1000], exploit: 1.3,
       weights: { slash: 3, quick: 2.5, feint: 2.5, heavy: 1.5, grab: 1.5, chain: 3 }, chainMax: 4, color: '#7a4fd1',
       intro: '會記住你的習慣，專挑你擋不好的招。', phase2: true },
   ];
@@ -40,7 +40,7 @@
     greed: '👁 它看穿你亂揮',
     weak: '👁 它專挑你擋不好的招',
     wary: '它受傷了，開始保持距離',
-    phase2: '影刃進入第二階段！',
+    phase2: '影忍進入第二階段！',
     fast: '👁 它發現你怕快招',
   };
 
