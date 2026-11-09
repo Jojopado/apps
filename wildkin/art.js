@@ -1,4 +1,4 @@
-// WILDKIN 美術：全部用程式畫的 SVG，沒有外部素材
+// WILDKIN 美術：角色、地形、圖示都是程式畫的 SVG（字型、音效、配樂是外部素材，見 credits）
 const eyes = (y = 54, gap = 14, c = '#2b2320') => `
   <circle cx="${50 - gap}" cy="${y}" r="5.4" fill="${c}"/><circle cx="${50 + gap}" cy="${y}" r="5.4" fill="${c}"/>
   <circle cx="${50 - gap + 1.9}" cy="${y - 2}" r="1.9" fill="#fff"/><circle cx="${50 + gap + 1.9}" cy="${y - 2}" r="1.9" fill="#fff"/>`;
@@ -74,7 +74,7 @@ const ACC = {
 };
 
 export function animalSVG(species, acc = '') {
-  return `<svg class="art" viewBox="-2 -8 104 120" aria-hidden="true">${(DRAW[species] || DRAW.cat)()}${ACC[acc] || ''}</svg>`;
+  return `<svg class="art" viewBox="-8 -14 116 132" aria-hidden="true"><g filter="url(#stk)">${(DRAW[species] || DRAW.cat)()}${ACC[acc] || ''}</g></svg>`;
 }
 
 const ICON = {
@@ -97,5 +97,81 @@ const ICON = {
   horn: '<path d="M12 40 C40 42 66 30 88 12 V82 C66 68 40 60 12 62Z" fill="#d7ab56" stroke="#9a7330" stroke-width="3"/><rect x="24" y="42" width="8" height="19" fill="#9a7330"/>',
   flag: '<rect x="18" y="8" width="7" height="86" rx="3" fill="#7b5532"/><path d="M25 12 Q52 2 88 16 V56 Q54 44 25 54Z" fill="#fff" stroke="#c8c1b4" stroke-width="3"/>',
 };
-export function iconSVG(name) { return `<svg class="art" viewBox="0 0 100 100" aria-hidden="true">${ICON[name] || ICON.leaf}</svg>`; }
+export function iconSVG(name) { return `<svg class="art" viewBox="-8 -8 116 116" aria-hidden="true"><g filter="url(#stk)">${ICON[name] || ICON.leaf}</g></svg>`; }
 export const terrainSVG = (id) => iconSVG(id === 'forest' ? 'tree' : id === 'lake' ? 'wave' : 'grass');
+
+// ── 共用濾鏡：白邊＋內陰影＋高光＋落影（貼紙質感）──
+export const SVG_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<filter id="stk" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+  <feOffset in="SourceAlpha" dy="-6" result="up"/><feComposite in="SourceAlpha" in2="up" operator="out" result="low"/>
+  <feGaussianBlur in="low" stdDeviation="2.6" result="lowB"/><feFlood flood-color="#4a2a12" flood-opacity=".28"/>
+  <feComposite in2="lowB" operator="in"/><feComposite in2="SourceAlpha" operator="in" result="shade"/>
+  <feOffset in="SourceAlpha" dy="5" result="dn"/><feComposite in="SourceAlpha" in2="dn" operator="out" result="top"/>
+  <feGaussianBlur in="top" stdDeviation="2" result="topB"/><feFlood flood-color="#fff" flood-opacity=".42"/>
+  <feComposite in2="topB" operator="in"/><feComposite in2="SourceAlpha" operator="in" result="hi"/>
+  <feMorphology in="SourceAlpha" operator="dilate" radius="3.4" result="fat"/>
+  <feFlood flood-color="#fffdf6"/><feComposite in2="fat" operator="in" result="rim"/>
+  <feGaussianBlur in="fat" stdDeviation="2.2" result="fatB"/><feOffset in="fatB" dy="3.5" result="drop"/>
+  <feFlood flood-color="#2b1d10" flood-opacity=".38"/><feComposite in2="drop" operator="in" result="shadow"/>
+  <feMerge><feMergeNode in="shadow"/><feMergeNode in="rim"/><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/><feMergeNode in="hi"/></feMerge>
+</filter></defs></svg>`;
+
+// ── 數值圖示 ──
+const STAT = {
+  atk: '<path d="M19 3 L21 3 L21 7 L11 17 L13 19 L11 21 L9 19 L6 22 L2 18 L5 15 L3 13 L5 11 L7 13 L17 3Z" fill="currentColor"/>',
+  hp: '<path d="M12 21 C5 15.5 2 12.5 2 8.4 C2 5.4 4.4 3 7.3 3 C9.2 3 10.8 4 12 5.6 C13.2 4 14.8 3 16.7 3 C19.6 3 22 5.4 22 8.4 C22 12.5 19 15.5 12 21Z" fill="currentColor"/>',
+  spd: '<path d="M3 13 L13 13 L9 21 L21 9 L12 9 L15 2Z" fill="currentColor"/>',
+  shield: '<path d="M12 2 L21 5.5 V11 C21 16.5 17 20.5 12 22 C7 20.5 3 16.5 3 11 V5.5Z" fill="currentColor"/>',
+};
+export const statIcon = (k) => `<svg class="si" viewBox="0 0 24 24" aria-hidden="true">${STAT[k]}</svg>`;
+
+// ── 地形風景（當作區域背景）──
+function rng(seed) { let a = seed; return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const W = 160, H = 420;
+const grad = (a, b, c) => `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset=".5" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#g)"/>`;
+function forestScene() {
+  const r = rng(7);
+  let s = grad('#a9d48f', '#c7e3a8', '#9ccb83');
+  for (let i = 0; i < 26; i++) {
+    const x = r() * W, y = r() * H, h = 22 + r() * 26, w = h * 0.62, c = ['#5f9d55', '#6cab5c', '#4f8a4a', '#78b766'][(r() * 4) | 0];
+    s += `<g opacity=".5"><rect x="${x - 2}" y="${y}" width="4" height="${h * 0.3}" fill="#7a5a3a"/><path d="M${x} ${y - h} L${x + w / 2} ${y - h * 0.38} H${x + w * 0.3} L${x + w / 2 + 3} ${y + 2} H${x - w / 2 - 3} L${x - w * 0.3} ${y - h * 0.38} H${x - w / 2}Z" fill="${c}"/></g>`;
+  }
+  for (let i = 0; i < 7; i++) { const x = r() * W, y = r() * H; s += `<g opacity=".7"><rect x="${x - 1.5}" y="${y}" width="3" height="5" fill="#f4ecd8"/><path d="M${x - 6} ${y + 1} Q${x} ${y - 8} ${x + 6} ${y + 1}Z" fill="#d9584a"/><circle cx="${x - 2}" cy="${y - 2}" r="1.1" fill="#fff"/></g>`; }
+  for (let i = 0; i < 4; i++) { const x = r() * W; s += `<path d="M${x} 0 L${x + 22} 0 L${x + 70} ${H} L${x + 40} ${H}Z" fill="#fff8d8" opacity=".14"/>`; }
+  return s;
+}
+function lakeScene() {
+  const r = rng(11);
+  let s = grad('#8fcbe6', '#b6e0f0', '#86c3e0');
+  for (let i = 0; i < 30; i++) { const x = r() * W, y = r() * H, w = 10 + r() * 22; s += `<path d="M${x} ${y} q${w / 4} -4 ${w / 2} 0 t${w / 2} 0" stroke="#fff" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>`; }
+  for (let i = 0; i < 9; i++) {
+    const x = r() * W, y = r() * H, rr = 7 + r() * 6, a = r() * 360;
+    s += `<g transform="rotate(${a} ${x} ${y})" opacity=".75"><path d="M${x} ${y} L${x + rr} ${y - 2} A${rr} ${rr} 0 1 1 ${x + rr} ${y + 2}Z" fill="#7cbf6a"/></g>`;
+    if (r() < 0.4) s += `<circle cx="${x + 2}" cy="${y - 3}" r="3" fill="#f6b3cb" opacity=".85"/>`;
+  }
+  for (const side of [0, W]) for (let i = 0; i < 9; i++) {
+    const y = r() * H, d = side ? -1 : 1, x = side + d * r() * 10;
+    s += `<path d="M${x} ${y} q${3 * d} -16 ${d} -28" stroke="#5f9a52" stroke-width="2.4" fill="none" opacity=".6"/><ellipse cx="${x + d}" cy="${y - 26}" rx="2.4" ry="6" fill="#8a5b36" opacity=".7"/>`;
+  }
+  return s;
+}
+function grassScene() {
+  const r = rng(23);
+  let s = grad('#e3e49a', '#f0ecb8', '#dcdf8e');
+  for (let i = 0; i < 40; i++) { const x = r() * W, y = r() * H, c = ['#a9c45c', '#94b84e', '#b8cf6c'][(r() * 3) | 0]; s += `<path d="M${x - 5} ${y} Q${x - 4} ${y - 9} ${x - 7} ${y - 13} Q${x - 1} ${y - 8} ${x} ${y} Q${x + 1} ${y - 12} ${x + 3} ${y - 16} Q${x + 3} ${y - 7} ${x + 5} ${y}Z" fill="${c}" opacity=".7"/>`; }
+  for (let i = 0; i < 22; i++) {
+    const x = r() * W, y = r() * H, c = ['#fff', '#f7d24a', '#f3a3c0', '#fff'][(r() * 4) | 0];
+    s += `<g opacity=".85">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${x + Math.cos(a * Math.PI / 180) * 2.6}" cy="${y + Math.sin(a * Math.PI / 180) * 2.6}" r="2" fill="${c}"/>`).join('')}<circle cx="${x}" cy="${y}" r="1.4" fill="#e8a43a"/></g>`;
+  }
+  for (let i = 0; i < 3; i++) { const x = r() * W, y = r() * H; s += `<g opacity=".5"><ellipse cx="${x}" cy="${y}" rx="9" ry="6" fill="#c9c2b0"/><ellipse cx="${x + 6}" cy="${y + 2}" rx="6" ry="4" fill="#b5ad99"/></g>`; }
+  return s;
+}
+const SCENES = { forest: forestScene, lake: lakeScene, grass: grassScene };
+const sceneCache = {};
+export function sceneURL(id) {
+  if (!sceneCache[id]) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${(SCENES[id] || grassScene)()}</svg>`;
+    sceneCache[id] = `url('data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, '%27')}')`;
+  }
+  return sceneCache[id];
+}
