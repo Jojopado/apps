@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>推陣 Shove Tactics</title>
+<style>
+:root{--bg:#1d1f24;--panel:#2a2d34;--tile:#3a3e47;--tile2:#343841;--line:#4b505b;--txt:#e8e8ea;--dim:#9a9ca3;
+--blue:#3b82f6;--blueD:#1e3a8a;--red:#ef4444;--redD:#7f1d1d;--green:#22c55e;--gold:#facc15;--t:min(17.5vw,78px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;overscroll-behavior:none}
+#app{max-width:480px;margin:0 auto;padding:8px 12px 16px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:6px}
+header .side{display:flex;gap:6px;align-items:center}
+.pill{background:var(--panel);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill.b{border:1px solid var(--blue)}.pill.r{border:1px solid var(--red)}
+.en{color:var(--gold);letter-spacing:-1px}
+button{font:inherit;color:var(--txt);background:#454a55;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
+button:disabled{opacity:.35}
+button.main{background:var(--blue);font-weight:700}
+button.ghost{background:transparent;border:1px solid var(--line)}
+#status{text-align:center;font-size:15px;min-height:22px;font-weight:600}
+#status.ai{color:#fca5a5}#status.me{color:#93c5fd}
+#boardWrap{position:relative;width:calc(var(--t)*5);height:calc(var(--t)*4);margin:0 auto}
+#board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(5,var(--t));grid-template-rows:repeat(4,var(--t))}
+.tile{border:1px solid var(--bg);background:var(--tile);position:relative}
+.tile.home0{background:#323a4a}.tile.home1{background:#4a3434}
+.tile.pit{background:radial-gradient(circle,#000 35%,#15161a 70%)}
+.tile.rock{background:repeating-linear-gradient(45deg,#6b6f78 0 6px,#5a5e66 6px 12px)}
+.tile.water{background:repeating-linear-gradient(0deg,#1e4e7a 0 5px,#235a8a 5px 10px)}
+.tile .tl{position:absolute;left:3px;bottom:2px;font-size:10px;color:#ffffffaa}
+.tile.hl{box-shadow:inset 0 0 0 3px var(--gold);cursor:pointer}
+.tile.thR::after,.tile.thB::after{content:"";position:absolute;inset:0;pointer-events:none}
+.tile.thR::after{background:#ef444430}.tile.thB::after{background:#3b82f630}
+.tile.thR.thB::after{background:linear-gradient(135deg,#ef444430 50%,#3b82f630 50%)}
+svg#ov{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.unit{position:absolute;width:calc(var(--t) - 8px);height:calc(var(--t) - 8px);margin:4px;border-radius:9px;background:#5b606b;
+border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:left .25s,top .25s,transform .15s,opacity .3s;cursor:pointer;font-size:calc(var(--t)*.2)}
+.unit.s0{border-color:var(--blue);background:linear-gradient(#4b5568,#3b4252)}.unit.s1{border-color:var(--red);background:linear-gradient(#684b4b,#523b3b)}
+.unit.cmd{box-shadow:0 0 0 2px var(--gold)}
+.unit .nm{font-weight:800;line-height:1}
+.unit .st{font-size:.72em;margin-top:3px;white-space:nowrap}
+.unit .ord{position:absolute;left:-7px;top:-7px;width:20px;height:20px;border-radius:50%;background:#111;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1px solid #888}
+.unit .ord.mod{background:var(--gold);color:#111}
+.unit .face{position:absolute;width:0;height:0;border:6px solid transparent}
+.unit .face.f0{top:-12px;left:calc(50% - 6px);border-bottom:7px solid var(--fc)}
+.unit .face.f1{right:-12px;top:calc(50% - 6px);border-left:7px solid var(--fc)}
+.unit .face.f2{bottom:-12px;left:calc(50% - 6px);border-top:7px solid var(--fc)}
+.unit .face.f3{left:-12px;top:calc(50% - 6px);border-right:7px solid var(--fc)}
+.unit.s0{--fc:#93c5fd}.unit.s1{--fc:#fca5a5}
+.unit .pred{position:absolute;right:-7px;top:-8px;font-size:11px;font-weight:800;background:#111;border-radius:7px;padding:1px 4px;color:#fca5a5;border:1px solid #666}
+.unit .gd{position:absolute;right:-6px;bottom:-6px;font-size:13px}
+.unit.sel{transform:scale(1.08);box-shadow:0 0 0 3px var(--gold)}
+.unit.hl{box-shadow:0 0 0 3px var(--gold);animation:pulse .8s infinite alternate}
+.unit.act{transform:scale(1.18);z-index:5}
+.unit.dead{opacity:0;transform:scale(.4)}
+.unit.ghost{opacity:.55}
+@keyframes pulse{to{box-shadow:0 0 0 5px #facc1580}}
+.float{position:absolute;font-weight:900;font-size:20px;pointer-events:none;animation:up .7s forwards;z-index:9;text-shadow:0 2px 3px #000}
+@keyframes up{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-28px)}}
+.pick{position:absolute;width:34px;height:34px;border-radius:50%;background:var(--gold);color:#111;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:20;cursor:pointer;box-shadow:0 2px 6px #0008;padding:0}
+.pick.def{outline:3px solid #fff}
+#info{background:var(--panel);border-radius:10px;padding:8px 10px;font-size:13px;min-height:52px;line-height:1.45}
+#info b{font-size:14px}
+#info .warn{color:var(--gold)}
+#acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#hand{display:flex;gap:6px;overflow-x:auto;padding:10px 2px 6px;scrollbar-width:none}
+.card{flex:0 0 74px;height:96px;border-radius:9px;background:#e9e6df;color:#222;padding:5px;position:relative;cursor:pointer;border:2px solid #bbb;display:flex;flex-direction:column}
+.card.tac{background:#dfe6ef}
+.card .cc{position:absolute;right:4px;top:3px;width:20px;height:20px;border-radius:50%;background:#222;color:var(--gold);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center}
+.card .cn{font-weight:800;font-size:15px;margin-top:2px}
+.card .cs{font-size:11px;margin-top:auto;color:#444}
+.card .ck{font-size:10px;color:#666}
+.card.off{opacity:.45}
+.card.sel{border-color:var(--gold);transform:translateY(-6px);box-shadow:0 4px 10px #0008}
+#log{font-size:12px;color:var(--dim);background:#24262c;border-radius:8px;padding:6px 8px;min-height:62px;line-height:1.4}
+.ovl{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.ovl .box{background:var(--panel);border-radius:14px;padding:18px;max-width:440px;width:100%;max-height:90vh;overflow:auto;line-height:1.6;font-size:14px}
+.ovl h2{margin:0 0 8px;font-size:22px}
+.ovl ol{padding-left:20px;margin:6px 0}
+.ovl .btns{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.hidden{display:none!important}
+#banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);background:#000c;padding:12px 22px;border-radius:12px;font-size:20px;font-weight:800;z-index:40;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="side"><span class="pill" id="hRound">回合 1/8</span><button class="ghost" id="bRules" style="padding:3px 9px">規則</button></div>
+    <div class="side"><span class="pill r" id="hAI">AI</span><span class="pill b" id="hMe">你</span></div>
+  </header>
+  <div id="status"></div>
+  <div id="boardWrap"><div id="board"></div><svg id="ov"></svg></div>
+  <div id="info"></div>
+  <div id="acts"></div>
+  <div id="hand"></div>
+  <div id="log"></div>
+</div>
+<div id="banner" class="hidden"></div>
+<div class="ovl" id="oRules"><div class="box">
+  <h2>推陣 Shove Tactics</h2>
+  <div style="color:var(--dim);font-size:12px">灰色方塊原型 v0.1：先測規則好不好玩，美術之後再換</div>
+  <ol>
+    <li><b>打倒對方的指揮官（金框）就贏。</b>8 回合後還沒分出勝負，比指揮官剩幾血。</li>
+    <li>每回合雙方<b>輪流做一件事</b>：出牌、移動 1 格（1 能量）、轉向（免費）。每個單位每回合各能移動、轉向一次。兩邊都按「結束行動」就結算。</li>
+    <li><b>所有資訊都是公開的</b>：線條＝這回合會打哪裡（藍＝你、紅＝AI）。單位右上角的「→1」「💀」＝如果現在直接結算的結果。</li>
+    <li>結算時照<b>單位左上角的數字</b>，小的先出手。先被打倒的單位就不會出手。</li>
+    <li><b>左右是懸崖、上下是牆。</b>推出懸崖或掉進坑洞會死（指揮官改受 3 傷害）；撞到東西雙方各扣 1。</li>
+    <li>地形：<b>坑洞</b>（黑）、<b>岩石</b>（擋路、擋直線攻擊）、<b>水</b>（站上面攻擊 -1）。</li>
+    <li>攻擊只打敵人，只有<b>砲台</b>的十字範圍敵我都炸。</li>
+  </ol>
+  <div class="btns"><button id="bEasy" class="ghost">對手：新手 AI</button><button id="bNormal" class="main">對手：普通 AI</button></div>
+  <div class="btns"><button id="bClose" class="ghost hidden">繼續這局</button></div>
+</div></div>
+<div class="ovl hidden" id="oOver"><div class="box" style="text-align:center">
+  <h2 id="ovT"></h2><div id="ovD"></div>
+  <div class="btns"><button class="main" id="bAgain">再來一局</button><button class="ghost" id="bSee">看盤面</button></div>
+</div></div>
+<script type="module" src="ui.js"></script>
+</body>
+</html>
