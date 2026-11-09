@@ -422,7 +422,7 @@ layout(); legend();
 st = C.newState(C.LEVELS[0], 1); disp = C.copy(st.g); hud();
 menu();
 requestAnimationFrame(loop);
-window.__g = { get st() { return st; }, get busy() { return busy; }, get T() { return T; }, tryMove, startLevel };
+window.__g = { get anim() { return anim && { type: anim.type, age: performance.now() - anim.t0, dur: anim.dur }; }, get st() { return st; }, get busy() { return busy; }, get T() { return T; }, tryMove, startLevel };
 })();
 </script>
 </body>
