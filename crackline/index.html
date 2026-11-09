@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#cfe6f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:,">
+<title>裂冰湖 Crackline</title>
+<style>
+:root{--ink:#123049;--dim:#4d6e89;--card:#ffffffee;--accent:#2f8fdc;--warn:#e8553e;--good:#2bb673;--gold:#f5b82e}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#cfe6f7;color:var(--ink);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#view{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;left:0;right:0;top:0;padding:max(10px,env(safe-area-inset-top)) 12px 0;display:flex;align-items:flex-start;gap:8px;pointer-events:none}
+#hud .pill{pointer-events:auto;background:var(--card);border-radius:16px;padding:7px 12px;box-shadow:0 3px 10px #0d3a5f22;font-weight:700}
+#lvl{flex:1;min-width:0}
+#lvl small{display:block;font-size:11px;color:var(--dim);font-weight:600}
+#lvl span{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.iconbtn{pointer-events:auto;border:0;background:var(--card);border-radius:14px;width:42px;height:42px;font-size:19px;box-shadow:0 3px 10px #0d3a5f22;color:var(--ink);display:flex;align-items:center;justify-content:center}
+#stats{position:fixed;left:12px;right:12px;top:calc(max(10px,env(safe-area-inset-top)) + 54px);display:flex;gap:8px;pointer-events:none}
+#stats .pill{background:var(--card);border-radius:14px;padding:5px 10px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:6px;box-shadow:0 3px 10px #0d3a5f22}
+.pick{width:18px;height:18px;display:inline-block}
+.pick.used{opacity:.22}
+#hint{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(440px,calc(100% - 24px));background:var(--card);border-radius:16px;padding:11px 14px;font-size:14px;line-height:1.55;box-shadow:0 6px 18px #0d3a5f2a;pointer-events:none;transition:opacity .4s}
+#hint.hide{opacity:0}
+#toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.9);background:#123049e6;color:#fff;padding:10px 18px;border-radius:16px;font-size:19px;font-weight:800;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(#cfe6f7cc,#a8cdeacc);z-index:10;overflow:auto}
+.ov.hidden{display:none}
+.card{background:#fff;border-radius:22px;padding:22px 20px;width:min(380px,100%);text-align:center;box-shadow:0 12px 40px #0d3a5f33}
+.logo{font-size:40px;font-weight:900;letter-spacing:2px;color:#1b5f95;margin:2px 0 0;text-shadow:0 3px 0 #d6ecfb}
+.sub{color:var(--dim);font-size:14px;margin:4px 0 14px}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:17px;font-weight:800;margin-top:10px;background:var(--accent);color:#fff;box-shadow:0 4px 0 #1d6aa8}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #1d6aa8}
+.btn.ghost{background:#e9f3fb;color:var(--ink);box-shadow:0 4px 0 #c6dcee}
+#grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.lv{border:0;border-radius:16px;background:#e9f3fb;padding:12px 4px 8px;font-weight:800;color:var(--ink);box-shadow:0 4px 0 #c6dcee}
+.lv b{display:block;font-size:24px}
+.lv i{font-style:normal;font-size:12px;color:var(--dim);display:block;margin-top:2px;white-space:nowrap}
+.lv .st{color:var(--gold);font-size:14px;letter-spacing:1px;min-height:18px;display:block}
+.lv:disabled{opacity:.45}
+.stars{font-size:42px;color:var(--gold);letter-spacing:6px;margin:4px 0}
+.stars .off{color:#dfe7ee}
+#rBody{color:var(--dim);font-size:15px;line-height:1.6;min-height:24px}
+.credits{font-size:11px;color:#7f98ad;margin-top:14px;line-height:1.6}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#cfe6f7;z-index:20;font-weight:800;color:#1b5f95;font-size:18px}
+#loading.hidden{display:none}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "d3-delaunay":"https://cdn.jsdelivr.net/npm/d3-delaunay@6.0.4/+esm"
+}}
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="hud">
+  <button class="iconbtn" id="bMenu" aria-label="選單">☰</button>
+  <div class="pill" id="lvl"><small id="lvlNo">第 1 關</small><span id="lvlName"></span></div>
+  <button class="iconbtn" id="bRetry" aria-label="重來">↺</button>
+  <button class="iconbtn" id="bSound" aria-label="聲音">🔊</button>
+</div>
+<div id="stats">
+  <div class="pill" id="picks"></div>
+  <div class="pill" id="fishGoal"></div>
+</div>
+<div id="hint"></div>
+<div id="toast"></div>
+
+<div class="ov" id="oMenu"><div class="card">
+  <div class="logo">裂冰湖</div>
+  <div class="sub">Crackline · 敲裂冰面，放魚兒回家</div>
+  <div id="grid"></div>
+  <div class="credits">生物模型：BluePudding 日式水族館素材包<br>音樂：オオヒラセイジ「アクアリウム」(OpenTracks)　音效：Kenney (CC0)</div>
+</div></div>
+
+<div class="ov hidden" id="oOver"><div class="card">
+  <div class="logo" id="rTitle" style="font-size:32px"></div>
+  <div class="stars" id="rStars"></div>
+  <div id="rBody"></div>
+  <button class="btn" id="bNext">下一關</button>
+  <button class="btn ghost" id="bAgain">再玩一次</button>
+  <button class="btn ghost" id="bBack">關卡列表</button>
+</div></div>
+
+<div id="loading">冰面結凍中…</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
