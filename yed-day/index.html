@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>YED 的一天</title>
+<meta name="description" content="用小遊戲體驗晶圓廠良率／缺陷工程師（YED）一天在做什麼：SPC 警報、wafer map、SEM 分類、共同機台分析、通知 PE。">
+<style>
+:root{
+  --bg:#14161b;--panel:#1d2027;--panel2:#262a33;--line:#343945;--text:#e9ebef;--dim:#9aa1ad;
+  --accent:#f2c14e;--good:#4cc38a;--bad:#ef6b6b;--info:#6aa7ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;-webkit-text-size-adjust:100%}
+body{min-height:100vh}
+#app{max-width:560px;margin:0 auto;overflow-x:hidden;padding:12px 16px 40px}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);padding:8px 0 10px;z-index:5;border-bottom:1px solid var(--line)}
+header .t{font-weight:700;font-size:15px;margin-right:auto}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.chip b{color:var(--accent)}
+h1{font-size:24px;margin:18px 0 6px}
+h2{font-size:18px;margin:16px 0 8px}
+p{line-height:1.7;margin:8px 0}
+.dim{color:var(--dim)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.step{font-size:12px;color:var(--accent);letter-spacing:.05em;font-weight:700}
+canvas{display:block;max-width:100%;background:#0d0f13;border-radius:10px;margin:8px auto}
+.opts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}
+.opts.one{grid-template-columns:1fr}
+button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 10px;cursor:pointer;text-align:left;line-height:1.4;touch-action:manipulation}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{cursor:default;opacity:.55}
+button.right{border-color:var(--good);background:#1f3a2e;opacity:1}
+button.wrong{border-color:var(--bad);background:#3d2224;opacity:1}
+.primary{background:var(--accent);color:#1a1a1a;font-weight:700;text-align:center;border:none;width:100%;margin-top:12px;padding:13px}
+.primary:hover{filter:brightness(1.07)}
+.fb{border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.65;font-size:14.5px}
+.fb.ok{background:#1b3328;border:1px solid #2d5a44}
+.fb.no{background:#3a2023;border:1px solid #6a3236}
+.sems{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.sems canvas{width:100%;height:auto;margin:0}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{border:1px solid var(--line);padding:6px 2px;white-space:nowrap;text-align:center}
+th{background:var(--panel2);font-weight:600}
+td.tool{cursor:pointer;user-select:none}
+td.tool:hover{outline:2px solid var(--accent);outline-offset:-2px}
+td.tool.sel{background:#4a3d14}
+td.tool.ans{background:#1f3a2e}
+tr.badrow td:first-child{color:var(--bad);font-weight:700}
+tr.goodrow td:first-child{color:var(--good)}
+.legend{font-size:12.5px;color:var(--dim);margin-top:4px}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);margin:0 2px}
+.bar{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--good)}
+ul{padding-left:20px;line-height:1.7}
+a{color:var(--info)}
+.log{font-size:13.5px;line-height:1.7}
+.log div{border-bottom:1px dashed var(--line);padding:4px 0}
+.big{font-size:40px;font-weight:800;color:var(--accent);text-align:center;margin:6px 0}
+.small{font-size:12.5px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+// ---------- utils ----------
+let seed = Date.now() % 2147483647;
+const qs = new URLSearchParams(location.search);
+if (qs.get('seed')) seed = (+qs.get('seed')) % 2147483647 || 1;
+function rnd(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+function ri(a,b){ return a + Math.floor(rnd()*(b-a+1)); }
+function pick(arr){ return arr[Math.floor(rnd()*arr.length)]; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function gauss(){ let u=0,v=0; while(!u)u=rnd(); while(!v)v=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids){
+  const e=document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    if(k==='class') e.className=attrs[k];
+    else if(k==='html') e.innerHTML=attrs[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2),attrs[k]);
+    else e.setAttribute(k,attrs[k]);
+  }
+  for(const k of kids){ if(k==null) continue; e.append(k.nodeType?k:document.createTextNode(k)); }
+  return e;
+}
+
+// ---------- data ----------
+const MAP_OPTS = [
+  {id:'arc',   name:'一條條弧線'},
+  {id:'edge',  name:'邊緣一圈'},
+  {id:'center',name:'中心一大團'},
+  {id:'blob',  name:'某個角落一團'},
+  {id:'repeat',name:'每顆 die 同一位置'},
+  {id:'random',name:'稀稀落落隨機分佈'},
+];
+const SEM_OPTS = [
+  {id:'particle',name:'微粒 Particle'},
+  {id:'scratch', name:'刮傷 Scratch'},
+  {id:'residue', name:'殘留物 Residue'},
+  {id:'bridge',  name:'橋接 Bridge（線連在一起）'},
+  {id:'missing', name:'圖形缺失 Missing pattern'},
+  {id:'nuisance',name:'看不到真缺陷（誤判）'},
+];
+const STEPS = ['黃光','蝕刻','薄膜','濕式清洗','CMP'];
+const TOOLS = {
+  '黃光':['SCN-01','SCN-02','SCN-03'],
+  '蝕刻':['ETC-A','ETC-B','ETC-C'],
+  '薄膜':['CVD-1','CVD-2','CVD-3'],
+  '濕式清洗':['WET-1','WET-2','WET-3'],
+  'CMP':['CMP-01','CMP-02','CMP-03'],
+};
+const DEPT = {'黃光':'黃光 PE','蝕刻':'蝕刻 PE','薄膜':'薄膜 PE','濕式清洗':'濕式 PE','CMP':'CMP PE'};
+
+const CASES = [
+  { key:'cmp', layer:'M3 CMP 後', map:'arc', sem:'scratch', step:'CMP',
+    act:'Hold 住同機台後面的貨，請 CMP PE 檢查研磨墊／研磨液',
+    mapWhy:'弧線狀的缺陷通常是晶圓在研磨時被硬的東西拖過去，旋轉留下弧形軌跡。',
+    semWhy:'細長、橫跨好幾條線的痕跡就是刮傷。',
+    actWhy:'刮傷的常見來源是研磨墊上卡了硬顆粒或研磨液結塊，屬於 CMP 的範圍。'},
+  { key:'etch', layer:'Via 蝕刻後', map:'blob', sem:'particle', step:'蝕刻',
+    act:'Hold 住同機台後面的貨，請蝕刻 PE 檢查反應腔（可能要停機清洗 PM）',
+    mapWhy:'集中在某個角落，表示那一區有東西掉下來，常見原因是腔體某處的沉積物剝落。',
+    semWhy:'圓圓一顆、邊緣亮、蓋在線路上面，這是微粒。',
+    actWhy:'蝕刻腔壁累積的副產物剝落會掉微粒，通常要請 PE 停機做 PM（保養清洗）。'},
+  { key:'wet', layer:'清洗後', map:'edge', sem:'residue', step:'濕式清洗',
+    act:'Hold 住同機台後面的貨，請濕式 PE 檢查噴嘴／旋乾',
+    mapWhy:'只出現在晶圓邊緣一圈，常跟旋轉清洗、甩乾時邊緣的液體沒處理乾淨有關。',
+    semWhy:'形狀不規則、暗暗一片像水漬的，是殘留物。',
+    actWhy:'邊緣殘留常見原因是清洗機的噴嘴、流量或旋乾條件跑掉了，所以要找濕式 PE。'},
+  { key:'litho', layer:'M2 黃光後', map:'repeat', sem:'missing', step:'黃光',
+    act:'Hold 住用同一片光罩的貨，請黃光 PE 檢查光罩（reticle）',
+    mapWhy:'每顆 die 都在同一個相對位置出事，代表問題是「被印上去的」，第一個要懷疑光罩。',
+    semWhy:'線路中間斷掉一段、本來該有的圖形不見了，這是圖形缺失。',
+    actWhy:'每一次曝光都把光罩上的髒污複製到每個 die，要請黃光 PE 把光罩拿去檢查清洗。'},
+  { key:'cvd', layer:'介電層沉積後', map:'center', sem:'bridge', step:'薄膜',
+    act:'Hold 住同機台後面的貨，請薄膜 PE 檢查噴氣頭（showerhead）',
+    mapWhy:'集中在晶圓中心，表示問題出在正上方的那個零件，例如沉積用的噴氣頭。',
+    semWhy:'兩條本來分開的線被一塊東西連在一起，這是橋接，會造成短路。',
+    actWhy:'中心有異物，最常懷疑薄膜機台的 showerhead 掉東西，要請薄膜 PE 檢查。'},
+  { key:'fake', layer:'M1 CMP 後', map:'random', sem:'nuisance', step:null,
+    act:'先不 call 製程，回報這次是誤判，請檢測機台調整掃描設定（recipe）',
+    mapWhy:'稀疏又隨機的點沒有明顯形狀，先別急著下結論。',
+    semWhy:'放大後線路都好好的，只有一點色差或雜訊。這叫 nuisance（假缺陷）：機台抓到了，但實際上不是缺陷。',
+    actWhy:'網友提醒過：要先確認真的是製程出問題，才去 call 製程。沒問題卻把 PE 叫來，會影響信任度。'},
+];
+
+// ---------- state ----------
+let S;
+function newGame(){
+  S = { clock: 9*60, caseIdx:0, cases: shuffle(CASES).slice(0,5), correct:0, total:0, trust:100, log:[], cur:null };
+  // guarantee the false alarm is in the run but never first
+  if(!S.cases.find(c=>c.key==='fake')){ S.cases[ri(1,4)] = CASES.find(c=>c.key==='fake'); }
+  if(S.cases[0].key==='fake'){ const j=ri(1,4); [S.cases[0],S.cases[j]]=[S.cases[j],S.cases[0]]; }
+}
+function fmtClock(m){ const h=Math.floor(m/60), mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+
+function header(){
+  return el('header',null,
+    el('span',{class:'t'},'YED 的一天'),
+    el('span',{class:'chip',html:'🕘 <b>'+fmtClock(S.clock)+'</b>'}),
+    el('span',{class:'chip',html:'PE 信任 <b>'+S.trust+'</b>'}),
+    el('span',{class:'chip',html:'答對 <b>'+S.correct+'/'+S.total+'</b>'}));
+}
+function render(...nodes){ const app=$('#app'); app.innerHTML=''; if(S) app.append(header()); nodes.forEach(n=>n&&app.append(n)); window.scrollTo(0,0); }
+
+// ---------- screens ----------
+function intro(){
+  S=null;
+  render(
+    el('h1',null,'YED 的一天'),
+    el('p',{class:'dim'},'晶圓廠的良率／缺陷工程（Yield Enhancement）體驗小遊戲'),
+    el('div',{class:'card'},
+      el('p',{html:'你是新進的 <b>YED 工程師</b>。晶圓每做完一站，就會被機台掃描找缺陷（defect）。你的工作是：'}),
+      el('ul',{html:
+        '<li><b>盯數字</b>：缺陷數量一旦超出管制線，就要處理</li>'+
+        '<li><b>看分佈</b>：缺陷在晶圓上的形狀是重要線索</li>'+
+        '<li><b>看照片</b>：用電子顯微鏡（SEM）放大，判斷是哪一種缺陷</li>'+
+        '<li><b>抓兇手</b>：比對壞的那幾批貨共同經過哪一台機台</li>'+
+        '<li><b>通知 PE</b>：找對製程的 PE 去修機台，不要亂 call</li>'})),
+    el('div',{class:'card small dim',html:
+      '⚠️ 這是簡化的教學版，流程依照公開的半導體良率工程常識，加上網友對 YED 工作的分享設計，<b>不是</b>台積電內部資料。機台名稱和數字都是虛構的。'}),
+    el('button',{class:'primary',onclick:()=>{newGame();handover();}},'開始上班 08:20'));
+}
+
+function handover(){
+  render(
+    el('div',{class:'card'},
+      el('div',{class:'step'},'08:20　交接'),
+      el('h2',null,'早班交接'),
+      el('p',null,'夜班同事交接：「今天有幾層的 defect 不太穩，有 OOC（超出管制）就要追，追完記得在老闆的會議上報告。」'),
+      el('p',{class:'dim'},'今天會遇到 5 個警報。每個警報有 5 個步驟，每一步只能選一次，選完會告訴你為什麼。')),
+    el('button',{class:'primary',onclick:startCase},'開始處理第一個警報'));
+}
+
+function startCase(){
+  const c = S.cases[S.caseIdx];
+  S.cur = { c, lots: makeLots(c) };
+  S.clock = Math.max(S.clock, 9*60) ;
+  stepSPC();
+}
+
+function stepTitle(n, name){ return el('div',{class:'step'},'警報 '+(S.caseIdx+1)+'/5　·　步驟 '+n+'/5　'+name); }
+
+// Step 1: SPC chart
+function stepSPC(){
+  const c=S.cur.c;
+  const cv=el('canvas',{width:520,height:220,style:'width:100%'});
+  drawSPC(cv);
+  const opts=[
+    {t:'超出管制線（OOC），要開始追', ok:true},
+    {t:'還在範圍內，不用管', ok:false},
+  ];
+  render(el('div',{class:'card'},
+    stepTitle(1,'SPC 管制圖'),
+    el('h2',null,'【'+c.layer+'】的缺陷數趨勢'),
+    el('p',{class:'dim small'},'每一點代表一批貨掃描到的缺陷數。紅色虛線是管制上限（UCL）。'),
+    cv,
+    question(opts, ()=>'最後一點超過 UCL，代表製程可能出問題了。YED 每天第一件事就是盯這些趨勢圖。', ()=>stepMap(), 5)
+  ));
+}
+
+// generic question block
+function question(opts, why, next, minutes, cls){
+  const box=el('div');
+  const grid=el('div',{class:'opts'+(cls?' '+cls:'')});
+  const btns=[];
+  opts.forEach(o=>{
+    const b=el('button',{onclick:()=>{
+      if(box.dataset.done) return; box.dataset.done='1';
+      S.total++;
+      if(o.ok){ S.correct++; } else { minutes += 15; if(o.trustHit) S.trust=Math.max(0,S.trust-o.trustHit); }
+      btns.forEach((bb,i)=>{ bb.disabled=true; if(opts[i].ok) bb.classList.add('right'); });
+      if(!o.ok) b.classList.add('wrong');
+      S.clock += minutes;
+      const msg = (o.ok?'✅ 答對了。':'❌ 不對'+(o.note? '：'+o.note : '。')) + ' ' + why(o);
+      box.append(el('div',{class:'fb '+(o.ok?'ok':'no'),html:msg}));
+      box.append(el('button',{class:'primary',onclick:next},'下一步 →'));
+      updateHeader();
+    }}, o.t);
+    btns.push(b); grid.append(b);
+  });
+  box.append(grid);
+  return box;
+}
+function updateHeader(){ const h=$('header'); if(h&&S) h.replaceWith(header()); }
+
+// Step 2: wafer map
+function stepMap(){
+  const c=S.cur.c;
+  const cv=el('canvas',{width:420,height:420,style:'width:min(100%,360px)'});
+  drawWafer(cv,c.map);
+  const opts=MAP_OPTS.map(m=>({t:m.name, ok:m.id===c.map}));
+  render(el('div',{class:'card'},
+    stepTitle(2,'Wafer Map'),
+    el('h2',null,'缺陷長在晶圓的哪裡？'),
+    el('p',{class:'dim small'},'檢測機台把整片晶圓掃過一遍，每個紅點是一個缺陷。灰色格子是 die（之後切開的晶片）。缺陷的「分佈形狀」常常指向原因。'),
+    cv,
+    question(opts, ()=> c.mapWhy, ()=>stepSEM(), 10)
+  ));
+}
+
+// Step 3: SEM review
+function stepSEM(){
+  const c=S.cur.c;
+  const wrap=el('div',{class:'sems'});
+  for(let i=0;i<3;i++){ const cv=el('canvas',{width:200,height:200}); drawSEM(cv,c.sem,i); wrap.append(cv); }
+  const opts=SEM_OPTS.map(m=>({t:m.name, ok:m.id===c.sem}));
+  render(el('div',{class:'card'},
+    stepTitle(3,'SEM Review'),
+    el('h2',null,'放大看，這是哪一種缺陷？'),
+    el('p',{class:'dim small'},'從 wafer map 挑幾個點，用電子顯微鏡（SEM）拍下來。背景的直條紋是金屬線路。'),
+    wrap,
+    question(opts, ()=> c.semWhy, ()=>stepCommon(), 20)
+  ));
+}
+
+// lots / commonality
+function makeLots(c){
+  for(let tries=0;tries<500;tries++){
+    const lots=[]; const nBad=3, nGood=3;
+    for(let i=0;i<nBad+nGood;i++){
+      const bad=i<nBad; const tools={};
+      for(const st of STEPS) tools[st]=pick(TOOLS[st]);
+      lots.push({id:'L'+ri(100,999), bad, tools, count: bad? ri(180,420): ri(20,60)});
+    }
+    if(c.step){
+      const target=pick(TOOLS[c.step]);
+      lots.forEach(l=>{ if(l.bad) l.tools[c.step]=target; else l.tools[c.step]=pick(TOOLS[c.step].filter(t=>t!==target)); });
+      c._target=target;
+    } else c._target=null;
+    // validate uniqueness: exactly the target (or none) is a perfect common tool
+    const perfect=[];
+    for(const st of STEPS) for(const t of TOOLS[st]){
+      const allBad=lots.filter(l=>l.bad).every(l=>l.tools[st]===t);
+      const noGood=lots.filter(l=>!l.bad).every(l=>l.tools[st]!==t);
+      if(allBad&&noGood) perfect.push(t);
+    }
+    const ok = c.step ? (perfect.length===1 && perfect[0]===c._target) : perfect.length===0;
+    // also avoid a step where all bad lots share a tool (even if good share it too) besides target -> reduces ambiguity
+    const sharedBad=[]; for(const st of STEPS){ const s=new Set(lots.filter(l=>l.bad).map(l=>l.tools[st])); if(s.size===1) sharedBad.push(st); }
+    const ok2 = c.step ? (sharedBad.length===1) : (sharedBad.length===0);
+    if(ok&&ok2) return shuffle(lots);
+  }
+  throw new Error('lot generation failed');
+}
+
+function stepCommon(){
+  const c=S.cur.c, lots=S.cur.lots;
+  const tbl=el('table');
+  const hr=el('tr',null,el('th',null,'批號'),el('th',null,'缺陷'));
+  STEPS.forEach(st=>hr.append(el('th',null,st)));
+  tbl.append(hr);
+  let chosen=null; const cells=[];
+  lots.forEach(l=>{
+    const tr=el('tr',{class:l.bad?'badrow':'goodrow'},el('td',null,l.id),el('td',null,String(l.count)));
+    STEPS.forEach(st=>{
+      const td=el('td',{class:'tool'},l.tools[st]);
+      td.dataset.tool=l.tools[st];
+      td.addEventListener('click',()=>{ if(box.dataset.done) return; chosen=l.tools[st]; cells.forEach(x=>x.classList.toggle('sel',x.dataset.tool===chosen)); confirmBtn.disabled=false; confirmBtn.textContent='就是它：'+chosen; });
+      cells.push(td); tr.append(td);
+    });
+    tbl.append(tr);
+  });
+  const box=el('div');
+  const confirmBtn=el('button',{class:'primary',disabled:'disabled',onclick:()=>finish(chosen)},'先點表格裡的機台');
+  const noneBtn=el('button',{style:'width:100%;margin-top:8px;text-align:center',onclick:()=>finish('NONE')},'找不到共同機台');
+  function finish(ans){
+    if(box.dataset.done||!ans) return; box.dataset.done='1';
+    const correct = c.step ? ans===c._target : ans==='NONE';
+    S.total++; let m=25;
+    if(correct) S.correct++; else { m+=15; }
+    S.clock+=m;
+    confirmBtn.disabled=true; noneBtn.disabled=true;
+    cells.forEach(x=>{ if(c._target && x.dataset.tool===c._target) x.classList.add('ans'); });
+    const why = c.step
+      ? '三批壞貨（紅色）在「'+c.step+'」都走了 <b>'+c._target+'</b>，好的貨都沒走這台。這種分析叫 <b>commonality（共同性分析）</b>。'
+      : '壞貨在每一站用的機台都不一樣，找不到共同點。這時候要懷疑是不是檢測本身有問題。';
+    box.append(el('div',{class:'fb '+(correct?'ok':'no'),html:(correct?'✅ 答對了。':'❌ 不對。')+' '+why}));
+    box.append(el('button',{class:'primary',onclick:stepAct},'下一步 →'));
+    updateHeader();
+  }
+  box.append(confirmBtn,noneBtn);
+  render(el('div',{class:'card'},
+    stepTitle(4,'抓兇手機台'),
+    el('h2',null,'壞的貨共同經過哪一台？'),
+    el('p',{class:'dim small'},'下表是最近 6 批貨的生產紀錄。<紅>的批號缺陷多，<綠>的正常。點一格機台再按確認。'.replace('<紅>','紅色').replace('<綠>','綠色')),
+    el('div',{style:'overflow-x:auto'},tbl),
+    el('div',{class:'legend'},'提示：找「紅色批號全部都有、綠色批號都沒有」的那台。'),
+    box
+  ));
+}
+
+// Step 5: action
+function stepAct(){
+  const c=S.cur.c;
+  const otherSteps = STEPS.filter(s=>s!==c.step);
+  const wrongStep = pick(otherSteps);
+  let opts;
+  if(c.step){
+    opts=[
+      {t:c.act, ok:true},
+      {t:'Hold 住貨，請'+DEPT[wrongStep]+'檢查 '+pick(TOOLS[wrongStep]), ok:false, trustHit:15, note:'找錯部門了，對方 PE 白跑一趟'},
+      {t:'先放行，等下一站掃描再看看', ok:false, trustHit:5, note:'問題機台會繼續生產，害更多貨'},
+      {t:'先不 call 製程，回報這次是誤判', ok:false, trustHit:5, note:'SEM 已經看到真的缺陷了'},
+    ];
+  } else {
+    opts=[
+      {t:c.act, ok:true},
+      {t:'Hold 住貨，請'+DEPT[wrongStep]+'停機檢查', ok:false, trustHit:20, note:'根本沒有真缺陷，害 PE 白白停機'},
+      {t:'把這幾批晶圓全部報廢', ok:false, trustHit:10, note:'晶圓是好的，報廢就是浪費'},
+      {t:'Call 所有製程的 PE 開會一起查', ok:false, trustHit:15, note:'大家都被拉來開會，結果是誤判'},
+    ];
+  }
+  opts=shuffle(opts);
+  render(el('div',{class:'card'},
+    stepTitle(5,'決策'),
+    el('h2',null,'要怎麼處理？'),
+    el('p',{class:'dim small'},'YED 通常不自己修機台，而是把證據整理好，交給負責那一站的 PE（製程工程師）處理。找錯人或亂 call 會扣 PE 信任。'),
+    question(opts, ()=>c.actWhy, nextCase, 20, 'one')
+  ));
+}
+
+function nextCase(){
+  const c=S.cur.c;
+  S.log.push({layer:c.layer, cause: c.step? (c.step+' '+c._target) : '誤判（nuisance）'});
+  S.caseIdx++;
+  if(S.caseIdx===2){ lunch(); return; }
+  if(S.caseIdx>=5){ meeting(); return; }
+  startCase();
+}
+function lunch(){
+  S.clock=Math.max(S.clock,12*60);
+  render(el('div',{class:'card'},
+    el('div',{class:'step'},fmtClock(S.clock)+'　午餐'),
+    el('h2',null,'吃飯時間'),
+    el('p',null,'吃飯的時候同事說：「下午還有幾個警報。記得，先確定問題真的在製程上，再去 call 人。」')),
+    el('button',{class:'primary',onclick:()=>{S.clock+=50;startCase();}},'回去繼續 →'));
+}
+function meeting(){
+  const items=S.log.map((l,i)=>el('div',null,(i+1)+'. '+l.layer+' → '+l.cause));
+  render(el('div',{class:'card'},
+    el('div',{class:'step'},fmtClock(S.clock)+'　老闆會議'),
+    el('h2',null,'向老闆報告今天的 case'),
+    el('div',{class:'log'},...items),
+    el('p',{class:'dim small'},'真實工作中，你會把趨勢圖、wafer map、SEM 照片、共同機台分析整理成簡報，追蹤 PE 修好沒、defect 有沒有降回來。')),
+    el('button',{class:'primary',onclick:ending},'下班 →'));
+}
+function ending(){
+  const pct = S.total? Math.round(S.correct/S.total*100):0;
+  const off = Math.max(S.clock+20, 17*60+30);
+  let grade = pct>=90&&S.trust>=80 ? '可以獨當一面的 YED' : pct>=70 ? '還在學的新人' : '新人過渡期（很正常）';
+  const app=$('#app'); S.clock=off;
+  render(
+    el('div',{class:'card'},
+      el('div',{class:'step'},fmtClock(off)+'　下班'),
+      el('div',{class:'big'},pct+'%'),
+      el('p',{style:'text-align:center'},grade),
+      el('p',{class:'small dim',style:'text-align:center'},'答對 '+S.correct+'/'+S.total+'　·　PE 信任 '+S.trust+'/100'),
+      el('div',{class:'bar'},el('i',{style:'width:'+S.trust+'%'}))),
+    el('div',{class:'card'},
+      el('h2',null,'遊戲沒演到的真實狀況'),
+      el('ul',{html:
+        '<li><b>要輪班</b>：網友提到 YED 輪班頻率高、有特早班，輪到值班 6:30 就要上班（還沒確認是不是 18B 的狀況）。</li>'+
+        '<li><b>下班時間</b>：一位拿到 18B YED offer 的人說主管講大約晚上 7～8 點下班；GoodJob 上有一筆 F18B 回報一週工時 60 小時（只有 1 筆，參考就好）。</li>'+
+        '<li><b>大量重複</b>：每天看很多 defect case、畫趨勢圖，有人覺得很單純，也有人覺得無聊。</li>'+
+        '<li><b>跟 PE 互動</b>：YED 負責找出問題，修機台的是 PE。判斷錯誤會影響彼此的信任。</li>'}),
+      el('p',{class:'small dim',html:'資料來源：<a href="https://guide.1111.com.tw/article/job-hunting/interview_Job_510" target="_blank" rel="noopener">1111 面試分享</a>、<a href="https://www.goodjob.life/job-titles/YED/salary-work-times" target="_blank" rel="noopener">GoodJob</a>、Dcard 網友留言。都是個人經驗。'})),
+    el('button',{class:'primary',onclick:()=>{newGame();handover();}},'再上一次班'),
+    el('button',{style:'width:100%;margin-top:8px;text-align:center',onclick:intro},'回首頁'));
+}
+
+// ---------- drawing ----------
+function drawSPC(cv){
+  const g=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const n=20, mean=60, ucl=110;
+  const pts=[]; for(let i=0;i<n-1;i++) pts.push(Math.max(15, mean+gauss()*14));
+  pts.push(ri(150,190));
+  const maxV=210, x0=40, x1=W-14, y0=14, y1=H-26;
+  const X=i=>x0+(x1-x0)*i/(n-1), Y=v=>y1-(y1-y0)*v/maxV;
+  g.fillStyle='#0d0f13'; g.fillRect(0,0,W,H);
+  g.strokeStyle='#2a2f3a'; g.lineWidth=1;
+  for(let v=0;v<=200;v+=50){ g.beginPath(); g.moveTo(x0,Y(v)); g.lineTo(x1,Y(v)); g.stroke(); g.fillStyle='#7d8593'; g.font='12px sans-serif'; g.fillText(v,6,Y(v)+4); }
+  g.setLineDash([6,5]); g.strokeStyle='#ef6b6b'; g.lineWidth=1.5; g.beginPath(); g.moveTo(x0,Y(ucl)); g.lineTo(x1,Y(ucl)); g.stroke();
+  g.strokeStyle='#4c8a6a'; g.beginPath(); g.moveTo(x0,Y(mean)); g.lineTo(x1,Y(mean)); g.stroke(); g.setLineDash([]);
+  g.fillStyle='#ef6b6b'; g.font='12px sans-serif'; g.fillText('UCL',x1-28,Y(ucl)-5);
+  g.strokeStyle='#6aa7ff'; g.lineWidth=2; g.beginPath(); pts.forEach((v,i)=>i?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v))); g.stroke();
+  pts.forEach((v,i)=>{ g.fillStyle = v>ucl? '#ef6b6b':'#6aa7ff'; g.beginPath(); g.arc(X(i),Y(v), v>ucl?6:3.5,0,7); g.fill(); });
+  g.fillStyle='#7d8593'; g.fillText('批次 →', x1-50, H-8);
+}
+
+function drawWafer(cv,type){
+  const g=cv.getContext('2d'), W=cv.width, cx=W/2, cy=W/2, R=W/2-14;
+  g.fillStyle='#0d0f13'; g.fillRect(0,0,W,W);
+  g.fillStyle='#1c2029'; g.beginPath(); g.arc(cx,cy,R,0,7); g.fill();
+  // dies
+  const d=32; g.save(); g.beginPath(); g.arc(cx,cy,R,0,7); g.clip();
+  g.strokeStyle='#323846'; g.lineWidth=1;
+  const dies=[];
+  for(let x=cx-d*7; x<cx+d*7; x+=d) for(let y=cy-d*7;y<cy+d*7;y+=d){
+    const corners=[[x,y],[x+d,y],[x,y+d],[x+d,y+d]];
+    if(corners.every(([a,b])=>Math.hypot(a-cx,b-cy)<R-2)){ g.strokeRect(x+.5,y+.5,d-1,d-1); dies.push([x,y]); }
+  }
+  g.restore();
+  // notch
+  g.fillStyle='#0d0f13'; g.beginPath(); g.arc(cx,cy+R,7,0,7); g.fill();
+  const dots=[];
+  const inW=(x,y)=>Math.hypot(x-cx,y-cy)<R-3;
+  const bg=ri(10,22); for(let i=0;i<bg;i++){ const a=rnd()*7,r=Math.sqrt(rnd())*R; dots.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); }
+  if(type==='arc'){
+    const k=ri(2,3);
+    for(let s=0;s<k;s++){
+      const ccx=cx+gauss()*R*0.6, ccy=cy+gauss()*R*0.6, rr=R*(0.5+rnd()*0.6), a0=rnd()*7, span=0.6+rnd()*0.7;
+      for(let i=0;i<70;i++){ const a=a0+span*i/70; dots.push([ccx+rr*Math.cos(a)+gauss()*1.2, ccy+rr*Math.sin(a)+gauss()*1.2]); }
+    }
+  } else if(type==='edge'){
+    for(let i=0;i<260;i++){ const a=rnd()*7, r=R*(0.88+rnd()*0.1); dots.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); }
+  } else if(type==='center'){
+    for(let i=0;i<220;i++){ dots.push([cx+gauss()*R*0.17, cy+gauss()*R*0.17]); }
+  } else if(type==='blob'){
+    const a=rnd()*7, r=R*0.62, bx=cx+r*Math.cos(a), by=cy+r*Math.sin(a);
+    for(let i=0;i<200;i++){ dots.push([bx+gauss()*R*0.11, by+gauss()*R*0.11]); }
+  } else if(type==='repeat'){
+    const ox=ri(6,d-6), oy=ri(6,d-6);
+    dies.forEach(([x,y])=>{ if(rnd()<0.92) dots.push([x+ox+gauss()*0.6,y+oy+gauss()*0.6]); });
+  } else if(type==='random'){
+    for(let i=0;i<45;i++){ const a=rnd()*7,r=Math.sqrt(rnd())*R; dots.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); }
+  }
+  g.fillStyle='#ff5b5b';
+  dots.forEach(([x,y])=>{ if(inW(x,y)){ g.beginPath(); g.arc(x,y,2.2,0,7); g.fill(); } });
+  g.strokeStyle='#5a6070'; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,R,0,7); g.stroke();
+}
+
+function drawSEM(cv,type,variant){
+  const g=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const img=g.createImageData(W,H);
+  const pitch=26, lw=12, off=ri(0,pitch-1);
+  // base: vertical metal lines
+  const field=new Float32Array(W*H);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const p=((x+off)%pitch);
+    let v = p<lw ? 150 : 70;
+    if(p===0||p===lw-1) v=200; // edge brightness
+    field[y*W+x]=v;
+  }
+  const lineAt=x=>((x+off)%pitch)<lw;
+  if(type==='particle'){
+    const px=ri(60,140), py=ri(60,140), r=ri(14,22);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const d=Math.hypot(x-px,y-py); if(d<r){ field[y*W+x]=150+90*(d/r)+ (d<r*0.4?10:0); } else if(d<r+5 && x>px && y>py) field[y*W+x]*=0.6; }
+  } else if(type==='scratch'){
+    const y0=ri(40,160), slope=(rnd()-0.5)*0.6, curv=(rnd()-0.5)*0.004;
+    for(let x=0;x<W;x++){ const yc=y0+slope*(x-100)+curv*(x-100)*(x-100); for(let dy=-3;dy<=3;dy++){ const y=Math.round(yc+dy); if(y>=0&&y<H) field[y*W+x]= Math.abs(dy)<2? 25 : 230; } }
+  } else if(type==='residue'){
+    const bx=ri(70,130), by=ri(70,130);
+    const blobs=[]; for(let i=0;i<7;i++) blobs.push([bx+gauss()*22, by+gauss()*22, 10+rnd()*18]);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ let s=0; blobs.forEach(([a,b,r])=>{ s+=Math.max(0,1-Math.hypot(x-a,y-b)/r); }); if(s>0.35) field[y*W+x]=field[y*W+x]*0.35+40+ (s>0.9?20:0); }
+  } else if(type==='bridge'){
+    // find a gap between two lines near center
+    let gx=100; while(lineAt(gx)) gx++; let gx2=gx; while(!lineAt(gx2)&&gx2<W-1) gx2++;
+    const by=ri(70,130), bh=ri(10,16);
+    for(let y=by;y<by+bh;y++) for(let x=gx-2;x<=gx2+1;x++) field[y*W+x]= (y===by||y===by+bh-1)?210:160;
+  } else if(type==='missing'){
+    let lx=90; while(!lineAt(lx)) lx++; while(lineAt(lx-1)) lx--;
+    const y0=ri(50,110), len=ri(40,60);
+    for(let y=y0;y<y0+len;y++) for(let x=lx;x<lx+lw;x++) field[y*W+x]=70;
+    for(let x=lx;x<lx+lw;x++){ field[y0*W+x]=190; field[(y0+len)*W+x]=190; }
+  } else if(type==='nuisance'){
+    const cx=ri(60,140), cy=ri(60,140);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const d=Math.hypot(x-cx,y-cy); if(d<40) field[y*W+x]*= 1+0.12*(1-d/40); }
+  }
+  for(let i=0;i<W*H;i++){
+    const v=Math.max(0,Math.min(255, field[i]+gauss()*18));
+    img.data[i*4]=v; img.data[i*4+1]=v; img.data[i*4+2]=v; img.data[i*4+3]=255;
+  }
+  g.putImageData(img,0,0);
+  // crosshair + scale bar
+  g.strokeStyle='rgba(242,193,78,.8)'; g.lineWidth=1;
+  g.strokeRect(4,4,W-8,H-8);
+  g.fillStyle='#fff'; g.fillRect(W-58,H-16,40,3); g.font='10px sans-serif'; g.fillText('100nm',W-58,H-20);
+  g.fillText('#'+(variant+1),8,16);
+}
+
+// ---------- fuzz (?fuzz=N) ----------
+async function fuzz(n){
+  const errs=[]; window.addEventListener('error',e=>errs.push(e.message));
+  let games=0, steps=0;
+  for(let i=0;i<n;i++){
+    const cands=[...document.querySelectorAll('button:not(:disabled), td.tool')];
+    if(!cands.length){ errs.push('stuck: no clickable'); break; }
+    const t=cands[Math.floor(Math.random()*cands.length)];
+    try{ t.click(); steps++; }catch(e){ errs.push(String(e)); }
+    if(S){
+      if(S.trust<0||S.trust>100||isNaN(S.clock)||S.correct>S.total||S.caseIdx>5) errs.push('bad state '+JSON.stringify({t:S.trust,c:S.clock,ci:S.caseIdx}));
+    }
+    if(/下班/.test(document.body.innerText) && document.querySelector('.big')) games++;
+    if(i%50===0) await new Promise(r=>setTimeout(r,0));
+  }
+  document.title='FUZZ steps='+steps+' endings='+games+' errs='+errs.length+' '+errs.slice(0,3).join(' | ');
+}
+
+intro();
+if(qs.get('go')){ newGame(); startCase(); const go=qs.get('go'); if(go==='map')stepMap(); if(go==='sem')stepSEM(); if(go==='common')stepCommon(); if(go==='end'){S.total=25;S.correct=21;S.trust=85;ending();} }
+if(qs.get('fuzz')) fuzz(+qs.get('fuzz')||2000);
+</script>
+</body>
+</html>
