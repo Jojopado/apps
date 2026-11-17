@@ -1,0 +1,52 @@
+<p style="text-align:center"><a href="https://jojopado.github.io/apps/dragon-knight/"><strong>▶ Try the live 3D demo in your browser</strong></a></p>
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/stats.png" alt="12 knight animations, 17 dragon animations, mounted prefab, Built-in and URP"></p>
+<p>A rigged and animated voxel knight and a rideable dragon with pixel-art textures, medieval style. Use them separately, or drop in the mounted prefab with the knight already in the saddle.</p>
+
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/hdr_knight.png" alt="The Knight"></p>
+<p>Steel plate armour, royal blue cape with gold trim and an original heraldic crest. Every part is its own skinned mesh, so you can switch it on or off:</p>
+<ul>
+<li>Body, bare face, great helm with plume, cape</li>
+<li>4 m lance with pennant, kite shield, arming sword sheathed on the hip</li>
+<li><strong>Humanoid</strong> rig: retarget other humanoid animations onto it</li>
+<li>Hand sockets for your own props</li>
+</ul>
+<p><strong>Animations:</strong> Idle, Walk, Run, Attack, Attack2, Block, Hit, Victory, Death, Ride_Idle, Ride_Fly, Ride_Attack</p>
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/01_Knight_Combat.gif" alt="Knight animations"></p>
+
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/hdr_dragon.png" alt="The Dragon"></p>
+<p>Emerald scales, gold belly plates, ivory horns and glowing amber eyes. The saddle (with harness, reins, stirrups and saddle bags) and the steel armour are separate meshes you can hide.</p>
+<p><strong>Ground:</strong> Idle, Idle_Look, Walk, Run, Roar, Sleep<br>
+<strong>Combat:</strong> Attack_Bite, Attack_Claw, Attack_Tail, Breath_Fire, Hit, Death<br>
+<strong>Flight:</strong> TakeOff, Hover, Fly, Glide, Land</p>
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/05_Dragon_Flight.gif" alt="Dragon flight animations"></p>
+
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/hdr_riding.png" alt="Ready to ride"></p>
+<p>The mounted prefab is the dragon with the knight already seated on the <code>Socket_Saddle</code> bone, so the rider follows every dragon animation, including flight. The rider has its own small Animator Controller: Ride_Idle, Ride_Fly (bool <em>Flying</em>) and Ride_Attack (trigger <em>Attack</em>).</p>
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/07_Mounted.gif" alt="Mounted dragon and rider"></p>
+
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/hdr_box.png" alt="What's in the box"></p>
+<ul>
+<li>3 prefabs: Knight, Dragon, Dragon (Mounted)</li>
+<li>2 FBX models: skinned meshes, skeleton and animation clips</li>
+<li>3 Animator Controllers (knight, dragon, mounted knight)</li>
+<li>Textures: knight 256 px, dragon 1024 px + emission (PNG, pixel art)</li>
+<li>Showcase scene and PDF documentation</li>
+</ul>
+
+<p><img src="https://jojopado.github.io/apps/dragon-knight/itch/hdr_tech.png" alt="Technical details"></p>
+<ul>
+<li>Knight: 3,036 triangles, 7 skinned meshes, 1 material, Humanoid rig (44 bones), 12 clips</li>
+<li>Dragon: 6,840 triangles, 3 skinned meshes, 1 material, Generic rig (64 bones), 17 clips</li>
+<li>No LODs; 30 fps clips, horizontal movement in place (no root motion); flight clips lift the body</li>
+<li>Box-mapped pixel UVs, point filtering, 1 texel = 1/32 m, forward axis +Z</li>
+<li>Heights: knight 2.0 m, dragon 3.7 m standing</li>
+<li>Built-in Render Pipeline; URP via Unity's Render Pipeline Converter (tested with Unity 2022.3 + URP 14)</li>
+<li>Unity 2022.3 or newer</li>
+</ul>
+
+<p><strong>Please note</strong></p>
+<ul>
+<li>No scripts are included: drive the Animator parameters from your own code.</li>
+<li>No particle effects are included (Breath_Fire is the body animation; use <code>Socket_Mouth</code> for your own fire).</li>
+<li>Unity package only (.unitypackage).</li>
+</ul>
