@@ -1,0 +1,60 @@
+<p style="text-align:center"><a href="https://jojopado.github.io/apps/voxel-aliens/"><strong>▶ Try the live 3D demo in your browser</strong></a></p>
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/stats.png" alt="10 body types, 5 animations each, eyelid bones, Built-in and URP"></p>
+<p>33 rigged and animated voxel alien creatures with pixel-art textures, in 10 body types. Every creature blinks, squints when it attacks and dies with its eyes closed.</p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/hdr_box.png" alt="What's in the box"></p>
+<ul>
+<li>33 voxel alien creature prefabs (Animator + Animator Controller + capsule collider)</li>
+<li>33 FBX models: skinned mesh, skeleton and 5 animation clips each</li>
+<li>33 Animator Controllers (parameters: Speed, Attack, Hit, Dead)</li>
+<li>33 albedo textures + 19 emission textures (PNG, pixel art)</li>
+<li>Showcase scene with every creature on a pedestal</li>
+<li>PDF documentation</li>
+</ul>
+
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/hdr_types.png" alt="10 body types"></p>
+<ul>
+<li><strong>Blob (4):</strong> Gloop, Blorb, Mumu, Puddlit</li>
+<li><strong>Jelly (3):</strong> Drifter, Lumajel, Squibble</li>
+<li><strong>Orb (3):</strong> Watcher, Spikeball, Buzzorb</li>
+<li><strong>Bug (5):</strong> Skitter, Beetlon, Antlix, Weaver, Tickgrub</li>
+<li><strong>Quadruped (4):</strong> Hound, Rhinox, Stalker, Hoppa</li>
+<li><strong>Biped (4):</strong> Strider, Chompa, Raptix, Peepo</li>
+<li><strong>Worm (3):</strong> Wormul, Coilsnake, Larvo</li>
+<li><strong>Flyer (3):</strong> Batling, Dustmoth, Skyray</li>
+<li><strong>Crab (2):</strong> Clackjaw, Shellbot</li>
+<li><strong>Plant (2):</strong> Shroomy, Podling</li>
+</ul>
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/catalog_1.png" alt="Creature catalog 1"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/catalog_2.png" alt="Creature catalog 2"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/catalog_3.png" alt="Creature catalog 3"></p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/hdr_anims.png" alt="5 animations each"></p>
+<ul>
+<li><strong>Idle</strong> (loop): eyelids blink</li>
+<li><strong>Move</strong> (loop, in place): walk, hop, crawl, swim or fly depending on the body type</li>
+<li><strong>Attack</strong>: wind-up, strike, recovery</li>
+<li><strong>Hit</strong></li>
+<li><strong>Death</strong>: ends lying on the ground with the eyes closed</li>
+</ul>
+<p>The eyelids are bones, so blinking and closed eyes are part of the clips and work in any engine that plays the FBX animation.</p>
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/01_Blob.gif" alt="Blob animations"></p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-aliens/itch/hdr_tech.png" alt="Technical details"></p>
+<ul>
+<li>Triangles per creature: min 84, average 269, max 396</li>
+<li>1 skinned mesh and 1 material per creature, no LODs</li>
+<li>Generic rig, 7-30 bones per creature (body + eyelid bones)</li>
+<li>165 animation clips, 30 fps, no root motion</li>
+<li>Textures: 32 / 64 / 128 px PNG, point filtering</li>
+<li>Heights: 0.44 m to 2.53 m, forward axis +Z</li>
+<li>Built-in Render Pipeline; URP via Unity's Render Pipeline Converter (tested with Unity 2022.3 + URP 14)</li>
+<li>Unity 2022.3 or newer</li>
+</ul>
+
+<p><strong>Please note</strong></p>
+<ul>
+<li>No humanoid characters are included.</li>
+<li>No scripts are included: drive the Animator parameters from your own code.</li>
+<li>Unity package only (.unitypackage).</li>
+</ul>
