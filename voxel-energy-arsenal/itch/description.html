@@ -1,0 +1,69 @@
+<p style="text-align:center"><a href="https://jojopado.github.io/apps/voxel-energy-arsenal/"><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/demo_button.png" alt="Play the 3D demo in your browser"></a></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/stats.png" alt="33 energy weapons, 14 transforming, 4 color themes, Built-in and URP"></p>
+<p>Voxel sci-fi energy weapons with animated charge, fire and transformations, plus armory props. Everything is driven by the Animator and particle systems; the package contains no scripts.</p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_weapons.png" alt="The weapons"></p>
+<ul>
+<li><strong>Pistols (5):</strong> Plasma Hand Cannon, Ion Revolver, Crystal Needler, Pulse Pistol, Shift Pistol (T)</li>
+<li><strong>SMGs (3):</strong> Fold SMG (T), Pulse SMG, Twin-Coil SMG</li>
+<li><strong>Rifles (6):</strong> Arc Rifle, Breach Battle Rifle (T), Laser Rifle, Marksman Rifle (T), Plasma Rifle, Pulse Carbine</li>
+<li><strong>Snipers (3):</strong> Gauss Rifle, Photon Lance, Rail Sniper (T)</li>
+<li><strong>Shotguns (3):</strong> Fan Plasma Shotgun (T), Pump Ion Shotgun, Scatter Blaster</li>
+<li><strong>Heavy (6):</strong> Beam Projector, Gravity Cannon (T), Micro-Missile Pod (T), Plasma Cannon, Plasma Thrower, Pulse Minigun (T)</li>
+<li><strong>Melee (4):</strong> Plasma Knife, Energy Lance (T), Energy Sword (T), Plasma War Axe (T)</li>
+<li><strong>Special (3):</strong> Arm Cannon (T), Bloom Energy Shield (T), Plasma Grenade</li>
+<li><strong>Props (10):</strong> ammo crate, charging dock, display pedestal, 3 energy cells, holo target, weapon case, floor rack, wall rack</li>
+</ul>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/g05_weapons_1.png" alt="Pistols, SMGs and rifles"></p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_transform.png" alt="Transforming weapons"></p>
+<p>14 weapons (marked T) have a compact stowed form and a deployed form. Set the <em>Deployed</em> bool to open or fold them. They can also fire while stowed, with a weaker shot.</p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/t_RailSniper.gif" alt="Rail Sniper transforming"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/t_GravityCannon.gif" alt="Gravity Cannon transforming"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/t_EnergyShield.gif" alt="Bloom Energy Shield transforming"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/t_MissilePod.gif" alt="Micro-Missile Pod transforming"></p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_fx.png" alt="Voxel effects"></p>
+<p>Every weapon has a charge effect and its own shot: laser bolt, plasma orb, beam, scatter, missiles, singularity, plasma flame, arc lightning, slash wave, shield wave or grenade. Projectiles hit any Collider in your scene and spawn an impact, with no code. Transforming weapons fire an overcharged shot when deployed.</p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/f_PulseMinigun.gif" alt="Pulse Minigun firing"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/f_BeamProjector.gif" alt="Beam Projector firing"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/f_ArcRifle.gif" alt="Arc Rifle firing"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/f_PlasmaThrower.gif" alt="Plasma Thrower firing"></p>
+<p><strong>Animator parameters:</strong> <em>Deployed</em> (bool), <em>Charge</em> (bool), <em>Fire</em> (trigger).<br>
+<strong>Animations:</strong> Idle, Charge, Fire, Cooldown; transforming weapons add Stowed, FireStowed, Deploy, Stow.<br>
+Each weapon also has a <em>Showcase</em> controller that loops everything (including firing) and a <em>Display</em> controller that loops only the transformation.</p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_themes.png" alt="Color themes"></p>
+<p>Every weapon and prop has a prefab in all four themes: Vanguard, Crimson, Wasteland and Void. Each theme has its own effect colors.</p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/g02_themes.png" alt="The four color themes"></p>
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/g08_props.png" alt="Armory props"></p>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_box.png" alt="What's in the box"></p>
+<ul>
+<li>Weapon prefabs in 4 color themes with the Animator and effects already set up; prop prefabs in 4 color themes</li>
+<li>FBX models with animation clips; 3 Animator Override Controllers per weapon</li>
+<li>Stand-alone effect prefabs for each theme</li>
+<li>3 demo scenes: Armory, Lineup, Range</li>
+<li>PDF documentation</li>
+</ul>
+
+<p><img src="https://jojopado.github.io/apps/voxel-energy-arsenal/itch/hdr_tech.png" alt="Technical details"></p>
+<ul>
+<li>Triangles: weapons 772 to 8,772 (average 3,779); props 132 to 5,192 (average 2,068); no LODs</li>
+<li>8 PNG palette textures, 64 x 64 (albedo + emission per theme), point filtering; palette UVs</li>
+<li>18 materials (Built-in Standard and Particles/Standard Unlit)</li>
+<li>Transform animation of moving parts; no rig, no skinned meshes</li>
+<li>1 voxel = 1/128 m, forward axis +Z; Muzzle, Grip and Vent sockets on every weapon</li>
+<li>Built-in Render Pipeline; URP via Unity's Render Pipeline Converter</li>
+<li>Unity 2022.3 or newer</li>
+</ul>
+
+<p><strong>Please note</strong></p>
+<ul>
+<li>No characters or hands are included.</li>
+<li>No scripts are included: drive the Animator parameters from your own code.</li>
+<li>Weapon colliders are triggers, so a weapon's own shots pass through it. Add your own collider if you need physics.</li>
+<li>Unity package only (.unitypackage).</li>
+</ul>
+
+<p><em>How it's made: the models are built by Python scripts in Blender, written with help from an AI coding assistant, and every model was checked by hand.</em></p>
