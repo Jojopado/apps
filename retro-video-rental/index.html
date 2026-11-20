@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Retro Video Rental Store Showcase | BluePudding</title>
+  <style>
+    :root { --bg:#0c0d1a; --panel:#141633; --line:#2a2d55; --text:#eef0ff; --muted:#9aa0c8; --accent:#f5be28; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
+    #rvr-shell { display:flex; flex-direction:column; height:100%; }
+    header { display:flex; align-items:center; gap:16px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--panel); flex:0 0 auto; }
+    header h1 { font-size:16px; margin:0; letter-spacing:.04em; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    header h1 span { color:var(--muted); font-weight:500; }
+    header .spacer { flex:1; }
+    button { font:inherit; color:var(--bg); background:var(--accent); border:0; padding:7px 14px; border-radius:4px; font-weight:700; cursor:pointer; }
+    button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+    button:hover { filter:brightness(1.1); }
+    #stage { position:relative; flex:1 1 auto; min-height:0; background:#000; }
+    #unity-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; background:#000; outline:none; }
+    #loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; background:var(--bg); padding:16px; text-align:center; }
+    #loading .name { font-size:22px; font-weight:700; letter-spacing:.06em; }
+    #bar { width:min(460px, 80vw); height:6px; background:#22292c; border-radius:3px; overflow:hidden; }
+    #fill { width:0; height:100%; background:var(--accent); transition:width .15s; }
+    #loading .hint { color:var(--muted); font-size:13px; max-width:520px; }
+    #error { display:none; position:absolute; left:50%; top:16px; transform:translateX(-50%); background:#3a1414; color:#ffd7d2; padding:10px 16px; border-radius:4px; max-width:90%; z-index:5; }
+    footer { flex:0 0 auto; padding:7px 18px; color:var(--muted); font-size:13px; border-top:1px solid var(--line); background:var(--panel); display:flex; gap:18px; flex-wrap:wrap; }
+    footer b { color:var(--text); font-weight:600; }
+    #mobile { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; padding:24px 16px; align-items:center; justify-content:center; text-align:center; }
+    #mobile .box { max-width:420px; }
+    #mobile h2 { margin:0 0 10px; font-size:20px; }
+    #mobile p { color:var(--muted); margin:0 0 18px; }
+  </style>
+</head>
+<body>
+  <div id="rvr-shell">
+    <header>
+      <h1>RETRO VIDEO RENTAL STORE <span>— Live 3D Showcase · BluePudding asset kit for Unity</span></h1>
+      <div class="spacer"></div>
+      <a href="https://josephpodado.itch.io/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:700;margin-right:6px">BluePudding on itch.io ↗</a>
+      <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
+    </header>
+    <div id="stage">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading">
+        <img src="cover.png" alt="" style="max-width:min(560px,80vw);max-height:42vh;border-radius:6px;box-shadow:0 8px 40px #0008">
+        <div class="name">RETRO VIDEO RENTAL STORE</div>
+        <div id="bar"><div id="fill"></div></div>
+        <div class="hint" id="status">Loading the 3D store… (first visit downloads the showcase; later visits load from the browser cache)</div>
+      </div>
+      <div id="error"></div>
+    </div>
+    <footer>
+      <span><b>WASD</b> move · <b>drag</b> to look</span>
+      <span><b>Click</b> tapes, VCRs, rewinders, drawers and doors</span>
+      <span><b>Tab</b> jump menu · <b>F</b> walk / fly</span>
+      <span>Desktop browser with keyboard and mouse · Chrome / Edge / Firefox</span>
+    </footer>
+  </div>
+  <div id="mobile"><div class="box">
+    <h2>Desktop only</h2>
+    <p>This 3D showcase needs a keyboard, a mouse and a desktop GPU. Please open this page on a computer.</p>
+    <button class="ghost" id="anyway">Try anyway</button>
+  </div></div>
+  <script>
+    var canvas = document.getElementById("unity-canvas");
+    var fill = document.getElementById("fill");
+    var statusEl = document.getElementById("status");
+    var errorEl = document.getElementById("error");
+    var instance = null;
+    function showError(msg) { errorEl.textContent = msg; errorEl.style.display = "block"; }
+    var buildUrl = "Build";
+    var config = {
+      dataUrl: buildUrl + "/retro-video-rental.data.unityweb",
+      frameworkUrl: buildUrl + "/retro-video-rental.framework.js.unityweb",
+      codeUrl: buildUrl + "/retro-video-rental.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "BluePudding",
+      productName: "Retro Video Rental Store - Live 3D Showcase",
+      productVersion: "1.0",
+      devicePixelRatio: 1,
+      showBanner: function (msg, type) { if (type === "error") showError(msg); else console.warn(msg); }
+    };
+    // Filled in by the build script when the data file is larger than the host's file limit (GitHub: 100 MB):
+    // the parts are downloaded, joined into one Blob and handed to the Unity loader.
+    var DATA_PARTS = null; /*DATA_PARTS*/
+    function fetchParts(parts, onProgress) {
+      var total = parts.reduce(function (a, p) { return a + p.size; }, 0), done = 0, blobs = [];
+      return parts.reduce(function (chain, p) {
+        return chain.then(function () {
+          return fetch(buildUrl + "/" + p.file).then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status + " for " + p.file);
+            var reader = r.body.getReader(), chunks = [];
+            function pump() {
+              return reader.read().then(function (x) {
+                if (x.done) { blobs.push(new Blob(chunks)); return; }
+                chunks.push(x.value); done += x.value.length; onProgress(done / total);
+                return pump();
+              });
+            }
+            return pump();
+          });
+        });
+      }, Promise.resolve()).then(function () { return URL.createObjectURL(new Blob(blobs)); });
+    }
+    function start() {
+      if (DATA_PARTS) {
+        statusEl.textContent = "Downloading…";
+        fetchParts(DATA_PARTS, function (p) { fill.style.width = Math.round(p * 70) + "%"; })
+          .then(function (url) { config.dataUrl = url; startUnity(0.7); })
+          .catch(function (e) { showError("Download failed: " + e); });
+      } else startUnity(0);
+    }
+    function startUnity(base) {
+      var script = document.createElement("script");
+      script.src = buildUrl + "/retro-video-rental.loader.js";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (p) {
+          fill.style.width = Math.round((base + (1 - base) * p) * 100) + "%";
+          if (p >= 0.9) statusEl.textContent = "Starting…";
+        }).then(function (inst) {
+          instance = inst;
+          document.getElementById("loading").style.display = "none";
+          canvas.focus();
+        }).catch(function (e) { showError(String(e)); });
+      };
+      script.onerror = function () { showError("Could not load the demo files."); };
+      document.body.appendChild(script);
+    }
+    document.getElementById("fs").onclick = function () { if (instance) instance.SetFullscreen(1); };
+    canvas.addEventListener("mousedown", function () { canvas.focus(); });
+    var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+    if (mobile) {
+      document.getElementById("mobile").style.display = "flex";
+      document.getElementById("anyway").onclick = function () { document.getElementById("mobile").style.display = "none"; start(); };
+    } else start();
+  </script>
+</body>
+</html>
