@@ -29,6 +29,9 @@
     #error { display:none; position:absolute; left:50%; top:14px; transform:translateX(-50%); background:#4a1712; color:#ffd9d2; padding:10px 16px; border-radius:6px; max-width:90%; z-index:5; }
     footer { flex:0 0 auto; padding:7px 18px; color:var(--muted); font-size:13px; background:var(--panel); border-top:1px solid var(--line); display:flex; gap:18px; flex-wrap:wrap; }
     footer b { color:var(--text); }
+    #qwrap { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:6px; }
+    button.q { padding:5px 10px; font-size:13px; }
+    button.q.on { background:var(--gold); color:#1d1714; border-color:var(--gold); }
     #mobile { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; padding:24px 16px; align-items:center; justify-content:center; text-align:center; }
     #mobile .box { max-width:420px; } #mobile p { color:var(--muted); }
   </style>
@@ -39,6 +42,8 @@
       <div class="dot"></div>
       <h1>Japanese Gacha Capsule Shop<span>LIVE 3D SHOWCASE</span></h1>
       <div class="spacer"></div>
+      <span id="qwrap" title="Balanced lowers the render resolution automatically when the frame rate drops">Quality
+        <button class="ghost q" id="qBal">Balanced</button><button class="ghost q" id="qHigh">High</button></span>
       <a class="btn ghost" href="https://josephpodado.itch.io" target="_blank" rel="noopener">More BluePudding packs</a>
       <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
     </header>
@@ -76,7 +81,7 @@
       companyName: "BluePudding",
       productName: "Japanese Gacha Capsule Shop - Live 3D Showcase",
       productVersion: "1.1",
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+      devicePixelRatio: 1,
       showBanner: function (msg, type) { if (type === "error") showError(msg); else console.warn(msg); }
     };
     function start() {
@@ -88,11 +93,40 @@
           if (p >= 0.9) statusEl.textContent = "Opening the shop…";
         }).then(function (inst) {
           instance = inst; document.getElementById("loading").style.display = "none"; canvas.focus();
+          setQuality(qmode);
+          requestAnimationFrame(tick);
         }).catch(function (e) { showError(String(e)); });
       };
       s.onerror = function () { showError("Could not load the showcase files."); };
       document.body.appendChild(s);
     }
+    // 畫質：High = 原解析度（最多 1.25 倍）；Balanced = 1 倍起跳，連續 3 秒低於 40 fps 就降低渲染解析度（最低 0.6），順了再慢慢升回來
+    var qmode = localStorage.getItem("jgs_quality") || "balanced", scale = 1, lowSec = 0, highSec = 0, frames = 0, last = performance.now();
+    function applyScale(v) {
+      scale = v;
+      if (instance && instance.Module) { instance.Module.devicePixelRatio = v; window.dispatchEvent(new Event("resize")); }
+    }
+    function setQuality(m) {
+      qmode = m; localStorage.setItem("jgs_quality", m);
+      document.getElementById("qBal").classList.toggle("on", m === "balanced");
+      document.getElementById("qHigh").classList.toggle("on", m === "high");
+      applyScale(m === "high" ? Math.min(window.devicePixelRatio || 1, 1.25) : 1);
+      lowSec = highSec = 0;
+    }
+    function tick(t) {
+      frames++;
+      if (t - last >= 1000) {
+        var fps = frames * 1000 / (t - last); frames = 0; last = t;
+        if (qmode === "balanced") {
+          if (fps < 40) { lowSec++; highSec = 0; if (lowSec >= 3 && scale > 0.6) { applyScale(Math.max(0.6, +(scale - 0.15).toFixed(2))); lowSec = 0; } }
+          else if (fps > 56) { highSec++; lowSec = 0; if (highSec >= 8 && scale < 1) { applyScale(Math.min(1, +(scale + 0.1).toFixed(2))); highSec = 0; } }
+          else { lowSec = highSec = 0; }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    document.getElementById("qBal").onclick = function () { setQuality("balanced"); canvas.focus(); };
+    document.getElementById("qHigh").onclick = function () { setQuality("high"); canvas.focus(); };
     document.getElementById("fs").onclick = function () { if (instance) instance.SetFullscreen(1); };
     canvas.addEventListener("mousedown", function () { canvas.focus(); });
     var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
