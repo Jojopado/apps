@@ -42,7 +42,7 @@
       <div class="dot"></div>
       <h1>Japanese Gacha Capsule Shop<span>LIVE 3D SHOWCASE</span></h1>
       <div class="spacer"></div>
-      <span id="qwrap" title="Balanced lowers the render resolution automatically when the frame rate drops">Quality
+      <span id="qwrap" title="Balanced lowers the render resolution automatically when the frame rate drops">Quality [G]
         <button class="ghost q" id="qBal">Balanced</button><button class="ghost q" id="qHigh">High</button></span>
       <a class="btn ghost" href="https://josephpodado.itch.io" target="_blank" rel="noopener">More BluePudding packs</a>
       <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
@@ -58,8 +58,8 @@
       <div id="error"></div>
     </div>
     <footer>
-      <span><b>Click</b> a knob to play a machine · <b>click</b> the capsule to open it</span>
-      <span><b>Drag</b> to look · <b>WASD</b> to move · <b>1–9</b> viewpoints</span>
+      <span><b>E</b> interact · <b>Tab</b> areas · <b>F</b> walk/fly · <b>G</b> quality · <b>H</b> help · <b>Esc</b> free the mouse</span>
+      <span><b>WASD</b> move · <b>mouse</b> look · <b>Space</b> up / <b>C</b>,<b>Q</b> down (fly)</span>
       <span>Everything shown is in the package · Desktop Chrome / Edge / Firefox</span>
     </footer>
   </div>
@@ -104,6 +104,7 @@
     var qmode = localStorage.getItem("jgs_quality") || "balanced", scale = 1, lowSec = 0, highSec = 0, frames = 0, last = performance.now();
     function applyScale(v) {
       scale = v;
+      config.devicePixelRatio = v;
       if (instance && instance.Module) { instance.Module.devicePixelRatio = v; window.dispatchEvent(new Event("resize")); }
     }
     function setQuality(m) {
@@ -117,7 +118,9 @@
       frames++;
       if (t - last >= 1000) {
         var fps = frames * 1000 / (t - last); frames = 0; last = t;
-        if (qmode === "balanced") {
+        // v1.2.2：Unity 在視窗 resize／全螢幕時會用 config 的值把解析度蓋回 1 → 每秒檢查一次，不一樣就套回目前的倍率
+        if (instance && instance.Module && Math.abs((instance.Module.devicePixelRatio || 1) - scale) > 0.001) applyScale(scale);
+        if (qmode === "balanced" && !document.hidden && fps > 5) {   // 背景分頁／被節流時不算（v1.2.2）
           if (fps < 40) { lowSec++; highSec = 0; if (lowSec >= 3 && scale > 0.6) { applyScale(Math.max(0.6, +(scale - 0.15).toFixed(2))); lowSec = 0; } }
           else if (fps > 56) { highSec++; lowSec = 0; if (highSec >= 8 && scale < 1) { applyScale(Math.min(1, +(scale + 0.1).toFixed(2))); highSec = 0; } }
           else { lowSec = highSec = 0; }
@@ -125,9 +128,15 @@
       }
       requestAnimationFrame(tick);
     }
-    document.getElementById("qBal").onclick = function () { setQuality("balanced"); canvas.focus(); };
-    document.getElementById("qHigh").onclick = function () { setQuality("high"); canvas.focus(); };
-    document.getElementById("fs").onclick = function () { if (instance) instance.SetFullscreen(1); };
+    document.getElementById("qBal").onclick = function () { setQuality("balanced"); this.blur(); canvas.focus(); };
+    document.getElementById("qHigh").onclick = function () { setQuality("high"); this.blur(); canvas.focus(); };
+    document.getElementById("fs").onclick = function () { this.blur(); if (instance) instance.SetFullscreen(1); };
+    // Space／方向鍵不要捲動頁面或重按 HTML 按鈕
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Tab") e.preventDefault();   // Tab = Unity 裡的區域選單，不要讓瀏覽器切換焦點
+      if ([" ", "ArrowUp", "ArrowDown"].indexOf(e.key) >= 0 && document.activeElement !== canvas) { e.preventDefault(); canvas.focus(); }
+      if ((e.key === "g" || e.key === "G") && instance && !e.repeat) setQuality(qmode === "high" ? "balanced" : "high");   // G：畫質切換
+    });
     canvas.addEventListener("mousedown", function () { canvas.focus(); });
     var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     if (mobile) { document.getElementById("mobile").style.display = "flex"; document.getElementById("anyway").onclick = function () { document.getElementById("mobile").style.display = "none"; start(); }; }
