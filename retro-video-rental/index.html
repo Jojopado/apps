@@ -39,6 +39,7 @@
       <h1>RETRO VIDEO RENTAL STORE <span>— Live 3D Showcase · BluePudding asset kit for Unity</span></h1>
       <div class="spacer"></div>
       <a href="https://josephpodado.itch.io/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:700;margin-right:6px">BluePudding on itch.io ↗</a>
+      <button class="ghost" id="q" title="Render quality (auto lowers the resolution when the frame rate drops)">Quality: High</button>
       <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
     </header>
     <div id="stage">
@@ -54,7 +55,7 @@
     <footer>
       <span><b>WASD</b> move · <b>drag</b> to look</span>
       <span><b>Click</b> tapes, VCRs, rewinders, drawers and doors</span>
-      <span><b>Tab</b> jump menu · <b>F</b> walk / fly</span>
+      <span><b>Tab</b> jump menu · <b>F</b> walk / fly · fly: <b>Space</b> up, <b>Ctrl</b>/<b>C</b> down</span>
       <span>Desktop browser with keyboard and mouse · Chrome / Edge / Firefox</span>
     </footer>
   </div>
@@ -80,6 +81,7 @@
       productName: "Retro Video Rental Store - Live 3D Showcase",
       productVersion: "1.0",
       devicePixelRatio: 1,
+      matchWebGLToCanvasSize: false,   // the page sizes the drawing buffer itself (render scale below)
       showBanner: function (msg, type) { if (type === "error") showError(msg); else console.warn(msg); }
     };
     // Filled in by the build script when the data file is larger than the host's file limit (GitHub: 100 MB):
@@ -121,6 +123,7 @@
           if (p >= 0.9) statusEl.textContent = "Starting…";
         }).then(function (inst) {
           instance = inst;
+          applyScale();
           document.getElementById("loading").style.display = "none";
           canvas.focus();
         }).catch(function (e) { showError(String(e)); });
@@ -128,6 +131,35 @@
       script.onerror = function () { showError("Could not load the demo files."); };
       document.body.appendChild(script);
     }
+    // ---- render scale: High = 100 %, Balanced = 75 %; both step down automatically when the frame rate stays low ----
+    var qBtn = document.getElementById("q"), mode = "High", scale = 1, autoDrop = 0;
+    var MAX = { High: 1, Balanced: 0.75 }, MIN = 0.55;
+    function applyScale() {
+      var w = Math.max(1, Math.round(canvas.clientWidth * scale)), h = Math.max(1, Math.round(canvas.clientHeight * scale));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      qBtn.textContent = "Quality: " + mode + " (" + Math.round(scale * 100) + "%)";
+      if (instance) instance.SendMessage("RVRWeb_Showcase", "SetUiScale", scale);
+    }
+    qBtn.onclick = function () { mode = mode === "High" ? "Balanced" : "High"; scale = MAX[mode]; autoDrop = 0; applyScale(); };
+    window.addEventListener("resize", applyScale);
+    var frames = 0, last = performance.now(), slow = 0;
+    function tick(now) {
+      frames++;
+      if (now - last > 2000) {
+        var fps = frames * 1000 / (now - last); frames = 0; last = now;
+        if (instance) {
+          if (fps < 40 && scale > MIN) { if (++slow >= 2) { scale = Math.max(MIN, scale - 0.15); slow = 0; autoDrop++; applyScale(); } }
+          else if (fps > 57 && scale < MAX[mode] && autoDrop > 0) { scale = Math.min(MAX[mode], scale + 0.1); applyScale(); slow = 0; }
+          else slow = 0;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    applyScale();
+    document.querySelectorAll("header button, header a").forEach(function (el) {
+      el.addEventListener("click", function () { el.blur(); canvas.focus(); });
+    });
     document.getElementById("fs").onclick = function () { if (instance) instance.SetFullscreen(1); };
     canvas.addEventListener("mousedown", function () { canvas.focus(); });
     var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
