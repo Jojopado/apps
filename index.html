@@ -3,186 +3,408 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BluePudding — 3D Asset Packs for Unity</title>
-<meta name="description" content="BluePudding makes 3D asset packs for Unity: simulator-ready shops, voxel characters and full FPS maps. Try the browser demos before you buy.">
-<meta property="og:title" content="BluePudding — 3D Asset Packs for Unity">
-<meta property="og:description" content="Simulator-ready shops, voxel characters and full FPS maps. Try the browser demos before you buy.">
-<meta property="og:image" content="https://jojopado.github.io/apps/assets/thumbs/tactical-fps-mega.jpg">
-<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121418" media="(prefers-color-scheme: dark)">
+<title>BluePudding — Game-ready 3D worlds for Unity</title>
+<meta name="description" content="Voxel heroes, simulator-ready shops and full FPS maps for Unity. Try the packs in your browser before you buy.">
+<meta property="og:title" content="BluePudding — Game-ready 3D worlds for Unity">
+<meta property="og:description" content="Voxel heroes, simulator-ready shops and full FPS maps. Try them in your browser before you buy.">
+<meta property="og:image" content="https://jojopado.github.io/apps/assets/hero/vfr.jpg">
+<meta name="theme-color" content="#0c0e13">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 26c0-8 8-14 18-14s18 6 18 14l4 24c0 3-3 5-6 5H16c-3 0-6-2-6-5z' fill='%233d6bff'/%3E%3Cpath d='M14 26c0-8 8-14 18-14s18 6 18 14c0 4-3 3-5 6-2-3-4-2-6 0-2-3-5-3-7 0-2-2-4-3-6 0-2-3-5-2-6-1-1-2 0-3 0-5z' fill='%23f2b14c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/hero/vfr.jpg">
 <style>
 :root{
-  --bg:#f6f5f2; --surface:#fff; --line:#e6e3dc; --text:#1c1d21; --muted:#6b6d76; --faint:#9a9ca4;
-  --accent:#2f5bea; --accent-soft:#e8eefd; --shadow:0 1px 2px rgba(20,20,30,.05),0 8px 24px rgba(20,20,30,.06);
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#121418;--surface:#1b1e24;--line:#2a2e36;--text:#ecedf0;--muted:#a1a4ad;--faint:#6f737c;
-  --accent:#7b9bff;--accent-soft:#232c45;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25)}
+  --ink:#0c0e13; --ink2:#151922; --ink3:#1e2330; --line:rgba(255,255,255,.09);
+  --text:#f2f3f6; --muted:#a3a8b8; --blue:#3d6bff; --blue2:#2148d6; --caramel:#f2b14c;
+  --cream:#f6efe4; --cream-ink:#2a2118; --violet:#5b3df5;
+  --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:72px}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--text);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+img,video{display:block;max-width:100%}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+.display{font-family:var(--display);font-weight:400;letter-spacing:.3px;line-height:.98}
+.eyebrow{font-size:12.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
 
-.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid transparent;transition:border-color .2s}
-.bar.scrolled{border-bottom-color:var(--line)}
-.bar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:750;letter-spacing:.2px;font-size:17px;white-space:nowrap}
-.logo i{width:26px;height:26px;border-radius:8px;background:linear-gradient(160deg,#5b82ff,#2f5bea);display:block;position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
-.logo i::after{content:"";position:absolute;left:6px;right:6px;top:5px;height:5px;border-radius:5px;background:rgba(255,255,255,.55)}
-.nav{display:flex;align-items:center;gap:4px}
-.nav a{padding:7px 12px;border-radius:8px;color:var(--muted);font-size:14.5px;white-space:nowrap}
-.nav a:hover{color:var(--text);background:var(--surface)}
-.nav a.store{color:#fff;background:var(--accent);font-weight:600;margin-left:6px}
-.nav a.store:hover{filter:brightness(1.08);background:var(--accent)}
+/* ---------- header ---------- */
+.top{position:fixed;inset:0 0 auto;z-index:50;transition:background .3s,backdrop-filter .3s,box-shadow .3s}
+.top.solid{background:rgba(12,14,19,.82);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 1px 0 var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:72px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:24px;letter-spacing:.5px}
+.brand svg{width:34px;height:34px;filter:drop-shadow(0 4px 10px rgba(61,107,255,.45))}
+.brand span{color:var(--caramel)}
+.menu{display:flex;align-items:center;gap:6px}
+.menu a{padding:9px 14px;border-radius:999px;font-size:14.5px;font-weight:500;color:rgba(255,255,255,.82)}
+.menu a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.menu a.cta{background:#fff;color:var(--ink);font-weight:700;margin-left:8px}
+.menu a.cta:hover{background:var(--caramel)}
 
-.hero{padding:64px 0 36px}
-.hero h1{font-size:clamp(32px,5.2vw,54px);line-height:1.1;margin:0 0 14px;letter-spacing:-1px;font-weight:800}
-.hero h1 span{color:var(--accent)}
-.hero p{margin:0;color:var(--muted);font-size:clamp(16px,2vw,18.5px);max-width:600px}
-.stats{display:flex;gap:32px;margin-top:28px;flex-wrap:wrap}
-.stats div{font-size:14px;color:var(--muted)}
-.stats b{display:block;font-size:24px;color:var(--text);font-weight:750;line-height:1.2}
+/* ---------- hero ---------- */
+.hero{position:relative;height:100svh;min-height:640px;max-height:1000px;overflow:hidden;background:#000}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease}
+.slide.on{opacity:1}
+.slide img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);transform-origin:60% 50%}
+.slide.on img{animation:kb 9s ease-out forwards}
+@keyframes kb{to{transform:scale(1.14)}}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(8,10,14,.92) 0%,rgba(8,10,14,.7) 35%,rgba(8,10,14,.1) 70%),linear-gradient(0deg,var(--ink) 0%,transparent 30%),linear-gradient(180deg,rgba(0,0,0,.5),transparent 20%)}
+.hero .copy{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;padding-top:40px}
+.hero .eyebrow{color:var(--caramel);display:flex;align-items:center;gap:10px}
+.hero .eyebrow::before{content:"";width:28px;height:2px;background:var(--caramel)}
+.hero h1{font-size:clamp(52px,8.4vw,116px);margin:18px 0 22px;max-width:9.5em;text-shadow:0 6px 40px rgba(0,0,0,.5)}
+.hero h1 em{font-style:normal;color:var(--blue);background:linear-gradient(90deg,#6f93ff,#3d6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:clamp(17px,1.6vw,20px);color:rgba(255,255,255,.82);max-width:520px;margin:0 0 34px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;height:54px;padding:0 26px;border-radius:14px;font-weight:700;font-size:16px;transition:transform .15s,background .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.primary{background:var(--blue);color:#fff;box-shadow:0 10px 30px rgba(61,107,255,.45),inset 0 -3px 0 rgba(0,0,0,.18)}
+.btn.primary:hover{background:#5480ff}
+.btn.ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+.btn.ghost:hover{background:rgba(255,255,255,.18)}
+.btn svg{width:18px;height:18px}
 
-.feature{display:grid;grid-template-columns:1.35fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);margin:8px 0}
-.feature .img{aspect-ratio:16/10;background:#222 center/cover}
-.feature .body{padding:32px;display:flex;flex-direction:column;justify-content:center}
-.kicker{font-size:12.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent)}
-.feature h3{font-size:26px;margin:8px 0 10px;line-height:1.25}
-.feature p{margin:0 0 20px;color:var(--muted)}
-.btns{display:flex;gap:10px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-weight:650;font-size:15px;border:1px solid var(--line);background:var(--surface);transition:border-color .15s}
-.btn:hover{border-color:var(--faint)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{filter:brightness(1.08)}
+.tabs{position:absolute;z-index:3;left:0;right:0;bottom:34px}
+.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.tab{all:unset;cursor:pointer;display:block;padding-top:14px;position:relative;color:rgba(255,255,255,.55);transition:color .2s}
+.tab::before,.tab i{content:"";position:absolute;top:0;left:0;height:3px;border-radius:3px}
+.tab::before{right:0;background:rgba(255,255,255,.18)}
+.tab i{width:0;background:#fff}
+.tab.on{color:#fff}
+.tab.on i{animation:prog 7s linear forwards}
+@keyframes prog{to{width:100%}}
+.tab b{display:block;font-size:14.5px;font-weight:700}
+.tab small{font-size:12.5px;opacity:.8}
+.tab:focus-visible{outline:2px solid var(--caramel);outline-offset:6px;border-radius:4px}
 
-section{padding:48px 0 8px}
-.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
-.sec-head h2{font-size:25px;margin:0;letter-spacing:-.3px}
-.sec-head p{margin:4px 0 0;color:var(--muted);font-size:15px}
+/* ---------- marquee ---------- */
+.marquee{position:relative;padding:34px 0 30px;background:var(--blue);overflow:hidden;transform:skewY(-2deg);margin:-30px 0 40px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.marquee .row{display:flex;gap:16px;width:max-content;animation:scroll 60s linear infinite;transform:skewY(2deg)}
+.marquee .row.rev{animation-direction:reverse;margin-top:16px;animation-duration:70s}
+.marquee:hover .row{animation-play-state:paused}
+.marquee a{flex:none;width:220px;aspect-ratio:630/500;border-radius:12px;overflow:hidden;background:#123 center/cover;box-shadow:0 8px 20px rgba(0,0,0,.25);transition:transform .2s}
+.marquee a:hover{transform:translateY(-4px) rotate(-1deg)}
+@keyframes scroll{to{transform:skewY(2deg) translateX(-50%)}}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
-.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-.thumb{display:block;aspect-ratio:16/10;background:#1d2027 center/cover}
-.cover{display:block;aspect-ratio:630/500;background:#1d2027 center/cover}
-.card .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
-.card h3{font-size:16.5px;margin:0;line-height:1.35}
-.card p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.55;flex:1}
-.card .links{display:flex;gap:16px;margin-top:8px;font-size:14px;font-weight:600}
-.card .links a{color:var(--accent)}
-.card .links a:hover{text-decoration:underline}
-.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
-.tag.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+/* ---------- section heads ---------- */
+section{position:relative}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:34px;flex-wrap:wrap}
+.head h2{font-size:clamp(40px,5.4vw,72px);margin:10px 0 0}
+.head p{max-width:440px;color:var(--muted);margin:0;font-size:17px}
 
-.filters{display:flex;gap:6px;flex-wrap:wrap}
-.filters button{font:inherit;font-size:14px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
-.filters button:hover{color:var(--text)}
-.filters button[aria-pressed=true]{background:var(--text);border-color:var(--text);color:var(--bg)}
-.card[hidden]{display:none}
+/* ---------- demos bento ---------- */
+.demos{padding:90px 0 110px}
+.demos .eyebrow{color:var(--caramel)}
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:240px;gap:16px}
+.tile{position:relative;border-radius:20px;overflow:hidden;background:var(--ink2);isolation:isolate}
+.tile img,.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.tile:hover img,.tile:hover video{transform:scale(1.06)}
+.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(6,8,12,.88),rgba(6,8,12,0) 55%);z-index:1}
+.tile .lbl{position:absolute;z-index:2;left:22px;right:22px;bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.tile h3{margin:0;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05}
+.tile .lbl small{display:block;color:rgba(255,255,255,.7);font-size:13.5px;margin-top:4px}
+.tile .go{flex:none;width:42px;height:42px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;transition:transform .2s,background .2s}
+.tile:hover .go{transform:rotate(-45deg);background:var(--caramel)}
+.tile .chip{position:absolute;z-index:2;top:16px;left:16px;font-size:11.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
+.t-big{grid-column:span 2;grid-row:span 2}
+.t-big h3{font-size:44px}
+.t-wide{grid-column:span 2}
+.t-sq video{background:#0f1218}
+.t-full{grid-column:span 4}
+.tile video.side{left:auto;width:240px;right:0;border-left:1px solid var(--line)}
 
-.about{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
-.about div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
-.about h3{margin:0 0 6px;font-size:16px}
-.about p{margin:0;color:var(--muted);font-size:14.5px}
 
-footer{margin-top:56px;border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:14px}
-footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-footer a{color:var(--accent)}
+/* ---------- voxel band ---------- */
+.voxel{padding:120px 0;background:radial-gradient(1200px 600px at 85% 20%,#7a4dff 0%,transparent 60%),linear-gradient(160deg,#3a1fc2 0%,#25127a 55%,#160b4a 100%);overflow:hidden}
+.voxel::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(180deg,#000,transparent 80%);-webkit-mask-image:linear-gradient(180deg,#000,transparent 80%)}
+.voxel .grid2{position:relative;display:grid;grid-template-columns:1fr 1.15fr;gap:60px;align-items:center}
+.voxel .eyebrow{color:#c9b8ff}
+.voxel h2{font-size:clamp(46px,6vw,84px);margin:12px 0 18px}
+.voxel p{color:#d9d0ff;font-size:18px;max-width:460px;margin:0 0 30px}
+.feats{display:flex;gap:26px;margin:0 0 34px;flex-wrap:wrap}
+.feats div{font-size:13.5px;color:#c9b8ff}
+.feats b{display:block;font-family:var(--display);font-weight:400;font-size:40px;color:#fff;line-height:1}
+.stack{position:relative;height:520px}
+.stack a{position:absolute;width:56%;aspect-ratio:630/500;border-radius:18px;overflow:hidden;background:#000 center/cover;box-shadow:0 30px 60px rgba(10,0,40,.55),0 0 0 1px rgba(255,255,255,.08);transition:transform .35s cubic-bezier(.2,.7,.2,1),z-index 0s}
+.stack a:hover{z-index:9;transform:translateY(-10px) rotate(0) scale(1.04)!important}
+.stack a:nth-child(1){left:0;top:0;transform:rotate(-6deg);z-index:2}
+.stack a:nth-child(2){right:0;top:20px;transform:rotate(5deg);z-index:3}
+.stack a:nth-child(3){left:6%;bottom:0;transform:rotate(4deg);z-index:4}
+.stack a:nth-child(4){right:4%;bottom:20px;transform:rotate(-4deg);z-index:5}
 
-@media (max-width:760px){
-  .feature{grid-template-columns:1fr}
-  .feature .body{padding:22px}
-  .hero{padding:40px 0 24px}
-  .nav a:not(.store){display:none}
+/* ---------- shops band ---------- */
+.shops{background:var(--cream);color:var(--cream-ink);padding:120px 0}
+.shops .eyebrow{color:#c2541b}
+.shops .head p{color:#6c5c4b}
+.masonry{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:150px;gap:14px}
+.shot{position:relative;border-radius:18px;overflow:hidden;background:#ddd;box-shadow:0 12px 30px rgba(60,40,20,.14)}
+.shot img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.shot:hover img{transform:scale(1.06)}
+.shot span{position:absolute;left:12px;bottom:12px;background:#fff;color:var(--cream-ink);font-weight:700;font-size:13.5px;padding:7px 12px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.15);transition:background .2s,color .2s}
+.shot:hover span{background:var(--cream-ink);color:#fff}
+.s1{grid-column:span 3;grid-row:span 4}.s2{grid-column:span 3;grid-row:span 2}.s3{grid-column:span 2;grid-row:span 2}.s4{grid-column:span 1;grid-row:span 2}
+.s5{grid-column:span 2;grid-row:span 2}.s6{grid-column:span 2;grid-row:span 2}.s7{grid-column:span 2;grid-row:span 2}
+.s8{grid-column:span 3;grid-row:span 2}.s9{grid-column:span 3;grid-row:span 2}
+.shops .tagline{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.shops .tagline span{background:#fff;border:1px solid #eadfcd;border-radius:999px;padding:8px 16px;font-size:14px;font-weight:600}
+
+/* ---------- fps band ---------- */
+.fps{min-height:760px;display:flex;align-items:center;overflow:hidden;background:#111}
+.fps>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+.fps::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,10,8,.96) 8%,rgba(10,10,8,.6) 50%,rgba(10,10,8,.05)),linear-gradient(0deg,var(--ink),transparent 25%),linear-gradient(180deg,var(--ink),transparent 20%)}
+.fps .wrap{position:relative;z-index:2;width:100%}
+.fps .eyebrow{color:#ff9a3d}
+.fps h2{font-size:clamp(50px,7vw,100px);margin:12px 0 18px;max-width:7em}
+.fps p{color:#cfcabf;font-size:18px;max-width:480px;margin:0 0 30px}
+.fps .rifle{position:absolute;z-index:2;right:-40px;bottom:40px;width:min(58vw,820px);filter:drop-shadow(0 30px 40px rgba(0,0,0,.6));mix-blend-mode:lighten;pointer-events:none}
+.specs{display:grid;grid-template-columns:repeat(4,auto);gap:10px 34px;margin:0 0 36px;justify-content:start}
+.specs div{border-left:2px solid #ff9a3d;padding-left:12px;font-size:13.5px;color:#cfcabf}
+.specs b{display:block;color:#fff;font-size:17px}
+.btn.orange{background:#ff8a1f;color:#1a1004;box-shadow:0 10px 30px rgba(255,138,31,.35),inset 0 -3px 0 rgba(0,0,0,.15)}
+.btn.orange:hover{background:#ffa04a}
+
+/* ---------- all packs ---------- */
+.all{padding:110px 0 40px}
+.all .eyebrow{color:var(--caramel)}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{font:600 14px var(--body);padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--ink2);color:var(--muted);cursor:pointer;transition:all .2s}
+.filters button:hover{color:#fff;border-color:rgba(255,255,255,.25)}
+.filters button[aria-pressed=true]{background:#fff;color:var(--ink);border-color:#fff}
+.packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px}
+.pack{display:block;transition:transform .25s}
+.pack[hidden]{display:none}
+.pack .cv{aspect-ratio:630/500;border-radius:16px;overflow:hidden;background:var(--ink2) center/cover;box-shadow:0 0 0 1px var(--line);transition:box-shadow .25s,transform .25s}
+.pack:hover .cv{transform:translateY(-6px);box-shadow:0 0 0 2px var(--blue),0 20px 40px rgba(0,0,0,.45)}
+.pack h3{margin:14px 2px 2px;font-size:15.5px;font-weight:600}
+.pack small{color:var(--muted);font-size:13.5px;margin-left:2px}
+.pack small.free{color:#4ade80;font-weight:700}
+
+/* ---------- final cta ---------- */
+.final{margin:90px 28px 0;border-radius:28px;overflow:hidden;min-height:440px;display:grid;place-items:center;text-align:center;isolation:isolate}
+.final img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.final::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 50% 50%,rgba(12,14,19,.55),rgba(12,14,19,.9))}
+.final h2{font-size:clamp(44px,6vw,84px);margin:0 0 16px}
+.final p{color:rgba(255,255,255,.8);font-size:18px;margin:0 auto 30px;max-width:520px}
+.final .btns{justify-content:center}
+
+footer{padding:46px 0 50px;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+footer a:hover{color:#fff}
+footer .brand{font-size:20px;color:#fff}
+footer .brand svg{width:28px;height:28px}
+
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+
+@media (max-width:980px){
+  .bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:200px}
+  .t-full{grid-column:span 2}
+  .voxel .grid2{grid-template-columns:1fr}
+  .stack{height:420px}
+  .masonry{grid-template-columns:repeat(2,1fr);grid-auto-rows:170px}
+  .masonry .shot{grid-column:span 1!important;grid-row:span 1!important}
+  .masonry .s1,.masonry .s8{grid-column:span 2!important;grid-row:span 2!important}
+  .specs{grid-template-columns:repeat(2,auto)}
+  .fps .rifle{opacity:.35;width:90vw;right:-20vw}
+  .tabs .wrap{grid-template-columns:repeat(5,1fr);gap:8px}
+  .tab small{display:none}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media (max-width:640px){
+  .wrap{padding:0 18px}
+  .menu a:not(.cta){display:none}
+  .hero::after{background:linear-gradient(0deg,var(--ink) 5%,rgba(8,10,14,.55) 60%,rgba(8,10,14,.35))}
+  .hero .copy{justify-content:flex-end;padding-bottom:120px}
+  .tab b,.tab small{display:none}
+  .tile video.side{display:none}.t-full .lbl{right:22px}
+  .t-big,.t-wide,.t-full{grid-column:span 2}
+  .t-big{grid-row:span 1}
+  .t-big h3{font-size:30px}
+  .stack{height:330px}
+  .final{margin:60px 12px 0}
+  .marquee a{width:160px}
+  .packs{grid-template-columns:1fr 1fr;gap:14px}
+  .pack h3{font-size:14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
 
-<header class="bar" id="bar">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pud" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="56" rx="24" ry="4" fill="#000" opacity=".25"/>
+    <path d="M15 27c0-8.5 7.6-15 17-15s17 6.5 17 15l4.4 22.6c.6 3-1.7 5.4-4.7 5.4H15.3c-3 0-5.3-2.4-4.7-5.4z" fill="#3d6bff"/>
+    <path d="M15 27c0-8.5 7.6-15 17-15s17 6.5 17 15l4.4 22.6c.6 3-1.7 5.4-4.7 5.4H44C48 46 47 34 40 24z" fill="#2148d6" opacity=".6"/>
+    <path d="M15 27c0-8.5 7.6-15 17-15s17 6.5 17 15c0 3.6-2.6 2.6-4 5.6-1.6-3-4-2.8-5.4 0-1.8-3.6-4.8-3.6-6.6 0-1.6-2.2-3.8-3.4-5.6.4-1.6-3.8-4.4-2.6-5.4-1.4-1-2-.6-3.2-.6-4.6z" fill="#f2b14c"/>
+    <path d="M22 18c2.5-2 5.5-3 8.5-3" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55" fill="none"/>
+  </symbol>
+  <symbol id="arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></symbol>
+</svg>
+
+<header class="top" id="top">
   <div class="wrap">
-    <a class="logo" href="#top"><i></i>BluePudding</a>
-    <nav class="nav">
+    <a class="brand" href="#"><svg><use href="#pud"/></svg>Blue<span>Pudding</span></a>
+    <nav class="menu">
       <a href="#demos">Demos</a>
-      <a href="#packs">All Packs</a>
-      <a href="#about">About</a>
-      <a class="store" href="https://josephpodado.itch.io/" target="_blank" rel="noopener">itch.io Store</a>
+      <a href="#voxel">Voxel</a>
+      <a href="#shops">Shops</a>
+      <a href="#fps">FPS</a>
+      <a href="#all">All Packs</a>
+      <a class="cta" href="https://josephpodado.itch.io/" target="_blank" rel="noopener">itch.io Store</a>
     </nav>
   </div>
 </header>
 
-<main class="wrap" id="top">
+<!-- ============ HERO ============ -->
+<section class="hero" aria-label="Featured packs">
+  <div class="slide on"><img src="assets/hero/vfr.jpg" alt="Voxel Fantasy Realms town with castles and villages"></div>
+  <div class="slide"><img data-src="assets/hero/tfm.jpg" alt="Tactical FPS Mega Pack aerial view of the city map"></div>
+  <div class="slide"><img data-src="assets/hero/stage.jpg" alt="Japanese Live Stage concert arena with neon lights"></div>
+  <div class="slide"><img data-src="assets/hero/konbini.jpg" alt="Japanese Convenience Store exterior at night"></div>
+  <div class="slide"><img data-src="assets/hero/dragon.jpg" alt="Voxel Dragon Knight breathing fire"></div>
 
-  <div class="hero">
-    <h1>3D asset packs for Unity.<br><span>Try them before you buy.</span></h1>
-    <p>Simulator-ready shops, voxel characters and full FPS maps. Five packs have a browser demo, so you can walk around and check the models first.</p>
-    <div class="stats">
-      <div><b>15</b>asset packs</div>
-      <div><b>5</b>browser demos</div>
-      <div><b>Built-in &amp; URP</b>render pipelines</div>
+  <div class="wrap copy">
+    <div class="eyebrow">3D asset packs for Unity</div>
+    <h1 class="display">Game-ready worlds, <em>dropped right in.</em></h1>
+    <p>Voxel heroes, simulator-ready shops and full FPS maps. Walk through most of them in your browser before you buy.</p>
+    <div class="btns">
+      <a class="btn primary" href="#all">Browse all packs <svg><use href="#arr"/></svg></a>
+      <a class="btn ghost" href="#demos"><svg><use href="#play"/></svg> Play a demo</a>
     </div>
   </div>
 
-  <div class="feature">
-    <a class="img" href="tactical-fps-mega/" style="background-image:url(assets/thumbs/tactical-fps-mega.jpg)" aria-label="Tactical FPS Mega Pack demo"></a>
-    <div class="body">
-      <div class="kicker">New · Playable demo</div>
-      <h3>Tactical FPS Mega Pack</h3>
-      <p>Modular maps, weapons and a working FPS controller. Walk through Freightgate, Halvern Tower, Warehouse and Kill House, and fire every gun, right in your browser.</p>
-      <div class="btns">
-        <a class="btn primary" href="tactical-fps-mega/">Play the demo →</a>
-        <a class="btn" href="https://josephpodado.itch.io/tactical-fps-mega-pack" target="_blank" rel="noopener">View on itch.io</a>
-      </div>
+  <div class="tabs">
+    <div class="wrap" role="tablist">
+      <button class="tab on" role="tab"><i></i><b>Voxel Fantasy Realms</b><small>MMO RPG kit</small></button>
+      <button class="tab" role="tab"><i></i><b>Tactical FPS Mega</b><small>7 playable zones</small></button>
+      <button class="tab" role="tab"><i></i><b>Japanese Live Stage</b><small>Concert venue kit</small></button>
+      <button class="tab" role="tab"><i></i><b>Convenience Store</b><small>600+ props</small></button>
+      <button class="tab" role="tab"><i></i><b>Voxel Dragon Knight</b><small>Rideable dragon</small></button>
     </div>
   </div>
+</section>
 
-  <section id="demos">
-    <div class="sec-head">
-      <div><h2>Browser demos</h2><p>Interactive showcases built from the actual packs. Best viewed on desktop.</p></div>
-    </div>
-    <div class="grid">
-      <div class="card">
-        <a class="thumb" href="voxel-fantasy-realms/" style="background-image:url(assets/thumbs/voxel-fantasy-realms.jpg)" aria-label="Voxel Fantasy Realms demo"></a>
-        <div class="body">
-          <h3>Voxel Fantasy Realms</h3>
-          <p>MMO RPG kit with a character creator: 113 characters, 52 monsters and 21 landmarks.</p>
-          <div class="links"><a href="voxel-fantasy-realms/">Open demo</a><a href="https://josephpodado.itch.io/voxel-fantasy-realms" target="_blank" rel="noopener">itch.io</a></div>
-        </div>
-      </div>
-      <div class="card">
-        <a class="thumb" href="voxel-energy-arsenal/" style="background-image:url(assets/thumbs/voxel-energy-arsenal.jpg)" aria-label="Voxel Energy Arsenal demo"></a>
-        <div class="body">
-          <h3>Voxel Energy Arsenal</h3>
-          <p>Transforming and energy weapons with muzzle FX, 4 color themes and 52 sounds.</p>
-          <div class="links"><a href="voxel-energy-arsenal/">Open demo</a><a href="https://josephpodado.itch.io/voxel-energy-arsenal" target="_blank" rel="noopener">itch.io</a></div>
-        </div>
-      </div>
-      <div class="card">
-        <a class="thumb" href="dragon-knight/" style="background-image:url(assets/thumbs/dragon-knight.jpg)" aria-label="Voxel Dragon Knight demo"></a>
-        <div class="body">
-          <h3>Voxel Dragon Knight</h3>
-          <p>A rideable dragon and a knight, with ground, flight and mounted combat animations.</p>
-          <div class="links"><a href="dragon-knight/">Open demo</a><a href="https://josephpodado.itch.io/voxel-dragon-knight" target="_blank" rel="noopener">itch.io</a></div>
-        </div>
-      </div>
-      <div class="card">
-        <a class="thumb" href="voxel-aliens/" style="background-image:url(assets/thumbs/voxel-aliens.jpg)" aria-label="Voxel Aliens demo"></a>
-        <div class="body">
-          <h3>Voxel Aliens</h3>
-          <p>33 rigged and animated voxel creatures across 10 body types.</p>
-          <div class="links"><a href="voxel-aliens/">Open demo</a><a href="https://josephpodado.itch.io/voxel-aliens" target="_blank" rel="noopener">itch.io</a></div>
-        </div>
-      </div>
-    </div>
-  </section>
+<!-- ============ MARQUEE ============ -->
+<div class="marquee" aria-label="All packs">
+  <div class="row" id="mq1"></div>
+  <div class="row rev" id="mq2"></div>
+</div>
 
-  <section id="packs">
-    <div class="sec-head">
-      <div><h2>All packs</h2><p>Every pack is available on itch.io.</p></div>
+<!-- ============ DEMOS ============ -->
+<section class="demos" id="demos">
+  <div class="wrap">
+    <div class="head rv">
+      <div><div class="eyebrow">Play before you buy</div><h2 class="display">Live browser demos</h2></div>
+      <p>Built from the exact assets you download. Open one, walk around, fire a weapon, then decide.</p>
+    </div>
+    <div class="bento">
+      <a class="tile t-big rv" href="tactical-fps-mega/">
+        <img src="assets/hero/tfm.jpg" alt="" loading="lazy">
+        <div class="chip"><span class="dot"></span>Playable FPS</div>
+        <div class="lbl"><div><h3>Tactical FPS Mega Pack</h3><small>Freightgate · Halvern Tower · Warehouse · Kill House</small></div><span class="go"><svg width="18" height="18"><use href="#arr"/></svg></span></div>
+      </a>
+      <a class="tile t-wide rv" href="voxel-fantasy-realms/">
+        <img src="assets/hero/vfr.jpg" alt="" loading="lazy">
+        <div class="chip"><span class="dot"></span>Explore + creator</div>
+        <div class="lbl"><div><h3>Voxel Fantasy Realms</h3><small>Walk the MMO world, build a hero</small></div><span class="go"><svg width="18" height="18"><use href="#arr"/></svg></span></div>
+      </a>
+      <a class="tile t-sq rv" href="dragon-knight/">
+        <img src="assets/art/dragon.jpg" alt="" loading="lazy" style="object-position:62% 50%">
+        <div class="lbl"><div><h3>Dragon Knight</h3><small>Mounted combat</small></div><span class="go"><svg width="18" height="18"><use href="#arr"/></svg></span></div>
+      </a>
+      <a class="tile t-sq rv" href="voxel-energy-arsenal/">
+        <img src="assets/art/vea.jpg" alt="" loading="lazy" style="object-position:40% 50%">
+        <div class="lbl"><div><h3>Energy Arsenal</h3><small>52 weapon sounds</small></div><span class="go"><svg width="18" height="18"><use href="#arr"/></svg></span></div>
+      </a>
+      <a class="tile t-full rv" href="voxel-aliens/">
+        <img src="assets/art/aliens.jpg" alt="" loading="lazy" style="object-position:50% 62%">
+        <div class="lbl"><div><h3>Voxel Aliens</h3><small>33 rigged creatures with idle, walk, attack, hit and death animations</small></div><span class="go"><svg width="18" height="18"><use href="#arr"/></svg></span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VOXEL ============ -->
+<section class="voxel" id="voxel">
+  <div class="wrap grid2">
+    <div class="rv">
+      <div class="eyebrow">The Voxel Series</div>
+      <h2 class="display">Chunky, charming, fully animated.</h2>
+      <p>Heroes, monsters, dragons and sci-fi weapons in one consistent voxel style, so every pack works together in the same game.</p>
+      <div class="feats">
+        <div><b>113</b>characters</div>
+        <div><b>52</b>monsters</div>
+        <div><b>33</b>aliens</div>
+        <div><b>14</b>transforming guns</div>
+      </div>
+      <a class="btn primary" href="https://josephpodado.itch.io/voxel-fantasy-realms" target="_blank" rel="noopener" style="background:#fff;color:#25127a;box-shadow:0 10px 30px rgba(0,0,0,.3)">Start with Fantasy Realms <svg><use href="#arr"/></svg></a>
+    </div>
+    <div class="stack rv">
+      <a href="https://josephpodado.itch.io/voxel-fantasy-realms" target="_blank" rel="noopener" style="background-image:url(assets/covers/voxel-fantasy-realms.jpg)" aria-label="Voxel Fantasy Realms"></a>
+      <a href="https://josephpodado.itch.io/voxel-energy-arsenal" target="_blank" rel="noopener" style="background-image:url(assets/covers/voxel-energy-arsenal.jpg)" aria-label="Voxel Energy Arsenal"></a>
+      <a href="https://josephpodado.itch.io/voxel-aliens" target="_blank" rel="noopener" style="background-image:url(assets/covers/voxel-aliens.jpg)" aria-label="Voxel Aliens"></a>
+      <a href="https://josephpodado.itch.io/voxel-dragon-knight" target="_blank" rel="noopener" style="background-image:url(assets/covers/voxel-dragon-knight.jpg)" aria-label="Voxel Dragon Knight"></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHOPS ============ -->
+<section class="shops" id="shops">
+  <div class="wrap">
+    <div class="head rv">
+      <div><div class="eyebrow">Simulator-ready</div><h2 class="display">Shops &amp; venues you can run.</h2></div>
+      <p>Built for management and simulator games: opening doors, stocked shelves, and food and props split into separate parts.</p>
+    </div>
+    <div class="masonry">
+      <a class="shot s1 rv" href="https://josephpodado.itch.io/japanese-convenience-store-600-props" target="_blank" rel="noopener"><img src="assets/art/konbini-in.jpg" alt="Convenience store interior" loading="lazy"><span>Convenience Store</span></a>
+      <a class="shot s2 rv" href="https://josephpodado.itch.io/bakery-simulator-ready" target="_blank" rel="noopener"><img src="assets/art/bakery.jpg" alt="Bakery interior" loading="lazy"><span>Bakery</span></a>
+      <a class="shot s3 rv" href="https://josephpodado.itch.io/boba-tea-shop-simulator-ready" target="_blank" rel="noopener"><img src="assets/art/boba.jpg" alt="Bubble tea shop front" loading="lazy"><span>Bubble Tea Shop</span></a>
+      <a class="shot s4 rv" href="https://josephpodado.itch.io/japanese-ramen-shop" target="_blank" rel="noopener"><img src="assets/covers/japanese-ramen-shop-free.jpg" alt="Ramen shop lantern" loading="lazy"><span>Ramen</span></a>
+      <a class="shot s5 rv" href="https://josephpodado.itch.io/conveyor-sushi-restaurant" target="_blank" rel="noopener"><img src="assets/art/sushi-in.jpg" alt="Conveyor sushi restaurant interior" loading="lazy"><span>Conveyor Sushi</span></a>
+      <a class="shot s6 rv" href="https://josephpodado.itch.io/japanese-live-stage" target="_blank" rel="noopener"><img src="assets/art/stage-main.jpg" alt="Concert stage with spotlights" loading="lazy"><span>Live Stage</span></a>
+      <a class="shot s7 rv" href="https://josephpodado.itch.io/japanese-aquarium" target="_blank" rel="noopener"><img src="assets/art/aquarium.jpg" alt="Aquarium hall" loading="lazy"><span>Aquarium</span></a>
+      <a class="shot s8 rv" href="https://josephpodado.itch.io/sushi-collection-100-sushi" target="_blank" rel="noopener"><img src="assets/art/sushi-wall.jpg" alt="135 sushi models" loading="lazy" style="object-position:50% 45%;background:#000"><span>Sushi Collection</span></a>
+      <a class="shot s9 rv" href="https://josephpodado.itch.io/low-poly-zoo-environment" target="_blank" rel="noopener"><img src="assets/covers/low-poly-zoo-environment.jpg" alt="Low poly zoo" loading="lazy" style="object-position:50% 10%"><span>Low Poly Zoo</span></a>
+    </div>
+    <div class="tagline rv"><span>Opening doors</span><span>341 konbini products</span><span>Layered drinks &amp; ramen</span><span>46 swimming animals</span><span>Built-in &amp; URP</span></div>
+  </div>
+</section>
+
+<!-- ============ FPS ============ -->
+<section class="fps" id="fps">
+  <img src="assets/art/fps-street.jpg" alt="" loading="lazy">
+  <div class="wrap rv">
+    <div class="eyebrow">Tactical FPS Mega Pack</div>
+    <h2 class="display">Maps. Weapons. Ready to fight.</h2>
+    <p>A complete tactical shooter kit: modular city maps, weapons with separable parts and a working FPS demo you can play right now.</p>
+    <div class="specs">
+      <div><b>7 zones</b>playable maps</div>
+      <div><b>0.5 m grid</b>modular building</div>
+      <div><b>Interactive</b>doors &amp; targets</div>
+      <div><b>URP ready</b>and Built-in</div>
+    </div>
+    <div class="btns">
+      <a class="btn orange" href="tactical-fps-mega/"><svg><use href="#play"/></svg> Play the demo</a>
+      <a class="btn ghost" href="https://josephpodado.itch.io/tactical-fps-mega-pack" target="_blank" rel="noopener">View on itch.io</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ALL ============ -->
+<section class="all" id="all">
+  <div class="wrap">
+    <div class="head rv">
+      <div><div class="eyebrow">The full catalog</div><h2 class="display">All 15 packs</h2></div>
       <div class="filters" role="group" aria-label="Filter packs">
         <button aria-pressed="true" data-f="all">All</button>
         <button aria-pressed="false" data-f="voxel">Voxel</button>
@@ -190,96 +412,80 @@ footer a{color:var(--accent)}
         <button aria-pressed="false" data-f="fps">FPS</button>
       </div>
     </div>
-    <div class="grid" id="packgrid">
-      <a class="card" data-c="voxel" href="https://josephpodado.itch.io/voxel-fantasy-realms" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/voxel-fantasy-realms.jpg)"></span>
-        <div class="body"><h3>Voxel Fantasy Realms</h3><p>MMO RPG kit with heroes, monsters, castles and a character creator.</p><div class="tags"><span class="tag on">Browser demo</span><span class="tag">Voxel</span></div></div>
-      </a>
-      <a class="card" data-c="fps" href="https://josephpodado.itch.io/tactical-fps-mega-pack" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/tactical-fps-mega-pack.jpg)"></span>
-        <div class="body"><h3>Tactical FPS Mega Pack</h3><p>7 zones of modular maps, weapons with separable parts and an FPS demo.</p><div class="tags"><span class="tag on">Browser demo</span><span class="tag">FPS</span></div></div>
-      </a>
-      <a class="card" data-c="voxel" href="https://josephpodado.itch.io/voxel-energy-arsenal" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/voxel-energy-arsenal.jpg)"></span>
-        <div class="body"><h3>Voxel Energy Arsenal</h3><p>Transforming and energy weapons with FX and sounds.</p><div class="tags"><span class="tag on">Browser demo</span><span class="tag">Voxel</span></div></div>
-      </a>
-      <a class="card" data-c="voxel" href="https://josephpodado.itch.io/voxel-dragon-knight" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/voxel-dragon-knight.jpg)"></span>
-        <div class="body"><h3>Voxel Dragon Knight</h3><p>Rideable dragon and knight, rigged and animated, with a mounted prefab.</p><div class="tags"><span class="tag on">Browser demo</span><span class="tag">Voxel</span></div></div>
-      </a>
-      <a class="card" data-c="voxel" href="https://josephpodado.itch.io/voxel-aliens" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/voxel-aliens.jpg)"></span>
-        <div class="body"><h3>Voxel Aliens</h3><p>33 animated creatures with pixel textures.</p><div class="tags"><span class="tag on">Browser demo</span><span class="tag">Voxel</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/bakery-simulator-ready" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/bakery-simulator-ready.jpg)"></span>
-        <div class="body"><h3>Bakery</h3><p>Simulator-ready bakery with 3 shop themes, layered baked goods and opening doors.</p><div class="tags"><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/boba-tea-shop-simulator-ready" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/boba-tea-shop-simulator-ready.jpg)"></span>
-        <div class="body"><h3>Bubble Tea Shop</h3><p>Simulator-ready boba shop with a drink builder and two-tone layered drinks.</p><div class="tags"><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/japanese-convenience-store-600-props" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/japanese-convenience-store-600-props.jpg)"></span>
-        <div class="body"><h3>Japanese Convenience Store</h3><p>A full konbini with 600+ props and 341 products.</p><div class="tags"><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/japanese-ramen-shop" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/japanese-ramen-shop.jpg)"></span>
-        <div class="body"><h3>Japanese Ramen Shop</h3><p>Modular, simulator-ready ramen shop with layered ramen bowls.</p><div class="tags"><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/japanese-ramen-shop-free" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/japanese-ramen-shop-free.jpg)"></span>
-        <div class="body"><h3>Ramen Shop Free Sampler</h3><p>A free taste of the Japanese Ramen Shop pack.</p><div class="tags"><span class="tag on">Free</span><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/conveyor-sushi-restaurant" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/conveyor-sushi-restaurant.jpg)"></span>
-        <div class="body"><h3>Conveyor Sushi Restaurant</h3><p>Simulator-ready conveyor-belt sushi restaurant, scripts and shaders included.</p><div class="tags"><span class="tag">Shop</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/sushi-collection-100-sushi" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/sushi-collection-100-sushi.jpg)"></span>
-        <div class="body"><h3>Sushi Collection</h3><p>135 sushi and sashimi plus 24 platters.</p><div class="tags"><span class="tag">Props</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/japanese-aquarium" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/japanese-aquarium.jpg)"></span>
-        <div class="body"><h3>Japanese Aquarium</h3><p>390+ prefabs, 33 exhibits and 46 animals that swim.</p><div class="tags"><span class="tag">Venue</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/japanese-live-stage" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/japanese-live-stage.jpg)"></span>
-        <div class="body"><h3>Japanese Live Stage</h3><p>Concert venue kit with 4 show themes and S / M / L venues.</p><div class="tags"><span class="tag">Venue</span></div></div>
-      </a>
-      <a class="card" data-c="shop" href="https://josephpodado.itch.io/low-poly-zoo-environment" target="_blank" rel="noopener">
-        <span class="cover" style="background-image:url(assets/covers/low-poly-zoo-environment.jpg)"></span>
-        <div class="body"><h3>Low Poly Zoo</h3><p>A complete low poly zoo environment.</p><div class="tags"><span class="tag">Venue</span></div></div>
-      </a>
-    </div>
-  </section>
+    <div class="packs" id="packs"></div>
+  </div>
+</section>
 
-  <section id="about">
-    <div class="sec-head"><div><h2>About BluePudding</h2></div></div>
-    <div class="about">
-      <div><h3>Simulator-ready</h3><p>Shop packs are built for management and simulator games, with opening doors and props split into separate parts.</p></div>
-      <div><h3>Try before you buy</h3><p>Browser demos are exported from the same assets you download, so what you see is what you get.</p></div>
-      <div><h3>Built-in &amp; URP</h3><p>Packs support both Unity's Built-in render pipeline and URP.</p></div>
+<!-- ============ FINAL ============ -->
+<section class="final rv">
+  <img src="assets/art/sushi-night.jpg" alt="" loading="lazy">
+  <div class="wrap">
+    <h2 class="display">Find your next world.</h2>
+    <p>Every BluePudding pack is on itch.io, with a free Ramen Shop sampler to try first.</p>
+    <div class="btns">
+      <a class="btn primary" href="https://josephpodado.itch.io/" target="_blank" rel="noopener">Visit the itch.io store <svg><use href="#arr"/></svg></a>
+      <a class="btn ghost" href="https://josephpodado.itch.io/japanese-ramen-shop-free" target="_blank" rel="noopener">Get the free sampler</a>
     </div>
-  </section>
-
-</main>
+  </div>
+</section>
 
 <footer>
   <div class="wrap">
-    <div>© 2026 BluePudding</div>
-    <div>Contact: <a href="mailto:newtonpew@gmail.com">newtonpew@gmail.com</a> · <a href="https://josephpodado.itch.io/" target="_blank" rel="noopener">itch.io</a></div>
+    <a class="brand" href="#"><svg><use href="#pud"/></svg>Blue<span>Pudding</span></a>
+    <div>© 2026 BluePudding · <a href="mailto:newtonpew@gmail.com">newtonpew@gmail.com</a> · <a href="https://josephpodado.itch.io/" target="_blank" rel="noopener">itch.io</a></div>
   </div>
 </footer>
 
 <script>
-const bar=document.getElementById('bar');
-addEventListener('scroll',()=>bar.classList.toggle('scrolled',scrollY>8),{passive:true});
-const btns=document.querySelectorAll('.filters button'),cards=document.querySelectorAll('#packgrid .card');
-btns.forEach(b=>b.addEventListener('click',()=>{
-  btns.forEach(x=>x.setAttribute('aria-pressed',x===b));
-  cards.forEach(c=>c.hidden=!(b.dataset.f==='all'||c.dataset.c===b.dataset.f));
-}));
+const PACKS=[
+ ['voxel-fantasy-realms','Voxel Fantasy Realms','MMO RPG kit','voxel'],
+ ['tactical-fps-mega-pack','Tactical FPS Mega Pack','Maps + weapons + demo','fps'],
+ ['voxel-energy-arsenal','Voxel Energy Arsenal','Transforming weapons','voxel'],
+ ['voxel-dragon-knight','Voxel Dragon Knight','Rideable dragon','voxel'],
+ ['voxel-aliens','Voxel Aliens','33 animated creatures','voxel'],
+ ['bakery-simulator-ready','Bakery','Simulator-ready','shop'],
+ ['boba-tea-shop-simulator-ready','Bubble Tea Shop','Simulator-ready','shop'],
+ ['japanese-convenience-store-600-props','Japanese Convenience Store','600+ props','shop'],
+ ['japanese-ramen-shop','Japanese Ramen Shop','Simulator-ready','shop'],
+ ['japanese-ramen-shop-free','Ramen Shop Sampler','Free','shop'],
+ ['conveyor-sushi-restaurant','Conveyor Sushi Restaurant','Simulator-ready','shop'],
+ ['sushi-collection-100-sushi','Sushi Collection','135 sushi & sashimi','shop'],
+ ['japanese-aquarium','Japanese Aquarium','46 animals','shop'],
+ ['japanese-live-stage','Japanese Live Stage','Concert venue kit','shop'],
+ ['low-poly-zoo-environment','Low Poly Zoo','Zoo environment','shop'],
+];
+const url=s=>'https://josephpodado.itch.io/'+s, cov=s=>'assets/covers/'+s+'.jpg';
+const esc=t=>t.replace(/&/g,'&amp;');
+document.getElementById('packs').innerHTML=PACKS.map(([s,t,d,c])=>
+ `<a class="pack rv" data-c="${c}" href="${url(s)}" target="_blank" rel="noopener"><div class="cv" style="background-image:url(${cov(s)})"></div><h3>${esc(t)}</h3><small class="${d==='Free'?'free':''}">${esc(d)}</small></a>`).join('');
+const mq=list=>{const h=list.map(([s,t])=>`<a href="${url(s)}" target="_blank" rel="noopener" aria-label="${esc(t)}" style="background-image:url(${cov(s)})"></a>`).join('');return h+h};
+document.getElementById('mq1').innerHTML=mq(PACKS.slice(0,8));
+document.getElementById('mq2').innerHTML=mq(PACKS.slice(7).concat(PACKS.slice(0,1)));
+
+// filters
+const fb=document.querySelectorAll('.filters button');
+fb.forEach(b=>b.onclick=()=>{fb.forEach(x=>x.setAttribute('aria-pressed',x===b));
+ document.querySelectorAll('.pack').forEach(p=>p.hidden=!(b.dataset.f==='all'||p.dataset.c===b.dataset.f));});
+
+// header
+const top_=document.getElementById('top');
+const onS=()=>top_.classList.toggle('solid',scrollY>40);onS();addEventListener('scroll',onS,{passive:true});
+
+// hero slideshow
+const slides=[...document.querySelectorAll('.slide')],tabs=[...document.querySelectorAll('.tab')];let cur=0,timer;
+const load=i=>{const im=slides[i].querySelector('img');if(im.dataset.src){im.src=im.dataset.src;im.removeAttribute('data-src')}};
+function go(i){load(i);load((i+1)%slides.length);
+ slides[cur].classList.remove('on');tabs[cur].classList.remove('on');
+ cur=i;slides[cur].classList.add('on');
+ const t=tabs[cur];t.classList.remove('on');void t.offsetWidth;t.classList.add('on');
+ clearTimeout(timer);timer=setTimeout(()=>go((cur+1)%slides.length),7000);}
+tabs.forEach((t,i)=>t.onclick=()=>go(i));
+addEventListener('load',()=>load(1));
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches) timer=setTimeout(()=>go(1),7000);
+
+// reveal
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});
+document.querySelectorAll('.rv').forEach((el,i)=>{el.style.transitionDelay=(i%4)*70+'ms';io.observe(el)});
 </script>
 </body>
 </html>
