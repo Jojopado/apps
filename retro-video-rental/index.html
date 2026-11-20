@@ -39,8 +39,8 @@
       <h1>RETRO VIDEO RENTAL STORE <span>— Live 3D Showcase · BluePudding asset kit for Unity</span></h1>
       <div class="spacer"></div>
       <a href="https://josephpodado.itch.io/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:700;margin-right:6px">BluePudding on itch.io ↗</a>
-      <button class="ghost" id="q" title="Render quality (auto lowers the resolution when the frame rate drops)">Quality: High</button>
-      <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
+      <button class="ghost" id="q" title="Render quality [G] (auto lowers the resolution when the frame rate drops)">[G] Quality: High</button>
+      <button id="fs" title="Fullscreen">Fullscreen</button>
     </header>
     <div id="stage">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
@@ -53,9 +53,9 @@
       <div id="error"></div>
     </div>
     <footer>
-      <span><b>WASD</b> move · <b>drag mouse</b> to look</span>
-      <span><b>E</b> interact (aim the dot): doors, drawers, VCR, rewinder, tapes</span>
-      <span><b>Tab</b> jump menu · <b>F</b> walk / fly · fly: <b>Space</b> up, <b>C</b>/<b>Q</b> down</span>
+      <span>Click the 3D view to capture the mouse · <b>Esc</b> releases it</span>
+      <span><b>WASD</b> move · <b>mouse</b> look · <b>E</b> interact (aim the dot)</span>
+      <span><b>Tab</b> areas (↑↓ Enter, 1-9) · <b>F</b> walk / fly · <b>G</b> quality · <b>H</b> help · fly: <b>Space</b> up, <b>C</b>/<b>Q</b> down</span>
       <span>Desktop browser with keyboard and mouse · Chrome / Edge / Firefox</span>
     </footer>
   </div>
@@ -137,10 +137,12 @@
     function applyScale() {
       var w = Math.max(1, Math.round(canvas.clientWidth * scale)), h = Math.max(1, Math.round(canvas.clientHeight * scale));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-      qBtn.textContent = "Quality: " + mode + " (" + Math.round(scale * 100) + "%)";
-      if (instance) instance.SendMessage("RVRWeb_Showcase", "SetUiScale", scale);
+      var lbl = mode + " " + Math.round(scale * 100) + "%";
+      qBtn.textContent = "[G] Quality: " + lbl;
+      if (instance) { instance.SendMessage("RVRWeb_Showcase", "SetUiScale", scale); instance.SendMessage("RVRWeb_Showcase", "SetQualityLabel", lbl); }
     }
-    qBtn.onclick = function () { mode = mode === "High" ? "Balanced" : "High"; scale = MAX[mode]; autoDrop = 0; applyScale(); };
+    window.rvrToggleQuality = function () { mode = mode === "High" ? "Balanced" : "High"; scale = MAX[mode]; autoDrop = 0; applyScale(); };
+    qBtn.onclick = window.rvrToggleQuality;
     window.addEventListener("resize", applyScale);
     var frames = 0, last = performance.now(), slow = 0;
     function tick(now) {
@@ -162,6 +164,11 @@
     });
     document.getElementById("fs").onclick = function () { if (instance) instance.SetFullscreen(1); };
     canvas.addEventListener("mousedown", function () { canvas.focus(); });
+    // tell the showcase whether the mouse is really captured (Esc releases it in every browser)
+    function lockState(v) { if (instance) instance.SendMessage("RVRWeb_Showcase", "SetPointerLocked", v); }
+    document.addEventListener("pointerlockchange", function () { lockState(document.pointerLockElement === canvas ? 1 : 0); });
+    document.addEventListener("pointerlockerror", function () { lockState(2); });
+    window.addEventListener("blur", function () { if (document.pointerLockElement) document.exitPointerLock(); });
     var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
     if (mobile) {
       document.getElementById("mobile").style.display = "flex";
