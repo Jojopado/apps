@@ -1,0 +1,545 @@
+{
+ "title": "Fresh Cut Ingredients",
+ "prefix": "FCI",
+ "version": "1.0.0",
+ "items": [
+  {
+   "id": "Onion",
+   "label": "Yellow Onion",
+   "zh": "黃洋蔥",
+   "category": "Vegetables",
+   "note": "Ø 7.5 cm",
+   "states": [
+    {
+     "id": "Whole",
+     "label": "Whole",
+     "file": "models/Onion_Whole.glb",
+     "unity": "FCI_Onion_Whole",
+     "pieces": 1,
+     "tris": 7056,
+     "size": [
+      0.0753,
+      0.0755,
+      0.078
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Onion_Whole.jpg"
+    },
+    {
+     "id": "Peeled",
+     "label": "Peeled",
+     "file": "models/Onion_Peeled.glb",
+     "unity": "FCI_Onion_Peeled",
+     "pieces": 1,
+     "tris": 6480,
+     "size": [
+      0.0712,
+      0.0712,
+      0.0623
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Onion_Peeled.jpg"
+    },
+    {
+     "id": "Halved",
+     "label": "Halved",
+     "file": "models/Onion_Halved.glb",
+     "unity": "FCI_Onion_Halved",
+     "pieces": 2,
+     "tris": 7124,
+     "size": [
+      0.1523,
+      0.0712,
+      0.0357
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Onion_Halved.jpg"
+    },
+    {
+     "id": "Slices",
+     "label": "Sliced",
+     "file": "models/Onion_Slices.glb",
+     "unity": "FCI_Onion_Slices",
+     "pieces": 6,
+     "tris": 5160,
+     "size": [
+      0.4402,
+      0.0712,
+      0.0056
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Onion_Slices.jpg"
+    },
+    {
+     "id": "Rings",
+     "label": "Rings",
+     "file": "models/Onion_Rings.glb",
+     "unity": "FCI_Onion_Rings",
+     "pieces": 5,
+     "tris": 4374,
+     "size": [
+      0.3188,
+      0.0712,
+      0.0056
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Onion_Rings.jpg"
+    },
+    {
+     "id": "Diced",
+     "label": "Diced",
+     "file": "models/Onion_Diced.glb",
+     "unity": "FCI_Onion_Diced",
+     "pieces": 36,
+     "tris": 940,
+     "size": [
+      0.0745,
+      0.0739,
+      0.0198
+     ],
+     "center": [
+      0.0014,
+      0.0013
+     ],
+     "thumb": "thumbs/Onion_Diced.jpg"
+    }
+   ],
+   "tex": {
+    "Albedo": "tex/Onion_Albedo.jpg",
+    "Normal": "tex/Onion_Normal.jpg",
+    "ORM": "tex/Onion_ORM.jpg"
+   }
+  },
+  {
+   "id": "Tomato",
+   "label": "Tomato",
+   "zh": "番茄",
+   "category": "Vegetables",
+   "note": "Ø 7 cm",
+   "states": [
+    {
+     "id": "Whole",
+     "label": "Whole",
+     "file": "models/Tomato_Whole.glb",
+     "unity": "FCI_Tomato_Whole",
+     "pieces": 3,
+     "tris": 10208,
+     "size": [
+      0.07,
+      0.07,
+      0.0613
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Tomato_Whole.jpg"
+    },
+    {
+     "id": "Halved",
+     "label": "Halved",
+     "file": "models/Tomato_Halved.glb",
+     "unity": "FCI_Tomato_Halved",
+     "pieces": 2,
+     "tris": 7196,
+     "size": [
+      0.15,
+      0.07,
+      0.0279
+     ],
+     "center": [
+      -0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Tomato_Halved.jpg"
+    },
+    {
+     "id": "Slices",
+     "label": "Sliced",
+     "file": "models/Tomato_Slices.glb",
+     "unity": "FCI_Tomato_Slices",
+     "pieces": 6,
+     "tris": 6696,
+     "size": [
+      0.4205,
+      0.07,
+      0.0066
+     ],
+     "center": [
+      -0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Tomato_Slices.jpg"
+    },
+    {
+     "id": "Wedges",
+     "label": "Wedges",
+     "file": "models/Tomato_Wedges.glb",
+     "unity": "FCI_Tomato_Wedges",
+     "pieces": 6,
+     "tris": 7912,
+     "size": [
+      0.356,
+      0.0352,
+      0.0355
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Tomato_Wedges.jpg"
+    },
+    {
+     "id": "Diced",
+     "label": "Diced",
+     "file": "models/Tomato_Diced.glb",
+     "unity": "FCI_Tomato_Diced",
+     "pieces": 28,
+     "tris": 1594,
+     "size": [
+      0.0998,
+      0.1024,
+      0.0296
+     ],
+     "center": [
+      -0.0002,
+      0.0003
+     ],
+     "thumb": "thumbs/Tomato_Diced.jpg"
+    }
+   ],
+   "tex": {
+    "Albedo": "tex/Tomato_Albedo.jpg",
+    "Normal": "tex/Tomato_Normal.jpg",
+    "ORM": "tex/Tomato_ORM.jpg"
+   }
+  },
+  {
+   "id": "Carrot",
+   "label": "Carrot",
+   "zh": "紅蘿蔔",
+   "category": "Vegetables",
+   "note": "L 18 cm",
+   "states": [
+    {
+     "id": "Whole",
+     "label": "Whole",
+     "file": "models/Carrot_Whole.glb",
+     "unity": "FCI_Carrot_Whole",
+     "pieces": 2,
+     "tris": 7200,
+     "size": [
+      0.1886,
+      0.0284,
+      0.0284
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Carrot_Whole.jpg"
+    },
+    {
+     "id": "Peeled",
+     "label": "Peeled",
+     "file": "models/Carrot_Peeled.glb",
+     "unity": "FCI_Carrot_Peeled",
+     "pieces": 1,
+     "tris": 6720,
+     "size": [
+      0.1674,
+      0.027,
+      0.027
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Carrot_Peeled.jpg"
+    },
+    {
+     "id": "Rounds",
+     "label": "Rounds",
+     "file": "models/Carrot_Rounds.glb",
+     "unity": "FCI_Carrot_Rounds",
+     "pieces": 16,
+     "tris": 6432,
+     "size": [
+      0.1227,
+      0.1214,
+      0.0046
+     ],
+     "center": [
+      0.0037,
+      -0.0079
+     ],
+     "thumb": "thumbs/Carrot_Rounds.jpg"
+    },
+    {
+     "id": "Bias",
+     "label": "Bias Cut",
+     "file": "models/Carrot_Bias.glb",
+     "unity": "FCI_Carrot_Bias",
+     "pieces": 7,
+     "tris": 4616,
+     "size": [
+      0.2889,
+      0.0217,
+      0.0055
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Carrot_Bias.jpg"
+    },
+    {
+     "id": "Sticks",
+     "label": "Sticks",
+     "file": "models/Carrot_Sticks.glb",
+     "unity": "FCI_Carrot_Sticks",
+     "pieces": 12,
+     "tris": 2578,
+     "size": [
+      0.0904,
+      0.0929,
+      0.0238
+     ],
+     "center": [
+      0.0039,
+      0.0008
+     ],
+     "thumb": "thumbs/Carrot_Sticks.jpg"
+    },
+    {
+     "id": "Diced",
+     "label": "Diced",
+     "file": "models/Carrot_Diced.glb",
+     "unity": "FCI_Carrot_Diced",
+     "pieces": 32,
+     "tris": 2602,
+     "size": [
+      0.07,
+      0.072,
+      0.016
+     ],
+     "center": [
+      -0.0051,
+      -0.002
+     ],
+     "thumb": "thumbs/Carrot_Diced.jpg"
+    }
+   ],
+   "tex": {
+    "Albedo": "tex/Carrot_Albedo.jpg",
+    "Normal": "tex/Carrot_Normal.jpg",
+    "ORM": "tex/Carrot_ORM.jpg"
+   }
+  },
+  {
+   "id": "Lemon",
+   "label": "Lemon",
+   "zh": "檸檬",
+   "category": "Fruits",
+   "note": "L 7.5 cm",
+   "states": [
+    {
+     "id": "Whole",
+     "label": "Whole",
+     "file": "models/Lemon_Whole.glb",
+     "unity": "FCI_Lemon_Whole",
+     "pieces": 1,
+     "tris": 7344,
+     "size": [
+      0.055,
+      0.075,
+      0.0533
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Lemon_Whole.jpg"
+    },
+    {
+     "id": "Halved",
+     "label": "Halved",
+     "file": "models/Lemon_Halved.glb",
+     "unity": "FCI_Lemon_Halved",
+     "pieces": 2,
+     "tris": 7628,
+     "size": [
+      0.123,
+      0.0533,
+      0.0376
+     ],
+     "center": [
+      -0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Lemon_Halved.jpg"
+    },
+    {
+     "id": "Slices",
+     "label": "Sliced",
+     "file": "models/Lemon_Slices.glb",
+     "unity": "FCI_Lemon_Slices",
+     "pieces": 6,
+     "tris": 3864,
+     "size": [
+      0.3478,
+      0.0533,
+      0.0036
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Lemon_Slices.jpg"
+    },
+    {
+     "id": "Wedges",
+     "label": "Wedges",
+     "file": "models/Lemon_Wedges.glb",
+     "unity": "FCI_Lemon_Wedges",
+     "pieces": 8,
+     "tris": 8976,
+     "size": [
+      0.075,
+      0.2515,
+      0.0194
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Lemon_Wedges.jpg"
+    }
+   ],
+   "tex": {
+    "Albedo": "tex/Lemon_Albedo.jpg",
+    "Normal": "tex/Lemon_Normal.jpg",
+    "ORM": "tex/Lemon_ORM.jpg"
+   }
+  },
+  {
+   "id": "Avocado",
+   "label": "Avocado",
+   "zh": "酪梨",
+   "category": "Fruits",
+   "note": "L 10 cm",
+   "states": [
+    {
+     "id": "Whole",
+     "label": "Whole",
+     "file": "models/Avocado_Whole.glb",
+     "unity": "FCI_Avocado_Whole",
+     "pieces": 2,
+     "tris": 8448,
+     "size": [
+      0.1045,
+      0.0615,
+      0.0649
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Avocado_Whole.jpg"
+    },
+    {
+     "id": "Halved",
+     "label": "Halved",
+     "file": "models/Avocado_Halved.glb",
+     "unity": "FCI_Avocado_Halved",
+     "pieces": 3,
+     "tris": 13892,
+     "size": [
+      0.181,
+      0.0615,
+      0.0537
+     ],
+     "center": [
+      -0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Avocado_Halved.jpg"
+    },
+    {
+     "id": "Pit",
+     "label": "Pit",
+     "file": "models/Avocado_Pit.glb",
+     "unity": "FCI_Avocado_Pit",
+     "pieces": 1,
+     "tris": 2208,
+     "size": [
+      0.042,
+      0.042,
+      0.047
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Avocado_Pit.jpg"
+    },
+    {
+     "id": "Sliced",
+     "label": "Sliced",
+     "file": "models/Avocado_Sliced.glb",
+     "unity": "FCI_Avocado_Sliced",
+     "pieces": 14,
+     "tris": 7896,
+     "size": [
+      0.1362,
+      0.0594,
+      0.031
+     ],
+     "center": [
+      0.0,
+      0.0
+     ],
+     "thumb": "thumbs/Avocado_Sliced.jpg"
+    },
+    {
+     "id": "Diced",
+     "label": "Diced",
+     "file": "models/Avocado_Diced.glb",
+     "unity": "FCI_Avocado_Diced",
+     "pieces": 22,
+     "tris": 4442,
+     "size": [
+      0.1123,
+      0.1089,
+      0.0237
+     ],
+     "center": [
+      0.0005,
+      -0.0029
+     ],
+     "thumb": "thumbs/Avocado_Diced.jpg"
+    }
+   ],
+   "tex": {
+    "Albedo": "tex/Avocado_Albedo.jpg",
+    "Normal": "tex/Avocado_Normal.jpg",
+    "ORM": "tex/Avocado_ORM.jpg"
+   }
+  }
+ ]
+}
