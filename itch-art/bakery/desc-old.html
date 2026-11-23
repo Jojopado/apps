@@ -1,0 +1,113 @@
+<p><strong>For Unity 2022.3+ (.unitypackage).</strong></p>
+
+<p>Bakery interior, kitchen equipment and baked goods for Unity. Baked goods are built from separate layers (liner, cake, frosting, glaze, filling, crust, lattice, toppers) that share one pivot, so they line up when placed on the same spot.</p>
+
+<h3>WHAT YOU GET</h3>
+
+<ul>
+
+  <li>Baked goods as ready-made prefabs: donuts, cupcakes and muffins, layer cakes (whole, cut, slice, plated), pies, cheesecake, breads, cookies, brownies, bagels, croissants, cinnamon rolls and dinner rolls</li>
+
+  <li>Food layers as separate prefabs: cake sponges, fillings, coats, borders and drips in three sizes; cupcake liners, cakes and frosting swirls; donut bodies, glazes and toppings; pie crusts, fillings and lattices; toppers</li>
+
+  <li>Raw and finished versions linked by ABK_StateChain (dough to bread, raw to fried donut, batter to cupcake, whole cake to slice); Advance() swaps the object in place</li>
+
+  <li>Shop modules: brick storefront with display windows, opening door, corner piers, awnings, store-name and blade signs; interior walls in red brick, kitchen walls in white subway tile</li>
+
+  <li>Front of house: register counter with cash drawer, curved and dry display cases with sliding rear doors, bread racks and display tables, coffee bar, menu boards, seating, pendant lights, ceiling fan</li>
+
+  <li>Kitchen: proofer, deck oven, convection oven, speed racks, floor and stand mixers, donut fryer, glaze station, reach-in fridge, three-compartment sink, hand sink, work tables, wire shelving</li>
+
+  <li>Tools and packaging: pans and tins, mixing bowls, rolling pins, piping bags, scale, timer, oven mitt, cake and pastry boxes, paper bags, cups</li>
+
+  <li>3 shop themes (Farmhouse, 1950s Pastel, Modern Minimal) that switch with one click; all printed graphics in English</li>
+
+  <li>Demo scenes: three stocked bakeries (6, 8 and 12 m wide) and a showcase of every prefab</li>
+
+</ul>
+
+<h3>FOOD</h3>
+
+<ul>
+
+  <li>Every food layer has its pivot at the bottom centre of the item: drop the layers on the same spot and they stack</li>
+
+  <li>Cakes come in 12, 18 and 24 cm sizes; cut cakes, slices and plated slices are separate prefabs</li>
+
+  <li>Sheet pans, muffin tins and loaf pans have raw and baked versions</li>
+
+  <li>ABK_BakeryItem holds a display name and a suggested price that match the printed price tags and menu boards</li>
+
+</ul>
+
+<h3>SHOP AND EQUIPMENT</h3>
+
+<ul>
+
+  <li>Modules on a 0.5 m grid at real-world scale; walls 3 m high and 0.15 m thick</li>
+
+  <li>26 prefabs with doors, lids or drawers that open (ABK_Openable): ovens, proofer, fridge, display cases, kitchen door, cash drawer, box lids, cake dome, jar and bin lids</li>
+
+  <li>Ovens, proofer, fridge, fryer and sinks are hollow inside</li>
+
+  <li>97 prefabs have display surfaces (ABK_DisplaySurface) with stocking slots; ABK_DisplayStocker fills them from a list of prefabs</li>
+
+  <li>Items that sit on equipment are separate prefabs (register, receipt printer, tip jar, pans, bowls, boxes)</li>
+
+</ul>
+
+<h3>NOT INCLUDED</h3>
+
+<ul>
+
+  <li>No people or characters</li>
+
+  <li>No gameplay systems (ordering, money, baking timers); the scripts only open parts, swap item states, stock displays and switch shop themes</li>
+
+  <li>No animations</li>
+
+</ul>
+
+<h3>TECHNICAL</h3>
+
+<ul>
+
+  <li>308 models, 456 prefabs, real-world scale in metres</li>
+
+  <li>Triangles per model (LOD0): min 2, average 2,088, max 21,192; LOD1 on 42 models</li>
+
+  <li>255 PNG textures (252 at 1024 px, 3 at 2048 px); 189 materials</li>
+
+  <li>Built-in Render Pipeline (Standard shader); a menu tool converts the materials to URP</li>
+
+  <li>Runtime scripts (namespace BluePudding.AmericanBakery): ABK_BakeryItem, ABK_DisplayStocker, ABK_DisplaySurface, ABK_FoodLayer, ABK_Grabbable, ABK_Openable, ABK_StateChain, ABK_Theme, ABK_ThemeSwitcher; demo walk-around scripts ABK_Explorer, ABK_ExplorerHUD, ABK_Input, ABK_ViewPoint</li>
+
+  <li>No animations, no rigging; colliders on 454 of 456 prefabs; UVs on every model</li>
+
+  <li>PDF manual included; Unity 2022.3 or newer</li>
+
+</ul>
+
+<h3>THIRD-PARTY NOTICES</h3>
+
+<ul>
+
+  <li>Asset uses textures from Poly Haven and ambientCG under CC0 1.0 (Public Domain); the fonts Pacifico, Playfair Display, Caveat, Rubik, Lilita One under the SIL Open Font License 1.1; see Third-Party Notices.txt file in package for details.</li>
+
+</ul>
+
+<h3>FILES</h3>
+
+<ul>
+
+  <li><strong>AmericanBakery_v1.0.0.unitypackage</strong> - import it with Assets &gt; Import Package &gt; Custom Package</li>
+
+  <li><strong>AmericanBakery_Documentation.pdf</strong> - the manual (also inside the package)</li>
+
+</ul>
+
+<h3>LICENSE</h3>
+
+<p>Use in any number of commercial or non-commercial games and apps. You may not resell or redistribute the assets themselves, on their own or as part of another asset pack. Store names and brands shown are fictional.</p>
+
+<p><em><small>How it&#x27;s made: the models are built by Python scripts in Blender, written with help from an AI coding assistant, and every model was checked by hand.</small></em></p>
