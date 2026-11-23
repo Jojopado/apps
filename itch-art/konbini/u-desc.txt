@@ -1,0 +1,40 @@
+Online 3D showcase: https://jojopado.github.io/apps/japanese-convenience-store/
+
+A Japanese convenience store (konbini) from the parking lot to the backroom: modular building pieces, equipment, 427 products, 4 store brands and 6 stocked store layouts.
+
+4 STORE BRANDS
+- HINATA MART (teal / yellow), MOMIJI STORE (red / orange), AOZORA MART (blue) and SUMIRE MART (purple). One click changes sign bands, logo, aisle signs, fridge headers, posters, vending machines and delivery truck. All brands are original and fictional.
+
+6 STORE LAYOUTS
+- Small, Medium, Medium Cafe, Medium Station, Large and Large Urban, as stocked prefabs
+- Demo scene: 16 x 12 m store with walk-in cooler, receiving area, backroom, restroom and parking lot
+- Showcase scene with the prefabs by category
+
+427 PRODUCTS
+- Drinks: cans, bottle cans, PET bottles with see-through drinks, cartons, chilled cups
+- Alcohol: beer, chuhai, one-cup sake, sake and shochu bottles, wine, whisky
+- Snacks and noodles: chips, candy, cookies, chocolate, gum, otsumami, cup / bowl / bag noodles
+- Fresh food: onigiri (wrapped and unwrapped), bento and rice bowls with separate lids, sandwiches, bread, salads, desserts
+- Ice cream, frozen food, bagged ice, eggs, tofu, natto, yogurt
+- Daily goods, cosmetics, socks, masks, magazines, manga, prepaid cards, seasonal goods
+- Hot food: oden, fried items, steamed buns, coffee
+- Product list as an asset and as a CSV (Japanese and English name, brand, category, price, size)
+
+THE STORE
+- Building: walls, storefront glass, automatic entrance, staff / restroom / steel back doors, floors, ceiling, light fittings, sprinkler, smoke detector, emergency light, air vent, sign bands
+- Shelving: wall, peg-hook and island gondolas, end cap, magazine rack, manga rack, cosmetics gondola, bakery rack, gift-card wall, price tags
+- Refrigeration: drink cooler, walk-in cooler (panels, racks, evaporator, drink cases), upright freezer, open multideck case, ice-cream chest, ice-cup and bagged-ice freezers
+- Checkout: counter modules with customer and staff side parts, POS register, receipt printer, self-checkout, tobacco rack with removable packs, back counter
+- Hot food: oden pot, fried-food case, coffee machine, steamed-bun case, microwaves, hot-drink case
+- Services: ATM, copier, trash station, parcel lockers, security cameras with monitors, fire equipment
+- Backroom: receiving area with pallet, scale, inspection table and hand truck, racks, staff desk, lockers, roll cages
+- Restroom, eat-in corner
+- Outdoor: 3 vending machines, gacha machines, ice-cream freezer, pylon sign, parking lot, bike rack, bench, smoking area, delivery truck with cargo doors and tail lift
+- Seasonal sets: New Year, Valentine, summer, Halloween, Christmas
+- Store states: discount stickers, sold-out cards, spills, broken bottle, damaged carton, footprints, overflowing trash
+
+OPENS / COMES APART
+- Fridge, freezer, cooler and vending machine doors, oden lid, hot cases, coffee hopper, microwave, ATM and copier covers, trash bins, cash drawer, self-checkout, parcel locker doors, desk drawers, lockers, bakery lids, toilet lid, truck doors and tail lift
+
+SCRIPTS (OPTIONAL)
+- Opening parts, automatic door, shelf stocking, product catalog, cartons, cargo loading, brand switch, season switch, day / evening / night and rain, security camera monitors

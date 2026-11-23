@@ -1,0 +1,8 @@
+- Unity 2022.3 or newer; Built-in Render Pipeline, with a converter to URP (tested with URP 14). HDRP is not supported
+- Real-world scale, 0.5 m grid, 3 m walls, pivots at floor level, +Z is the front
+- Models: 473 FBX files. Triangles per prefab (without the store layouts): 2 to 85,450, average about 2,400
+- Textures: 829 PNG, 256 to 8192 px (product label sheets are 8192); albedo, normal, metallic / smoothness and occlusion maps; UV mapped
+- LODs on larger models, box or mesh colliders, GPU instancing enabled
+- No rigging and no animation clips; doors and lids move by script
+- English PDF manual included
+- NO CHARACTERS INCLUDED. The demo scene has a fixed camera, no player controller
