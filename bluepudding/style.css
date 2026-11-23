@@ -174,3 +174,19 @@ dialog{border:0;padding:0;background:none;max-width:96vw;max-height:96vh}dialog:
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 .hero .im img:first-child{object-position:88% 50%}
 @media(max-width:700px){.top .brand svg{display:none}.top .brand{font-size:20px}.top nav{gap:14px}}
+
+.kv{position:relative;overflow:hidden;background:#ffb938}
+.kv .w{position:relative;z-index:2;padding-block:72px 0;min-height:min(50vw,720px)}
+.kv h1{font-size:clamp(44px,5.6vw,92px);max-width:6.2em;margin-bottom:20px;line-height:.95;letter-spacing:-.045em}
+.kv p{font-size:19px;max-width:20em;margin-bottom:26px}
+.kv .art{position:absolute;right:0;bottom:0;width:auto;height:100%;z-index:1;max-width:none}
+.kv::before{content:"";position:absolute;inset:auto 0 0;height:28.3%;background:#2549e8}
+.kv .row{max-width:400px}
+.nw{padding-block:64px 0!important}.ng{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.ng .pk .pi{aspect-ratio:4/3}.ng .sign{padding:16px 18px 18px}.ng .sign strong{font-size:25px}
+@media(max-width:1020px){.kv .w{min-height:0;padding-block:40px 20px}.kv .art{position:relative;width:100%;height:auto;display:block}.kv::before{height:16vw}.kv h1{max-width:9em}.ng{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.ng .sign{padding:12px}.ng .sign strong{font-size:19px}.ng{gap:10px}}
+.kv .w{min-height:min(48vw,700px);padding-top:60px}
+.nl{position:absolute;z-index:3;left:max(32px,calc((100vw - 1256px)/2));bottom:0;height:28.3%;display:flex;align-items:center;gap:20px;color:#fff;max-width:500px}
+.nl img{width:150px;aspect-ratio:4/3;object-fit:cover;border-radius:10px}.nl b{display:table;background:#ffb938;color:#0f1630;border-radius:6px;padding:1px 10px;font-size:14.5px;margin-bottom:8px}.nl strong{display:block;font:800 25px/1.05 var(--d);letter-spacing:-.02em;margin-bottom:4px}.nl:hover strong{text-decoration:underline}
+@media(max-width:1240px){.nl{max-width:36%}.nl img{display:none}}
+@media(max-width:1020px){.kv .w{min-height:0;padding-block:36px 16px}.kv::before{display:none}.kv .art{background:linear-gradient(#ffb938 72%,#2549e8 0)}.nl{position:static;height:auto;max-width:none;background:#2549e8;padding:18px 20px 24px}.nl img{display:block;width:120px}}
