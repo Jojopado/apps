@@ -54,7 +54,7 @@ button{font:inherit;color:inherit}
 .opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .opt.ok{border-color:var(--good);background:var(--good-soft)}
 .opt.no{border-color:var(--bad);background:var(--bad-soft)}
-.opt.miss{border-color:var(--good);border-style:dashed}
+.opt.miss{border:2px dashed var(--warn)}.opt .tag{margin-left:auto;flex:none;font-weight:600;font-size:.85rem}.opt.ok .tag{color:var(--good)}.opt.no .tag{color:var(--bad)}.opt.miss .tag{color:var(--warn)}
 .opt:disabled{cursor:default;color:inherit}
 .tfrow{display:flex;gap:8px}.tfrow .opt{justify-content:center}
 input[type=text],textarea{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px}
@@ -232,7 +232,7 @@ function showResult(el,p,right){
   else el.querySelectorAll(".opt").forEach((b,i)=>{
     const sel=p.k==="mc"?p.ans.has(i):p.ans===i,c=p.opts[i].c;
     b.setAttribute("aria-pressed","false");
-    if(sel&&c)b.classList.add("ok");else if(sel&&!c)b.classList.add("no");else if(c)b.classList.add("miss");
+    if(sel&&c)b.classList.add("ok");else if(sel&&!c)b.classList.add("no");else if(c)b.classList.add("miss"); const g=sel&&c?"✓ 選對":sel?"✗ 選錯":c?(p.k==="mc"?"⚠ 漏選":"✓ 正解"):""; if(g){const x=document.createElement("span");x.className="tag";x.textContent=g;b.appendChild(x)}
   });
   const ex=document.createElement("div");ex.className="exp";
   ex.innerHTML=`<span class="v ${right?"ok":"no"}">${right?"✓ 答對":"✗ 答錯"}</span>${right?"":`　正解：<b>${esc(answerText(p))}</b>`}<div>${esc(p.e)}</div>`;
