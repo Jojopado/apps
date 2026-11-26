@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Japanese Aquarium Showcase | BluePudding</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <style>
+    :root { --bg:#07121d; --panel:#0c1b2a; --line:#1f3a52; --text:#f4f5f8; --muted:#aeb6c8; --red:#1f8fc9; --gold:#7fe0f0; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
+    #shell { display:flex; flex-direction:column; height:100%; }
+    header { display:flex; align-items:center; gap:14px; padding:9px 18px; background:var(--panel); border-bottom:3px solid var(--red); flex:0 0 auto; }
+    header .dot { width:26px; height:26px; border-radius:50%; background:radial-gradient(circle, var(--gold) 45%, var(--red) 47%); border:3px solid #0b0e16; flex:0 0 auto; }
+    header h1 { font-size:17px; margin:0; font-weight:800; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    header h1 span { color:var(--gold); font-weight:700; font-size:13px; margin-left:8px; letter-spacing:.12em; }
+    header .spacer { flex:1; }
+    a.btn, button { font:inherit; font-weight:700; color:#07121d; background:var(--gold); border:0; padding:7px 14px; border-radius:6px; cursor:pointer; text-decoration:none; white-space:nowrap; }
+    a.btn.ghost, button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+    #stage { position:relative; flex:1 1 auto; min-height:0; background:#000; }
+    #unity-canvas { position:absolute; inset:0; width:100%; height:100%; display:block; background:#000; outline:none; }
+    #loading { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; background:#111 url("TemplateData/cover.jpg") center/cover no-repeat; }
+    #loading .card { margin:0 0 7vh; padding:18px 26px 20px; background:rgba(7,18,29,.88); border-radius:12px; border:1px solid var(--line); text-align:center; width:min(520px, 90vw); }
+    #loading .name { font-size:22px; font-weight:800; }
+    #loading .sub { color:var(--gold); font-size:12px; letter-spacing:.2em; font-weight:700; margin:2px 0 12px; }
+    #bar { height:8px; background:#1f3a52; border-radius:4px; overflow:hidden; }
+    #fill { width:0; height:100%; background:linear-gradient(90deg, var(--red), var(--gold)); transition:width .15s; }
+    #status { color:var(--muted); font-size:13px; margin-top:10px; }
+    #error { display:none; position:absolute; left:50%; top:14px; transform:translateX(-50%); background:#4a1712; color:#ffd9d2; padding:10px 16px; border-radius:6px; max-width:90%; z-index:5; }
+    footer { flex:0 0 auto; padding:7px 18px; color:var(--muted); font-size:13px; background:var(--panel); border-top:1px solid var(--line); display:flex; gap:18px; flex-wrap:wrap; }
+    footer b { color:var(--text); }
+    #qwrap { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:6px; }
+    button.q { padding:5px 10px; font-size:13px; }
+    button.q.on { background:var(--gold); color:#07121d; border-color:var(--gold); }
+    #mobile { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; padding:24px 16px; align-items:center; justify-content:center; text-align:center; }
+    #mobile .box { max-width:420px; } #mobile p { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="shell">
+    <header>
+      <div class="dot"></div>
+      <h1>Japanese Aquarium<span>LIVE 3D SHOWCASE</span></h1>
+      <div class="spacer"></div>
+      <span id="qwrap" title="Balanced lowers the render resolution automatically when the frame rate drops">Quality [G]
+        <button class="ghost q" id="qBal">Balanced</button><button class="ghost q" id="qHigh">High</button></span>
+      <a class="btn ghost" href="https://jojopado.github.io/apps/bluepudding/" target="_blank" rel="noopener">More BluePudding packs</a>
+      <button id="fs" title="Fullscreen (Esc to leave)">Fullscreen</button>
+    </header>
+    <div id="stage">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading"><div class="card">
+        <div class="name">Japanese Aquarium</div>
+        <div class="sub">LIVE 3D SHOWCASE · UNITY ASSET PACKAGE</div>
+        <div id="bar"><div id="fill"></div></div>
+        <div id="status">Loading… (the first visit downloads the showcase; later visits load from the browser cache)</div>
+      </div></div>
+      <div id="error"></div>
+    </div>
+    <footer>
+      <span><b>E</b> look closer at an animal / pick up · <b>R</b> flip · <b>M</b> areas · <b>1</b>–<b>0</b> jump · <b>Tab</b> walk/fly · <b>O</b> open everything · <b>G</b> quality · <b>H</b> keys · <b>Esc</b> free the mouse</span>
+      <span><b>WASD</b> move · <b>mouse</b> look · <b>right mouse</b> zoom · <b>Space</b> / <b>C</b> up / down (fly)</span>
+      <span>Everything shown is in the package · Desktop Chrome / Edge / Firefox</span>
+    </footer>
+  </div>
+  <div id="mobile"><div class="box">
+    <h2>Best on a computer</h2>
+    <p>This 3D showcase needs a mouse and a desktop GPU.</p>
+    <button class="ghost" id="anyway">Try anyway</button>
+  </div></div>
+  <script>
+    var canvas = document.getElementById("unity-canvas"), fill = document.getElementById("fill");
+    var statusEl = document.getElementById("status"), errorEl = document.getElementById("error"), instance = null;
+    function showError(m) { errorEl.textContent = m; errorEl.style.display = "block"; }
+    var buildUrl = "Build";
+    var config = {
+      dataUrl: buildUrl + "/JAQ_webbuild.data.unityweb",
+      frameworkUrl: buildUrl + "/JAQ_webbuild.framework.js.unityweb",
+      codeUrl: buildUrl + "/JAQ_webbuild.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "BluePudding",
+      productName: "Japanese Aquarium - Live 3D Showcase",
+      productVersion: "1.4",
+      devicePixelRatio: 1,
+      showBanner: function (msg, type) { if (type === "error") showError(msg); else console.warn(msg); }
+    };
+    // Filled in by web_build.sh when the data file is larger than GitHub's 100 MB limit (parts are joined in the browser)
+    var DATA_PARTS = null;
+    function fetchParts(parts, onProgress) {
+      var total = parts.reduce(function (a, p) { return a + p.size; }, 0), done = 0, blobs = [];
+      return parts.reduce(function (chain, p) {
+        return chain.then(function () {
+          return fetch(buildUrl + "/" + p.file).then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status + " for " + p.file);
+            var reader = r.body.getReader(), chunks = [];
+            function pump() {
+              return reader.read().then(function (x) {
+                if (x.done) { blobs.push(new Blob(chunks)); return; }
+                chunks.push(x.value); done += x.value.length; onProgress(done / total);
+                return pump();
+              });
+            }
+            return pump();
+          });
+        });
+      }, Promise.resolve()).then(function () { return URL.createObjectURL(new Blob(blobs)); });
+    }
+    function start() {
+      if (!DATA_PARTS) { boot(); return; }
+      fetchParts(DATA_PARTS, function (p) { fill.style.width = Math.round(p * 80) + "%"; })
+        .then(function (u) { config.dataUrl = u; boot(); }).catch(function (e) { showError("Download failed: " + e); });
+    }
+    function boot() {
+      var s = document.createElement("script");
+      s.src = buildUrl + "/JAQ_webbuild.loader.js";
+      s.onload = function () {
+        createUnityInstance(canvas, config, function (p) {
+          fill.style.width = Math.round(p * 100) + "%";
+          if (p >= 0.9) statusEl.textContent = "Opening the aquarium…";
+        }).then(function (inst) {
+          instance = inst; document.getElementById("loading").style.display = "none"; canvas.focus();
+          setQuality(qmode);
+          requestAnimationFrame(tick);
+        }).catch(function (e) { showError(String(e)); });
+      };
+      s.onerror = function () { showError("Could not load the showcase files."); };
+      document.body.appendChild(s);
+    }
+    // 畫質：High = 原解析度（最多 1.25 倍）；Balanced = 1 倍起跳，連續 3 秒低於 40 fps 就降低渲染解析度（最低 0.6），順了再慢慢升回來
+    var qmode = localStorage.getItem("jaq_quality") || "balanced", scale = 1, lowSec = 0, highSec = 0, frames = 0, last = performance.now();
+    function applyScale(v) {
+      scale = v;
+      config.devicePixelRatio = v;
+      if (instance && instance.Module) { instance.Module.devicePixelRatio = v; window.dispatchEvent(new Event("resize")); }
+    }
+    function setQuality(m) {
+      qmode = m; localStorage.setItem("jaq_quality", m);
+      document.getElementById("qBal").classList.toggle("on", m === "balanced");
+      document.getElementById("qHigh").classList.toggle("on", m === "high");
+      applyScale(m === "high" ? Math.min(window.devicePixelRatio || 1, 1.25) : 1);
+      lowSec = highSec = 0;
+    }
+    function tick(t) {
+      frames++;
+      if (t - last >= 1000) {
+        var fps = frames * 1000 / (t - last); frames = 0; last = t;
+        // v1.2.2：Unity 在視窗 resize／全螢幕時會用 config 的值把解析度蓋回 1 → 每秒檢查一次，不一樣就套回目前的倍率
+        if (instance && instance.Module && Math.abs((instance.Module.devicePixelRatio || 1) - scale) > 0.001) applyScale(scale);
+        if (qmode === "balanced" && !document.hidden && fps > 5) {   // 背景分頁／被節流時不算（v1.2.2）
+          if (fps < 40) { lowSec++; highSec = 0; if (lowSec >= 3 && scale > 0.6) { applyScale(Math.max(0.6, +(scale - 0.15).toFixed(2))); lowSec = 0; } }
+          else if (fps > 56) { highSec++; lowSec = 0; if (highSec >= 8 && scale < 1) { applyScale(Math.min(1, +(scale + 0.1).toFixed(2))); highSec = 0; } }
+          else { lowSec = highSec = 0; }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    document.getElementById("qBal").onclick = function () { setQuality("balanced"); this.blur(); canvas.focus(); };
+    document.getElementById("qHigh").onclick = function () { setQuality("high"); this.blur(); canvas.focus(); };
+    document.getElementById("fs").onclick = function () { this.blur(); if (instance) instance.SetFullscreen(1); };
+    // Space／方向鍵不要捲動頁面或重按 HTML 按鈕
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Tab") e.preventDefault();   // Tab = 走路／飛行切換，不要讓瀏覽器切換焦點
+      if ([" ", "ArrowUp", "ArrowDown"].indexOf(e.key) >= 0 && document.activeElement !== canvas) { e.preventDefault(); canvas.focus(); }
+      if ((e.key === "g" || e.key === "G") && instance && !e.repeat) setQuality(qmode === "high" ? "balanced" : "high");   // G：畫質切換
+    });
+    canvas.addEventListener("mousedown", function () { canvas.focus(); });
+    var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (mobile) { document.getElementById("mobile").style.display = "flex"; document.getElementById("anyway").onclick = function () { document.getElementById("mobile").style.display = "none"; start(); }; }
+    else start();
+  </script>
+</body>
+</html>
